@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 18px;
 }
 
 .claude-rewind-modal-backdrop {
@@ -21,12 +21,12 @@
 
 .claude-rewind-modal-card {
   position: relative;
-  width: min(1540px, calc(100vw - 12px));
-  max-height: calc(100vh - 24px);
+  width: min(1410px, calc(100vw - 36px));
+  max-height: calc(100vh - 36px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-radius: 24px;
+  border-radius: 22px;
   border: 1px solid color-mix(in srgb, var(--border-stronger), transparent 12%);
   background: linear-gradient(
     180deg,
@@ -45,8 +45,8 @@
 .claude-rewind-modal-header {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 20px 24px 16px;
+  gap: 8px;
+  padding: 18px 22px 14px;
   border-bottom: 1px solid
     color-mix(in srgb, var(--border-subtle) 80%, transparent);
 }
@@ -81,7 +81,7 @@
 
 .claude-rewind-modal-heading h3 {
   margin: 0;
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   line-height: 1.08;
   color: var(--text-strong);
@@ -96,16 +96,16 @@
 
 .claude-rewind-modal-body {
   overflow-y: auto;
-  padding: 22px 24px 10px;
+  padding: 18px 22px 10px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 16px;
 }
 
 .claude-rewind-modal-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .claude-rewind-modal-section-label {
@@ -133,11 +133,11 @@
 }
 
 .claude-rewind-modal-target-card {
-  border-radius: 18px;
-  padding: 16px 18px;
+  border-radius: 16px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .claude-rewind-modal-target-label {
@@ -156,20 +156,20 @@
 .claude-rewind-modal-impact-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .claude-rewind-modal-impact-card {
-  border-radius: 18px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  min-height: 92px;
+  gap: 5px;
+  min-height: 84px;
 }
 
 .claude-rewind-modal-impact-value {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 800;
   line-height: 1;
   color: var(--text-strong);
@@ -182,8 +182,8 @@
 }
 
 .claude-rewind-modal-impact-note {
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 12px 14px;
 }
 
 .claude-rewind-modal-impact-note p {
@@ -196,7 +196,7 @@
 .claude-rewind-modal-mode-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .claude-rewind-modal-mode-option {
@@ -205,8 +205,8 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 56px;
-  border-radius: 14px;
+  min-height: 52px;
+  border-radius: 13px;
   border: 1px solid color-mix(in srgb, var(--border-subtle) 82%, transparent);
   background: linear-gradient(
     180deg,
@@ -217,7 +217,7 @@
       transparent
     )
   );
-  padding: 12px 14px;
+  padding: 10px 12px;
   cursor: pointer;
 }
 
@@ -311,7 +311,7 @@
   display: grid;
   grid-template-columns: minmax(280px, 0.52fr) minmax(0, 2.28fr);
   gap: 12px;
-  min-height: 360px;
+  min-height: 332px;
 }
 
 .claude-rewind-modal-file-rail,
@@ -365,12 +365,12 @@
 
 .claude-rewind-modal-file-rail-list {
   min-height: 0;
-  max-height: min(58vh, 560px);
+  max-height: min(54vh, 500px);
   overflow-y: auto;
-  padding: 8px;
+  padding: 7px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .claude-rewind-modal-file-item {
@@ -506,7 +506,7 @@
 
 .claude-rewind-modal-diff-panel {
   min-width: 0;
-  min-height: 320px;
+  min-height: 300px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
