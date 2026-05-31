@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DropdownProps, DropdownItemData } from '../types';
 import { cn } from '@/lib/utils';
@@ -69,19 +69,49 @@ export const Dropdown = ({
   // of the zoom factor applied to #app.
   const { width: viewportWidth, height: viewportHeight, top: viewportTop, left: viewportLeft, fixedPosDivisor } = getAppViewport();
 
-  // When containerRef is provided, align dropdown to the input box
+  // Use containerRef to align dropdown to the input box when provided
   const containerRect = containerRef?.current?.getBoundingClientRect();
   let left: number;
   let bottomValue: number;
   let effectiveWidth: number;
 
+  // Estimate dropdown height for boundary detection
+  const estimatedDropdownHeight = Math.min(200, viewportHeight * 0.4);
+
   if (containerRect) {
-    // Match the input box width and left edge
     effectiveWidth = containerRect.width;
     left = containerRect.left - viewportLeft;
-    // Position above the container's top edge
-    const containerTopInApp = containerRect.top - viewportTop;
-    bottomValue = viewportHeight - containerTopInApp + offsetY;
+
+    // Viewport boundary detection: choose best position based on available space
+    const spaceAbove = containerRect.top - viewportTop;
+    const spaceBelow = viewportHeight - (containerRect.top - viewportTop);
+
+    if (spaceAbove >= estimatedDropdownHeight + offsetY) {
+      // Enough space above — position dropdown above the container
+      bottomValue = viewportHeight - (containerRect.top - viewportTop) + offsetY;
+    } else if (spaceBelow >= estimatedDropdownHeight + offsetY) {
+      // Not enough space above, but enough below — position below
+      bottomValue = viewportHeight - (containerRect.top - viewportTop) - containerRect.height - offsetY;
+    } else {
+      // Neither direction has full space — prefer above with available space
+      bottomValue = viewportHeight - (containerRect.top - viewportTop) + offsetY;
+    }
+
+    // Hard clamp: ensure the dropdown never extends above the viewport
+    if (bottomValue + estimatedDropdownHeight > viewportHeight) {
+      bottomValue = viewportHeight - estimatedDropdownHeight - 8;
+    }
+    if (bottomValue < 8) {
+      bottomValue = 8;
+    }
+
+    // Horizontal edge clamping
+    if (left + effectiveWidth + 10 > viewportWidth) {
+      left = viewportWidth - effectiveWidth - 10;
+    }
+    if (left < 10) {
+      left = 10;
+    }
   } else {
     // Fallback: position at cursor
     left = position.left - viewportLeft + offsetX;
@@ -105,6 +135,16 @@ export const Dropdown = ({
     width: effectiveWidth / fixedPosDivisor,
     zIndex: 1001,
   };
+
+  // After render, measure actual height and adjust position if it overflows viewport
+  useLayoutEffect(() => {
+    if (!dropdownRef.current) return;
+    const rect = dropdownRef.current.getBoundingClientRect();
+    if (rect.top < 0) {
+      dropdownRef.current.style.bottom = 'auto';
+      dropdownRef.current.style.top = '8px';
+    }
+  });
 
   return (
     <div

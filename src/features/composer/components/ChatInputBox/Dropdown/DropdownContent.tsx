@@ -64,6 +64,7 @@ export function DropdownContent({
   const containerRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<React.CSSProperties>({ visibility: "hidden" });
   const [mounted, setMounted] = useState(false);
+  const [effectiveSide, setEffectiveSide] = useState<"top" | "bottom">(side);
 
   // 挂载标记（确保只在客户端渲染 portal）
   useEffect(() => {
@@ -98,6 +99,7 @@ export function DropdownContent({
     const vh = window.innerHeight;
 
     let top: number;
+    let effectiveSide = side;
     if (side === "top") {
       top = anchorRect.top - sideOffset;
     } else {
@@ -125,13 +127,16 @@ export function DropdownContent({
       left = 8;
     }
 
-    // 垂直边界修正
+    // 垂直边界修正：翻转弹出方向
     if (side === "top" && top < 8) {
       top = anchorRect.bottom + sideOffset;
+      effectiveSide = "bottom";
     } else if (side === "bottom" && top + estimatedHeight > vh - 8) {
       top = anchorRect.top - sideOffset;
+      effectiveSide = "top";
     }
 
+    setEffectiveSide(effectiveSide);
     setStyle({
       position: "fixed",
       left,
@@ -182,6 +187,7 @@ export function DropdownContent({
     <div
       ref={containerRef}
       data-state={open ? "open" : "closed"}
+      data-side={effectiveSide}
       className={cn(
         // shadcn 弹出层基础样式
         "z-50 min-w-[8rem] overflow-y-auto rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",

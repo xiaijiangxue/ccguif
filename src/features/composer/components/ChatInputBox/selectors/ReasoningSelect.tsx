@@ -1,8 +1,10 @@
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Menu } from '@ark-ui/react/menu';
+import { Portal } from '@ark-ui/react/portal';
 import Check from "lucide-react/dist/esm/icons/check";
-import { DropdownContent } from '@/components/ui/dropdown-content';
 import { REASONING_LEVELS, type ReasoningEffort } from '../types';
+import { cn } from '@/lib/utils';
 
 interface ReasoningSelectProps {
   value: ReasoningEffort | null;
@@ -59,15 +61,6 @@ export const ReasoningSelect = ({
   const triggerIcon = currentLevel?.icon ?? 'codicon-lightbulb';
 
   /**
-   * Toggle dropdown
-   */
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (disabled) return;
-    setIsOpen(!isOpen);
-  }, [isOpen, disabled]);
-
-  /**
    * Select reasoning level
    */
   const handleSelect = useCallback((effort: ReasoningEffort | null) => {
@@ -75,13 +68,34 @@ export const ReasoningSelect = ({
     setIsOpen(false);
   }, [onChange]);
 
+  const menuContentClassName = cn(
+    "z-[10001] min-w-[200px] overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
+    "data-[state=open]:animate-in data-[state=closed]:animate-out",
+    "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+    "data-[placement^=bottom]:slide-in-from-top-2 data-[placement^=top]:slide-in-from-bottom-2",
+  );
+
+  const menuItemClassName = cn(
+    "selector-option m-0 rounded-md outline-none",
+    "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+  );
 
   return (
-    <div className="selector-reasoning-wrap" style={{ position: 'relative', display: 'inline-block' }}>
-      <button
+    <Menu.Root
+      lazyMount
+      onOpenChange={(details) => setIsOpen(details.open)}
+      open={isOpen}
+      positioning={{
+        placement: 'top-start',
+        gutter: 4,
+        flip: true,
+        shift: { padding: 8 },
+      }}
+    >
+      <Menu.Trigger
         ref={buttonRef}
         className={`selector-button selector-reasoning-button${currentLevel ? ' is-icon-only' : ''}`}
-        onClick={handleToggle}
         disabled={disabled}
         aria-label={triggerLabel}
         title={t('reasoning.title', { defaultValue: 'Select reasoning depth' })}
@@ -92,60 +106,56 @@ export const ReasoningSelect = ({
             {resolvedDefaultLabel}
           </span>
         )}
-      </button>
+      </Menu.Trigger>
 
-      {isOpen && (
-        <DropdownContent
-            anchorEl={buttonRef.current}
-            open={isOpen}
-            onClose={() => setIsOpen(false)}
-            side="top"
-            sideOffset={4}
-            align="start"
-            minWidth={200}
-          >
-          {showDefaultOption && (
-            <div
-              className={`selector-option ${value === null ? 'selected' : ''}`}
-              onClick={() => handleSelect(null)}
-              title={t('reasoning.defaultDescription', {
-                defaultValue: 'Use the engine default reasoning behavior',
-              })}
-            >
-              <span className="codicon codicon-circle-outline" />
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span>{resolvedDefaultLabel}</span>
-                <span className="mode-description">
-                  {t('reasoning.defaultDescription', {
-                    defaultValue: 'Use the engine default reasoning behavior',
-                  })}
-                </span>
-              </div>
-              {value === null && (
-                <Check size={16} className="check-mark" />
-              )}
-            </div>
-          )}
-          {visibleLevels.map((level) => (
-            <div
-              key={level.id}
-              className={`selector-option selector-option--reasoning ${level.id === value ? 'selected' : ''}`}
-              onClick={() => handleSelect(level.id)}
-              title={getReasoningText(level.id, 'description')}
-            >
-              <span className={`codicon ${level.icon}`} />
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span>{getReasoningText(level.id, 'label')}</span>
-                <span className="mode-description">{getReasoningText(level.id, 'description')}</span>
-              </div>
-              {level.id === value && (
-                <Check size={16} className="check-mark" />
-              )}
-            </div>
-          ))}
-          </DropdownContent>
-        )}
-    </div>
+      <Portal>
+        <Menu.Positioner className="z-[10001] outline-none">
+          <Menu.Content className={menuContentClassName}>
+            {showDefaultOption && (
+              <Menu.Item
+                className={menuItemClassName}
+                title={t('reasoning.defaultDescription', {
+                  defaultValue: 'Use the engine default reasoning behavior',
+                })}
+                value="reasoning:default"
+                onSelect={() => handleSelect(null)}
+              >
+                <span className="codicon codicon-circle-outline" />
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <span>{resolvedDefaultLabel}</span>
+                  <span className="mode-description">
+                    {t('reasoning.defaultDescription', {
+                      defaultValue: 'Use the engine default reasoning behavior',
+                    })}
+                  </span>
+                </div>
+                {value === null && (
+                  <Check size={16} className="check-mark" />
+                )}
+              </Menu.Item>
+            )}
+            {visibleLevels.map((level) => (
+              <Menu.Item
+                key={level.id}
+                className={cn(menuItemClassName, "selector-option--reasoning")}
+                title={getReasoningText(level.id, 'description')}
+                value={`reasoning:${level.id}`}
+                onSelect={() => handleSelect(level.id)}
+              >
+                <span className={`codicon ${level.icon}`} />
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <span>{getReasoningText(level.id, 'label')}</span>
+                  <span className="mode-description">{getReasoningText(level.id, 'description')}</span>
+                </div>
+                {level.id === value && (
+                  <Check size={16} className="check-mark" />
+                )}
+              </Menu.Item>
+            ))}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
   );
 };
 

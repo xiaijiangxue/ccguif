@@ -1,10 +1,12 @@
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Menu } from '@ark-ui/react/menu';
+import { Portal } from '@ark-ui/react/portal';
 import Check from "lucide-react/dist/esm/icons/check";
-import { DropdownContent } from '@/components/ui/dropdown-content';
 import { AVAILABLE_PROVIDERS } from '../types';
 import type { ProviderId } from '../types';
 import { EngineIcon } from '../../../../engine/components/EngineIcon';
+import { cn } from '@/lib/utils';
 
 interface ProviderSelectProps {
   value: string;
@@ -81,14 +83,6 @@ export const ProviderSelect = ({
   };
 
   /**
-   * Toggle dropdown
-   */
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(!isOpen);
-  }, [isOpen]);
-
-  /**
    * Show toast message
    */
   const showToastMessage = useCallback((message: string) => {
@@ -118,14 +112,36 @@ export const ProviderSelect = ({
     setIsOpen(false);
   }, [onChange, providers, showToastMessage, t]);
 
+  const menuContentClassName = cn(
+    "z-[10001] min-w-[180px] overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
+    "data-[state=open]:animate-in data-[state=closed]:animate-out",
+    "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+    "data-[placement^=bottom]:slide-in-from-top-2 data-[placement^=top]:slide-in-from-bottom-2",
+  );
+
+  const menuItemClassName = cn(
+    "selector-option m-0 rounded-md outline-none",
+    "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+    "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+  );
 
   return (
     <>
-      <div style={{ position: 'relative', display: 'inline-block' }}>
-        <button
+      <Menu.Root
+        lazyMount
+        onOpenChange={(details) => setIsOpen(details.open)}
+        open={isOpen}
+        positioning={{
+          placement: 'top-start',
+          gutter: 4,
+          flip: true,
+          shift: { padding: 8 },
+        }}
+      >
+        <Menu.Trigger
           ref={buttonRef}
           className={`selector-button ${iconOnly ? 'selector-provider-button' : ''}`}
-          onClick={handleToggle}
           title={`${t('config.switchProvider')}: ${getProviderLabel(currentProvider.id)}${currentProvider.version ? ` (${currentProvider.version})` : ''}${currentProvider.statusLabel ? `（${currentProvider.statusLabel}）` : ''}`}
           aria-label={`${t('config.switchProvider')}: ${getProviderLabel(currentProvider.id)}`}
         >
@@ -134,42 +150,34 @@ export const ProviderSelect = ({
           {!iconOnly && (
             <span className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'}`} style={{ fontSize: '10px', marginLeft: '2px' }} />
           )}
-        </button>
+        </Menu.Trigger>
 
-        {isOpen && (
-          <DropdownContent
-            anchorEl={buttonRef.current}
-            open={isOpen}
-            onClose={() => setIsOpen(false)}
-            side="top"
-            sideOffset={4}
-            align="start"
-            minWidth={180}
-          >
-            {visibleProviders.map((provider) => (
-              <div
-                key={provider.id}
-                className={`selector-option ${provider.id === value ? 'selected' : ''} ${!provider.enabled ? 'disabled' : ''}`}
-                onClick={() => handleSelect(provider.id)}
-                style={{
-                  opacity: provider.enabled ? 1 : 0.5,
-                  cursor: provider.enabled ? 'pointer' : 'not-allowed',
-                }}
-              >
-                <ProviderIcon providerId={provider.id} size={16}  />
-                <span>
-                  {getProviderLabel(provider.id)}
-                  {provider.version ? ` (${provider.version})` : ''}
-                  {provider.statusLabel ? `（${provider.statusLabel}）` : ''}
-                </span>
-                {provider.id === value && (
-                  <Check size={16} className="check-mark" />
-                )}
-              </div>
-            ))}
-          </DropdownContent>
-        )}
-      </div>
+        <Portal>
+          <Menu.Positioner className="z-[10001] outline-none">
+            <Menu.Content className={menuContentClassName}>
+              {visibleProviders.map((provider) => (
+                <Menu.Item
+                  key={provider.id}
+                  className={menuItemClassName}
+                  disabled={!provider.enabled}
+                  value={`provider:${provider.id}`}
+                  onSelect={() => handleSelect(provider.id)}
+                >
+                  <ProviderIcon providerId={provider.id} size={16}  />
+                  <span>
+                    {getProviderLabel(provider.id)}
+                    {provider.version ? ` (${provider.version})` : ''}
+                    {provider.statusLabel ? `（${provider.statusLabel}）` : ''}
+                  </span>
+                  {provider.id === value && (
+                    <Check size={16} className="check-mark" />
+                  )}
+                </Menu.Item>
+              ))}
+            </Menu.Content>
+          </Menu.Positioner>
+        </Portal>
+      </Menu.Root>
       {showToast && (
         <div className="selector-toast">
           {toastMessage}

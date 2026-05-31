@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Menu } from '@ark-ui/react/menu';
+import { Portal } from '@ark-ui/react/portal';
 import { AVAILABLE_MODES, type PermissionMode } from '../types';
 import Check from "lucide-react/dist/esm/icons/check";
-import { DropdownContent } from '@/components/ui/dropdown-content';
+import { cn } from '@/lib/utils';
 import {
   MODE_SELECT_FLASH_DURATION_MS,
   MODE_SELECT_FLASH_EVENT,
@@ -101,14 +103,6 @@ export const ModeSelect = ({
   };
 
   /**
-   * Toggle dropdown
-   */
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(!isOpen);
-  }, [isOpen]);
-
-  /**
    * Select mode
    */
   const handleSelect = useCallback((mode: PermissionMode, disabled?: boolean) => {
@@ -182,12 +176,35 @@ export const ModeSelect = ({
     };
   }, [flashCycle, isChevronFlashing]);
 
+  const menuContentClassName = cn(
+    "z-[10001] min-w-[240px] overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
+    "data-[state=open]:animate-in data-[state=closed]:animate-out",
+    "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+    "data-[placement^=bottom]:slide-in-from-top-2 data-[placement^=top]:slide-in-from-bottom-2",
+  );
+
+  const menuItemClassName = cn(
+    "selector-option m-0 rounded-md outline-none",
+    "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+    "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+  );
+
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
+    <Menu.Root
+      lazyMount
+      onOpenChange={(details) => setIsOpen(details.open)}
+      open={isOpen}
+      positioning={{
+        placement: 'top-start',
+        gutter: 4,
+        flip: true,
+        shift: { padding: 8 },
+      }}
+    >
+      <Menu.Trigger
         ref={buttonRef}
         className={`selector-button selector-button-mode-trigger${isChevronFlashing ? ' is-flashing' : ''}`}
-        onClick={handleToggle}
         style={flashingButtonStyle}
         title={getModeText(currentMode.id, 'tooltip') || `${t('chat.currentMode', { mode: getModeText(currentMode.id, 'label') })}`}
       >
@@ -200,47 +217,38 @@ export const ModeSelect = ({
           className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'} selector-button-mode-chevron${isChevronFlashing ? ' is-flashing' : ''}`}
           style={flashingChevronStyle}
         />
-      </button>
+      </Menu.Trigger>
 
-      {isOpen && (
-        <DropdownContent
-          anchorEl={buttonRef.current}
-          open={isOpen}
-          onClose={() => setIsOpen(false)}
-          side="top"
-          sideOffset={4}
-          align="start"
-          minWidth={240}
-          className="selector-dropdown--mode"
-        >
-          {modeOptions.map((mode) => (
-            <div
-              key={mode.id}
-              data-mode-id={mode.id}
-              className={`selector-option ${mode.id === selectedModeId ? 'selected' : ''} ${mode.disabled ? 'disabled' : ''}`}
-              onClick={() => handleSelect(mode.id, mode.disabled)}
-              title={getModeText(mode.id, 'tooltip')}
-              style={{
-                opacity: mode.disabled ? 0.5 : 1,
-                cursor: mode.disabled ? 'not-allowed' : 'pointer',
-              }}
-            >
-              <span
-                className={`codicon ${mode.icon} mode-icon`}
-                aria-hidden="true"
-              />
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <span>{getModeText(mode.id, 'label')}</span>
-                <span className="mode-description">{getModeText(mode.id, 'description')}</span>
-              </div>
-              {mode.id === selectedModeId && (
-                <Check size={20} className="check-mark" aria-hidden />
-              )}
-            </div>
-          ))}
-        </DropdownContent>
-      )}
-    </div>
+      <Portal>
+        <Menu.Positioner className="z-[10001] outline-none">
+          <Menu.Content className={cn(menuContentClassName, "selector-dropdown--mode")}>
+            {modeOptions.map((mode) => (
+              <Menu.Item
+                key={mode.id}
+                className={menuItemClassName}
+                data-mode-id={mode.id}
+                disabled={mode.disabled}
+                title={getModeText(mode.id, 'tooltip')}
+                value={`mode:${mode.id}`}
+                onSelect={() => handleSelect(mode.id, mode.disabled)}
+              >
+                <span
+                  className={`codicon ${mode.icon} mode-icon`}
+                  aria-hidden="true"
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <span>{getModeText(mode.id, 'label')}</span>
+                  <span className="mode-description">{getModeText(mode.id, 'description')}</span>
+                </div>
+                {mode.id === selectedModeId && (
+                  <Check size={20} className="check-mark" aria-hidden />
+                )}
+              </Menu.Item>
+            ))}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
   );
 };
 

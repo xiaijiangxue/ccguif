@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Menu } from '@ark-ui/react/menu';
+import { Portal } from '@ark-ui/react/portal';
 import { Switch } from 'antd';
 import Check from "lucide-react/dist/esm/icons/check";
-import { DropdownContent } from '@/components/ui/dropdown-content';
 import { AgentIcon } from '../../../../../components/AgentIcon';
 import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } from '../providers/agentProvider';
 import type { AccountRateLimitsInfo, CodexSpeedMode, ProviderId, SelectedAgent } from '../types';
 import { formatRelativeTime } from '../../../../../utils/time';
+import { cn } from '@/lib/utils';
 
 interface ConfigSelectProps {
   currentProvider: string;
@@ -57,7 +59,8 @@ export const ConfigSelect = ({
   const USAGE_REFRESH_TIMEOUT_MS = 10_000;
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'agent' | 'usage' | 'speed'>('none');
+  const [agentMenuOpen, setAgentMenuOpen] = useState(false);
+  const [usageMenuOpen, setUsageMenuOpen] = useState(false);
   const [agentItems, setAgentItems] = useState<AgentItem[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [usageLoading, setUsageLoading] = useState(false);
@@ -122,14 +125,6 @@ export const ConfigSelect = ({
     };
   }, [accountRateLimits, formatUsageReset, resolveUsagePercent]);
 
-  const handleToggle = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsOpen(!isOpen);
-    if (!isOpen) {
-      setActiveSubmenu('none');
-    }
-  }, [isOpen]);
-
   const loadAgents = useCallback(async () => {
     if (agentAbortControllerRef.current) {
       agentAbortControllerRef.current.abort();
@@ -187,14 +182,14 @@ export const ConfigSelect = ({
   }, [onRefreshAccountRateLimits]);
 
   useEffect(() => {
-    if (activeSubmenu !== 'agent') return;
+    if (!agentMenuOpen) return;
     loadAgents();
-  }, [activeSubmenu, loadAgents]);
+  }, [agentMenuOpen, loadAgents]);
 
   useEffect(() => {
-    if (activeSubmenu !== 'usage') return;
+    if (!usageMenuOpen) return;
     void refreshUsageSnapshot();
-  }, [activeSubmenu, refreshUsageSnapshot]);
+  }, [usageMenuOpen, refreshUsageSnapshot]);
 
   useEffect(() => {
     return () => {
@@ -204,473 +199,397 @@ export const ConfigSelect = ({
     };
   }, []);
 
-  const renderAgentSubmenu = () => (
-    <div
-      className="selector-dropdown"
-      style={{
-        position: 'absolute',
-        left: '100%',
-        bottom: 0,
-        marginLeft: '-30px',
-        zIndex: 10001,
-        minWidth: '320px',
-        maxWidth: '360px',
-        maxHeight: '360px',
-        overflowY: 'auto',
-        overscrollBehavior: 'contain',
-      }}
-      onMouseEnter={(e) => {
-        e.stopPropagation();
-        setActiveSubmenu('agent');
-      }}
-    >
-      {agentsLoading ? (
-        <div className="selector-option" style={{ cursor: 'default' }}>
-          <span className="codicon codicon-loading codicon-modifier-spin" />
-          <span>{t('chat.loadingDropdown')}</span>
-        </div>
-      ) : (
-        agentItems.map((agent) => {
-          const isInfo = agent.id === EMPTY_STATE_ID;
-          const isCreate = agent.id === CREATE_NEW_AGENT_ID;
-          const isSelected = !!selectedAgent && selectedAgent.id === agent.id;
-
-          return (
-            <div
-              key={agent.id}
-              className={`selector-option ${isSelected ? 'selected' : ''} ${isInfo ? 'disabled' : ''}`}
-              style={{
-                alignItems: 'flex-start',
-                cursor: isInfo ? 'default' : 'pointer',
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (isInfo) return;
-
-                if (isCreate) {
-                  setIsOpen(false);
-                  setActiveSubmenu('none');
-                  onOpenAgentSettings?.();
-                  return;
-                }
-
-                onAgentSelect?.({
-                  id: agent.id,
-                  name: agent.name,
-                  prompt: agent.prompt,
-                  icon: agent.icon,
-                });
-                setIsOpen(false);
-                setActiveSubmenu('none');
-              }}
-            >
-              {isCreate ? (
-                <span className="codicon codicon-add" />
-              ) : isInfo ? (
-                <span className="codicon codicon-info" />
-              ) : (
-                <AgentIcon
-                  icon={agent.icon}
-                  seed={agent.id || agent.name}
-                  fallback="codicon-robot"
-                  className="selector-option-agent-icon"
-                  size={16}
-                />
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
-                <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</span>
-                {agent.prompt ? (
-                  <span className="model-description" style={{ fontStyle: 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {agent.prompt.length > 60 ? agent.prompt.substring(0, 60) + '...' : agent.prompt}
-                  </span>
-                ) : isCreate ? (
-                  <span className="model-description" style={{ fontStyle: 'normal' }}>{t('settings.agent.createAgentHint')}</span>
-                ) : null}
-              </div>
-              {isSelected && <Check size={16} className="check-mark" />}
-            </div>
-          );
-        })
-      )}
-    </div>
-  );
-
-  const renderUsageSubmenu = () => (
-    <div
-      className="selector-dropdown selector-usage-dropdown"
-      style={{
-        position: 'absolute',
-        left: '100%',
-        bottom: 0,
-        marginLeft: '-30px',
-        zIndex: 10001,
-        minWidth: '280px',
-      }}
-    >
-      <div className="selector-usage-header">
-        <span>{t('home.usageSnapshot')}</span>
-        <button
-          type="button"
-          className="selector-usage-refresh"
-          onClick={(e) => {
-            e.stopPropagation();
-            void refreshUsageSnapshot();
-          }}
-          title={t('home.refreshUsage')}
-        >
-          <span className={`codicon ${usageLoading ? 'codicon-loading codicon-modifier-spin' : 'codicon-refresh'}`} />
-        </button>
-      </div>
-
-      <div className="selector-usage-row">
-        <div className="selector-usage-row-top">
-          <span>5h limit</span>
-          <span>
-            {usageSnapshot.sessionPercent === null
-              ? '--'
-              : `${usageSnapshot.sessionPercent}% ${t(
-                  usageShowRemaining ? 'usage.remaining' : 'usage.used',
-                )}`}
-          </span>
-        </div>
-        <div className="selector-usage-progress-track" aria-hidden>
-          <span
-            className="selector-usage-progress-fill"
-            style={{ width: `${usageSnapshot.sessionPercent ?? 0}%` }}
-          />
-        </div>
-        {usageSnapshot.sessionResetLabel && (
-          <div className="selector-usage-reset">{usageSnapshot.sessionResetLabel}</div>
-        )}
-      </div>
-
-      {usageSnapshot.showWeekly && (
-        <div className="selector-usage-row">
-          <div className="selector-usage-row-top">
-            <span>Weekly limit</span>
-            <span>
-              {usageSnapshot.weeklyPercent === null
-                ? '--'
-                : `${usageSnapshot.weeklyPercent}% ${t(
-                    usageShowRemaining ? 'usage.remaining' : 'usage.used',
-                  )}`}
-            </span>
-          </div>
-          <div className="selector-usage-progress-track" aria-hidden>
-            <span
-              className="selector-usage-progress-fill"
-              style={{ width: `${usageSnapshot.weeklyPercent ?? 0}%` }}
-            />
-          </div>
-          {usageSnapshot.weeklyResetLabel && (
-            <div className="selector-usage-reset">{usageSnapshot.weeklyResetLabel}</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-
   const handleCodexSpeedSelect = useCallback((mode: Exclude<CodexSpeedMode, 'unknown'>) => {
     onCodexSpeedModeChange?.(mode);
     setIsOpen(false);
-    setActiveSubmenu('none');
   }, [onCodexSpeedModeChange]);
 
   const handleCodexReviewQuickStart = useCallback(() => {
     onCodexReviewQuickStart?.();
     setIsOpen(false);
-    setActiveSubmenu('none');
   }, [onCodexReviewQuickStart]);
 
   const handleForkQuickStart = useCallback(() => {
     onForkQuickStart?.();
     setIsOpen(false);
-    setActiveSubmenu('none');
   }, [onForkQuickStart]);
 
-  const renderSpeedSubmenu = () => (
-    <div
-      className="selector-dropdown"
-      style={{
-        position: 'absolute',
-        left: '100%',
-        bottom: 0,
-        marginLeft: '-30px',
-        zIndex: 10001,
-        minWidth: '180px',
-      }}
-      onMouseEnter={(e) => {
-        e.stopPropagation();
-        setActiveSubmenu('speed');
-      }}
-    >
-      <div
-        className="selector-option selector-option-speed-standard"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleCodexSpeedSelect('standard');
-        }}
-      >
-        <span>{t('composer.speedStandard')}</span>
-        {codexSpeedMode === 'standard' && <Check size={16} className="check-mark" />}
-      </div>
-      <div
-        className="selector-option selector-option-speed-fast"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleCodexSpeedSelect('fast');
-        }}
-      >
-        <span>{t('composer.speedFast')}</span>
-        {codexSpeedMode === 'fast' && <Check size={16} className="check-mark" />}
-      </div>
-    </div>
+  const baseMenuContentClassName = cn(
+    "z-[10001] overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
+    "data-[state=open]:animate-in data-[state=closed]:animate-out",
+    "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+    "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+    "data-[placement^=bottom]:slide-in-from-top-2 data-[placement^=top]:slide-in-from-bottom-2",
+    "data-[placement^=left]:slide-in-from-right-2 data-[placement^=right]:slide-in-from-left-2",
+  );
+
+  const menuRowClassName = cn(
+    "selector-option m-0 rounded-md",
+    "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
+    "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+    "outline-none",
+  );
+
+  const menuSeparator = (
+    <Menu.Separator className="mx-1 my-1 h-px bg-[var(--dropdown-border)] opacity-50" />
   );
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
+    <Menu.Root
+      closeOnSelect={false}
+      lazyMount
+      onOpenChange={(details) => setIsOpen(details.open)}
+      open={isOpen}
+      positioning={{
+        placement: 'top-start',
+        gutter: 4,
+        flip: true,
+        shift: { padding: 8 },
+      }}
+    >
+      <Menu.Trigger
         ref={buttonRef}
         className="selector-button config-button"
-        onClick={handleToggle}
         title={t('settings.configure', 'Configure')}
       >
         <span className="codicon codicon-settings" />
-      </button>
+      </Menu.Trigger>
 
-      {isOpen && (
-        <DropdownContent
-          anchorEl={buttonRef.current}
-          open={isOpen}
-          onClose={() => setIsOpen(false)}
-          side="top"
-          sideOffset={4}
-          align="start"
-          minWidth={200}
-        >
-          {/* Agent Item (Disabled) */}
-          <div
-            className="selector-option"
-            onMouseEnter={() => setActiveSubmenu('agent')}
-            onMouseLeave={() => setActiveSubmenu('none')}
-            style={{ position: 'relative' }}
-          >
-            <AgentIcon
-              icon={selectedAgent?.icon}
-              seed={selectedAgent?.id || selectedAgent?.name}
-              fallback="codicon-robot"
-              className="selector-option-agent-icon"
-              size={16}
-            />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span>{t('settings.agent.title')}</span>
-              {selectedAgent?.name ? (
-                <span className="model-description" style={{ fontStyle: 'normal' }}>
-                  {selectedAgent.name}
-                </span>
-              ) : null}
-            </div>
-            <div 
-              style={{ 
-                marginLeft: 'auto',
-                display: 'flex',
-                alignItems: 'center',
-                alignSelf: 'stretch',
-                paddingLeft: '12px',
-                cursor: 'pointer'
+      <Portal>
+        <Menu.Positioner className="z-[10001] outline-none">
+          <Menu.Content className={cn(baseMenuContentClassName, "min-w-[220px]")} aria-label={t('settings.configure', 'Configure')}>
+            <Menu.Root
+              lazyMount
+              onOpenChange={(details) => setAgentMenuOpen(details.open)}
+              open={agentMenuOpen}
+              positioning={{
+                placement: 'right-start',
+                gutter: 8,
+                flip: true,
+                shift: { padding: 8 },
               }}
             >
-              <span className="codicon codicon-chevron-right" style={{ fontSize: '12px' }} />
-            </div>
-
-            {activeSubmenu === 'agent' && renderAgentSubmenu()}
-          </div>
-
-          {!isCodexProvider && (
-            <>
-              {/* Divider */}
-              <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
-
-              {/* Streaming Switch Item */}
-              <div
-                className="selector-option selector-option-streaming-toggle"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onStreamingEnabledChange?.(!streamingEnabled);
-                }}
-                onMouseEnter={() => setActiveSubmenu('none')}
-                style={{ justifyContent: 'space-between', cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="codicon codicon-sync" />
-                  <span>{t('settings.basic.streaming.label')}</span>
-                </div>
-                <Switch
-                  size="small"
-                  checked={streamingEnabled ?? true}
-                  onClick={(checked, e) => {
-                     e.stopPropagation();
-                     onStreamingEnabledChange?.(checked);
-                  }}
+              <Menu.TriggerItem className={menuRowClassName}>
+                <AgentIcon
+                  icon={selectedAgent?.icon}
+                  seed={selectedAgent?.id || selectedAgent?.name}
+                  fallback="codicon-robot"
+                  className="selector-option-agent-icon"
+                  size={16}
                 />
-              </div>
-
-              {/* Divider */}
-              <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
-
-              {/* Thinking Switch Item */}
-              <div
-                className="selector-option selector-option-thinking-toggle"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleThinking?.(!alwaysThinkingEnabled);
-                }}
-                onMouseEnter={() => setActiveSubmenu('none')}
-                style={{ justifyContent: 'space-between', cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="codicon codicon-lightbulb" />
-                  <span>{t('common.thinking')}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
+                  <span>{t('settings.agent.title')}</span>
+                  {selectedAgent?.name ? (
+                    <span className="model-description" style={{ fontStyle: 'normal' }}>
+                      {selectedAgent.name}
+                    </span>
+                  ) : null}
                 </div>
-                <Switch
-                  size="small"
-                  checked={alwaysThinkingEnabled ?? false}
-                  onClick={(checked, e) => {
-                     e.stopPropagation();
-                     onToggleThinking?.(checked);
-                  }}
-                />
-              </div>
-            </>
-          )}
+                <span className="codicon codicon-chevron-right ml-auto text-[12px]" />
+              </Menu.TriggerItem>
 
-          {isCodexProvider && (
-            <>
-              <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
-              <div
-                className="selector-option selector-option-plan-mode"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePlanModeToggle(!isPlanModeEnabled);
-                }}
-                onMouseEnter={() => setActiveSubmenu('none')}
-                style={{ justifyContent: 'space-between', cursor: 'pointer' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span className="codicon codicon-git-branch" />
-                  <span>{t('composer.planModeToggle')}</span>
-                </div>
-                <Switch
-                  size="small"
-                  checked={isPlanModeEnabled}
-                  disabled={!onSelectCollaborationMode}
-                  onClick={(checked, e) => {
-                     e.stopPropagation();
-                     handlePlanModeToggle(checked);
-                  }}
-                />
-              </div>
-            </>
-          )}
+              <Portal>
+                <Menu.Positioner className="z-[10002] outline-none">
+                  <Menu.Content className={cn(baseMenuContentClassName, "min-w-[320px] max-w-[360px] max-h-[360px] overflow-y-auto overscroll-contain")}>
+                    {agentsLoading ? (
+                      <div className={cn(menuRowClassName, "cursor-default")}>
+                        <span className="codicon codicon-loading codicon-modifier-spin" />
+                        <span>{t('chat.loadingDropdown')}</span>
+                      </div>
+                    ) : (
+                      agentItems.map((agent) => {
+                        const isInfo = agent.id === EMPTY_STATE_ID;
+                        const isCreate = agent.id === CREATE_NEW_AGENT_ID;
+                        const isSelected = !!selectedAgent && selectedAgent.id === agent.id;
 
-          {isCodexProvider && (
-            <>
-              <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
-              <div
-                className="selector-option selector-option-speed"
-                onMouseEnter={() => setActiveSubmenu('speed')}
-                onMouseLeave={() => setActiveSubmenu('none')}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveSubmenu('speed');
-                }}
-                style={{ position: 'relative' }}
-              >
-                <span className="codicon codicon-zap" />
-                <span>{t('composer.speed')}</span>
-                <div
-                  style={{
-                    marginLeft: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    alignSelf: 'stretch',
-                    paddingLeft: '12px',
-                    cursor: 'pointer',
+                        return (
+                          <Menu.Item
+                            key={agent.id}
+                            className={cn(menuRowClassName, isInfo && "cursor-default", "items-start")}
+                            closeOnSelect={!isInfo}
+                            disabled={isInfo}
+                            value={`agent:${agent.id}`}
+                            onSelect={() => {
+                              if (isCreate) {
+                                setIsOpen(false);
+                                onOpenAgentSettings?.();
+                                return;
+                              }
+
+                              onAgentSelect?.({
+                                id: agent.id,
+                                name: agent.name,
+                                prompt: agent.prompt,
+                                icon: agent.icon,
+                              });
+                              setIsOpen(false);
+                            }}
+                          >
+                            {isCreate ? (
+                              <span className="codicon codicon-add" />
+                            ) : isInfo ? (
+                              <span className="codicon codicon-info" />
+                            ) : (
+                              <AgentIcon
+                                icon={agent.icon}
+                                seed={agent.id || agent.name}
+                                fallback="codicon-robot"
+                                className="selector-option-agent-icon"
+                                size={16}
+                              />
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0, flex: 1 }}>
+                              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</span>
+                              {agent.prompt ? (
+                                <span className="model-description" style={{ fontStyle: 'normal', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {agent.prompt.length > 60 ? `${agent.prompt.substring(0, 60)}...` : agent.prompt}
+                                </span>
+                              ) : isCreate ? (
+                                <span className="model-description" style={{ fontStyle: 'normal' }}>{t('settings.agent.createAgentHint')}</span>
+                              ) : null}
+                            </div>
+                            {isSelected && <Check size={16} className="check-mark" />}
+                          </Menu.Item>
+                        );
+                      })
+                    )}
+                  </Menu.Content>
+                </Menu.Positioner>
+              </Portal>
+            </Menu.Root>
+
+            {!isCodexProvider && (
+              <>
+                {menuSeparator}
+                <Menu.Item
+                  className={cn(menuRowClassName, "selector-option-streaming-toggle justify-between")}
+                  closeOnSelect={false}
+                  value="toggle:streaming"
+                  onSelect={() => onStreamingEnabledChange?.(!(streamingEnabled ?? true))}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="codicon codicon-sync" />
+                    <span>{t('settings.basic.streaming.label')}</span>
+                  </div>
+                  <Switch
+                    size="small"
+                    checked={streamingEnabled ?? true}
+                    onClick={(checked, e) => {
+                      e.stopPropagation();
+                      onStreamingEnabledChange?.(checked);
+                    }}
+                  />
+                </Menu.Item>
+
+                {menuSeparator}
+                <Menu.Item
+                  className={cn(menuRowClassName, "selector-option-thinking-toggle justify-between")}
+                  closeOnSelect={false}
+                  value="toggle:thinking"
+                  onSelect={() => onToggleThinking?.(!(alwaysThinkingEnabled ?? false))}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="codicon codicon-lightbulb" />
+                    <span>{t('common.thinking')}</span>
+                  </div>
+                  <Switch
+                    size="small"
+                    checked={alwaysThinkingEnabled ?? false}
+                    onClick={(checked, e) => {
+                      e.stopPropagation();
+                      onToggleThinking?.(checked);
+                    }}
+                  />
+                </Menu.Item>
+              </>
+            )}
+
+            {isCodexProvider && (
+              <>
+                {menuSeparator}
+                <Menu.Item
+                  className={cn(menuRowClassName, "selector-option-plan-mode justify-between")}
+                  closeOnSelect={false}
+                  value="toggle:plan-mode"
+                  onSelect={() => handlePlanModeToggle(!isPlanModeEnabled)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="codicon codicon-git-branch" />
+                    <span>{t('composer.planModeToggle')}</span>
+                  </div>
+                  <Switch
+                    size="small"
+                    checked={isPlanModeEnabled}
+                    disabled={!onSelectCollaborationMode}
+                    onClick={(checked, e) => {
+                      e.stopPropagation();
+                      handlePlanModeToggle(checked);
+                    }}
+                  />
+                </Menu.Item>
+              </>
+            )}
+
+            {isCodexProvider && (
+              <>
+                {menuSeparator}
+                <Menu.Root
+                  lazyMount
+                  positioning={{
+                    placement: 'right-start',
+                    gutter: 8,
+                    flip: true,
+                    shift: { padding: 8 },
                   }}
                 >
-                  <span className="codicon codicon-chevron-right" style={{ fontSize: '12px' }} />
-                </div>
-                {activeSubmenu === 'speed' && renderSpeedSubmenu()}
-              </div>
-            </>
-          )}
+                  <Menu.TriggerItem className={cn(menuRowClassName, "selector-option-speed")}>
+                    <span className="codicon codicon-zap" />
+                    <span>{t('composer.speed')}</span>
+                    <span className="codicon codicon-chevron-right ml-auto text-[12px]" />
+                  </Menu.TriggerItem>
 
-          {supportsReviewQuickAction && (
-            <>
-              <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
-              {supportsForkQuickAction && (
-                <div
-                  className="selector-option selector-option-fork-quick"
-                  onMouseEnter={() => setActiveSubmenu('none')}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleForkQuickStart();
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <span className="codicon codicon-git-branch-create" />
-                  <span>{t('composer.forkQuickAction')}</span>
-                </div>
-              )}
-              <div
-                className="selector-option selector-option-review-quick"
-                onMouseEnter={() => setActiveSubmenu('none')}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCodexReviewQuickStart();
-                }}
-                style={{ cursor: 'pointer' }}
-              >
-                <span className="codicon codicon-search" />
-                <span>{t('composer.reviewQuickAction')}</span>
-              </div>
-            </>
-          )}
+                  <Portal>
+                    <Menu.Positioner className="z-[10002] outline-none">
+                      <Menu.Content className={cn(baseMenuContentClassName, "min-w-[180px]")}>
+                        <Menu.Item
+                          className={cn(menuRowClassName, "selector-option-speed-standard")}
+                          value="speed:standard"
+                          onSelect={() => handleCodexSpeedSelect('standard')}
+                        >
+                          <span>{t('composer.speedStandard')}</span>
+                          {codexSpeedMode === 'standard' && <Check size={16} className="check-mark ml-auto" />}
+                        </Menu.Item>
+                        <Menu.Item
+                          className={cn(menuRowClassName, "selector-option-speed-fast")}
+                          value="speed:fast"
+                          onSelect={() => handleCodexSpeedSelect('fast')}
+                        >
+                          <span>{t('composer.speedFast')}</span>
+                          {codexSpeedMode === 'fast' && <Check size={16} className="check-mark ml-auto" />}
+                        </Menu.Item>
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </>
+            )}
 
-          {isCodexProvider && (
-            <>
-              <div style={{ height: 1, background: 'var(--dropdown-border)', margin: '4px 0', opacity: 0.5 }} />
-              <div
-                className="selector-option selector-option-live-usage"
-                onMouseEnter={() => setActiveSubmenu('usage')}
-                onMouseLeave={() => setActiveSubmenu('none')}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveSubmenu('usage');
-                }}
-                style={{ position: 'relative' }}
-              >
-                <span className="codicon codicon-pulse" />
-                <span>{t('composer.liveUsage')}</span>
-                <div
-                  style={{
-                    marginLeft: 'auto',
-                    display: 'flex',
-                    alignItems: 'center',
-                    alignSelf: 'stretch',
-                    paddingLeft: '12px',
-                    cursor: 'pointer',
-                  }}
-                  title={t('home.usageSnapshot')}
+            {supportsReviewQuickAction && (
+              <>
+                {menuSeparator}
+                {supportsForkQuickAction && (
+                  <Menu.Item
+                    className={cn(menuRowClassName, "selector-option-fork-quick")}
+                    value="action:fork"
+                    onSelect={handleForkQuickStart}
+                  >
+                    <span className="codicon codicon-git-branch-create" />
+                    <span>{t('composer.forkQuickAction')}</span>
+                  </Menu.Item>
+                )}
+                <Menu.Item
+                  className={cn(menuRowClassName, "selector-option-review-quick")}
+                  value="action:review"
+                  onSelect={handleCodexReviewQuickStart}
                 >
-                  <span className="codicon codicon-chevron-right" style={{ fontSize: '12px' }} />
-                </div>
-                {activeSubmenu === 'usage' && renderUsageSubmenu()}
-              </div>
-            </>
-          )}
-        </DropdownContent>
-      )}
-    </div>
+                  <span className="codicon codicon-search" />
+                  <span>{t('composer.reviewQuickAction')}</span>
+                </Menu.Item>
+              </>
+            )}
+
+            {isCodexProvider && (
+              <>
+                {menuSeparator}
+                <Menu.Root
+                  lazyMount
+                  onOpenChange={(details) => setUsageMenuOpen(details.open)}
+                  open={usageMenuOpen}
+                  positioning={{
+                    placement: 'right-start',
+                    gutter: 8,
+                    flip: true,
+                    shift: { padding: 8 },
+                  }}
+                >
+                  <Menu.TriggerItem className={cn(menuRowClassName, "selector-option-live-usage")}>
+                    <span className="codicon codicon-pulse" />
+                    <span>{t('composer.liveUsage')}</span>
+                    <span className="codicon codicon-chevron-right ml-auto text-[12px]" title={t('home.usageSnapshot')} />
+                  </Menu.TriggerItem>
+
+                  <Portal>
+                    <Menu.Positioner className="z-[10002] outline-none">
+                      <Menu.Content className={cn(baseMenuContentClassName, "selector-usage-dropdown min-w-[280px]")}>
+                        <div className="selector-usage-header">
+                          <span>{t('home.usageSnapshot')}</span>
+                          <button
+                            type="button"
+                            className="selector-usage-refresh"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void refreshUsageSnapshot();
+                            }}
+                            title={t('home.refreshUsage')}
+                          >
+                            <span className={`codicon ${usageLoading ? 'codicon-loading codicon-modifier-spin' : 'codicon-refresh'}`} />
+                          </button>
+                        </div>
+
+                        <div className="selector-usage-row">
+                          <div className="selector-usage-row-top">
+                            <span>5h limit</span>
+                            <span>
+                              {usageSnapshot.sessionPercent === null
+                                ? '--'
+                                : `${usageSnapshot.sessionPercent}% ${t(
+                                    usageShowRemaining ? 'usage.remaining' : 'usage.used',
+                                  )}`}
+                            </span>
+                          </div>
+                          <div className="selector-usage-progress-track" aria-hidden>
+                            <span
+                              className="selector-usage-progress-fill"
+                              style={{ width: `${usageSnapshot.sessionPercent ?? 0}%` }}
+                            />
+                          </div>
+                          {usageSnapshot.sessionResetLabel && (
+                            <div className="selector-usage-reset">{usageSnapshot.sessionResetLabel}</div>
+                          )}
+                        </div>
+
+                        {usageSnapshot.showWeekly && (
+                          <div className="selector-usage-row">
+                            <div className="selector-usage-row-top">
+                              <span>Weekly limit</span>
+                              <span>
+                                {usageSnapshot.weeklyPercent === null
+                                  ? '--'
+                                  : `${usageSnapshot.weeklyPercent}% ${t(
+                                      usageShowRemaining ? 'usage.remaining' : 'usage.used',
+                                    )}`}
+                              </span>
+                            </div>
+                            <div className="selector-usage-progress-track" aria-hidden>
+                              <span
+                                className="selector-usage-progress-fill"
+                                style={{ width: `${usageSnapshot.weeklyPercent ?? 0}%` }}
+                              />
+                            </div>
+                            {usageSnapshot.weeklyResetLabel && (
+                              <div className="selector-usage-reset">{usageSnapshot.weeklyResetLabel}</div>
+                            )}
+                          </div>
+                        )}
+                      </Menu.Content>
+                    </Menu.Positioner>
+                  </Portal>
+                </Menu.Root>
+              </>
+            )}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Portal>
+    </Menu.Root>
   );
 };
