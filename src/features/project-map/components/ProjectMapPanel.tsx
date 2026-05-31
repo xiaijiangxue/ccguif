@@ -20,6 +20,7 @@ import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
 import ZoomIn from "lucide-react/dist/esm/icons/zoom-in";
 import ZoomOut from "lucide-react/dist/esm/icons/zoom-out";
+import { AppSelect } from "@/components/ui/app-select";
 
 import {
   AlertDialog,
@@ -1340,17 +1341,18 @@ export function ProjectMapPanel({
                   </button>
                   <label className="project-map-layout-preset">
                     <span>{t("projectMap.layoutPreset")}</span>
-                    <select
+                    <AppSelect
                       value={dataset.viewState?.layoutPreset ?? "radial"}
-                      aria-label={t("projectMap.layoutPreset")}
-                      onChange={(event) =>
-                        handleLayoutPresetChange(event.currentTarget.value as ProjectMapLayoutPreset)
+                      ariaLabel={t("projectMap.layoutPreset")}
+                      onValueChange={(value) =>
+                        handleLayoutPresetChange(value as ProjectMapLayoutPreset)
                       }
-                    >
-                      <option value="radial">{t("projectMap.layoutPresetRadial")}</option>
-                      <option value="tree">{t("projectMap.layoutPresetTree")}</option>
-                      <option value="force">{t("projectMap.layoutPresetForce")}</option>
-                    </select>
+                      options={[
+                        { value: "radial", label: t("projectMap.layoutPresetRadial") },
+                        { value: "tree", label: t("projectMap.layoutPresetTree") },
+                        { value: "force", label: t("projectMap.layoutPresetForce") },
+                      ]}
+                    />
                   </label>
                   <button
                     type="button"
@@ -2036,12 +2038,13 @@ function ProjectMapSettingsPanel({
       </label>
       <label>
         {t("projectMap.settings.applyMode")}
-        <select
+        <AppSelect
           value={settings.applyMode}
           disabled={disabled}
-          onChange={(event) => {
+          ariaLabel={t("projectMap.settings.applyMode")}
+          onValueChange={(value) => {
             const applyMode =
-              event.currentTarget.value === "autoApplyEvidenceBacked"
+              value === "autoApplyEvidenceBacked"
                 ? "autoApplyEvidenceBacked"
                 : "createCandidate";
             void onUpdate((current) => ({
@@ -2052,10 +2055,14 @@ function ProjectMapSettingsPanel({
               },
             }));
           }}
-        >
-          <option value="createCandidate">{t("projectMap.settings.createCandidate")}</option>
-          <option value="autoApplyEvidenceBacked">{t("projectMap.settings.autoApplyEvidenceBacked")}</option>
-        </select>
+          options={[
+            { value: "createCandidate", label: t("projectMap.settings.createCandidate") },
+            {
+              value: "autoApplyEvidenceBacked",
+              label: t("projectMap.settings.autoApplyEvidenceBacked"),
+            },
+          ]}
+        />
       </label>
       {isConfiguratorOpen ? (
         <div className="project-map-auto-ingestion-popover" role="presentation">
@@ -2074,19 +2081,20 @@ function ProjectMapSettingsPanel({
                   {t("projectMap.settings.engine")}
                 </label>
                 <div className="project-map-auto-ingestion-control">
-                  <select
+                  <AppSelect
                     id="project-map-auto-ingestion-engine"
                     className="project-map-dialog-control"
                     value={selectedEngine}
-                    aria-label={t("projectMap.settings.engine")}
-                    onChange={(event) => setSelectedEngine(normalizeEngineType(event.currentTarget.value))}
-                  >
-                    {generationOptions.engines.map((engine) => (
-                      <option key={engine.id} value={engine.id} disabled={!engine.installed}>
-                        {engine.label}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel={t("projectMap.settings.engine")}
+                    onValueChange={(value) =>
+                      setSelectedEngine(normalizeEngineType(value))
+                    }
+                    options={generationOptions.engines.map((engine) => ({
+                      value: engine.id,
+                      label: engine.label,
+                      disabled: !engine.installed,
+                    }))}
+                  />
                   {generationOptions.enginesLoading ? (
                     <span className="project-map-dialog-hint">{t("projectMap.confirmation.loadingEngines")}</span>
                   ) : null}
@@ -2101,20 +2109,18 @@ function ProjectMapSettingsPanel({
                 </label>
                 <div className="project-map-auto-ingestion-control project-map-auto-ingestion-model-control">
                   <div className="project-map-auto-ingestion-model-row">
-                    <select
+                    <AppSelect
                       id="project-map-auto-ingestion-model"
                       className="project-map-dialog-control"
                       value={selectedModel}
-                      aria-label={t("projectMap.settings.model")}
-                      onChange={(event) => setSelectedModel(event.currentTarget.value)}
+                      ariaLabel={t("projectMap.settings.model")}
+                      onValueChange={setSelectedModel}
                       disabled={generationOptions.modelsLoading || generationOptions.models.length === 0}
-                    >
-                      {generationOptions.models.map((model) => (
-                        <option key={`${model.id}-${model.model}`} value={model.model}>
-                          {model.displayName}
-                        </option>
-                      ))}
-                    </select>
+                      options={generationOptions.models.map((model) => ({
+                        value: model.model,
+                        label: model.displayName,
+                      }))}
+                    />
                     <button
                       className="project-map-dialog-refresh"
                       type="button"
@@ -2318,18 +2324,19 @@ function GenerationConfirmationDialog({
           <div className="project-map-confirmation-row">
             <dt>{t("projectMap.confirmation.engine")}</dt>
             <dd>
-              <select
+              <AppSelect
                 className="project-map-dialog-control"
                 value={selectedEngine}
-                aria-label={t("projectMap.confirmation.engine")}
-                onChange={(event) => setSelectedEngine(normalizeEngineType(event.currentTarget.value))}
-              >
-                {generationOptions.engines.map((engine) => (
-                  <option key={engine.id} value={engine.id} disabled={!engine.installed}>
-                    {engine.label}
-                  </option>
-                ))}
-              </select>
+                ariaLabel={t("projectMap.confirmation.engine")}
+                onValueChange={(value) =>
+                  setSelectedEngine(normalizeEngineType(value))
+                }
+                options={generationOptions.engines.map((engine) => ({
+                  value: engine.id,
+                  label: engine.label,
+                  disabled: !engine.installed,
+                }))}
+              />
               {generationOptions.enginesLoading ? (
                 <span className="project-map-dialog-hint">{t("projectMap.confirmation.loadingEngines")}</span>
               ) : null}
@@ -2342,19 +2349,17 @@ function GenerationConfirmationDialog({
             <dt>{t("projectMap.confirmation.model")}</dt>
             <dd>
               <div className="project-map-confirmation-model-row">
-                <select
+                <AppSelect
                   className="project-map-dialog-control"
                   value={selectedModel}
-                  aria-label={t("projectMap.confirmation.model")}
-                  onChange={(event) => setSelectedModel(event.currentTarget.value)}
+                  ariaLabel={t("projectMap.confirmation.model")}
+                  onValueChange={setSelectedModel}
                   disabled={generationOptions.modelsLoading || generationOptions.models.length === 0}
-                >
-                  {generationOptions.models.map((model) => (
-                    <option key={`${model.id}-${model.model}`} value={model.model}>
-                      {model.displayName}
-                    </option>
-                  ))}
-                </select>
+                  options={generationOptions.models.map((model) => ({
+                    value: model.model,
+                    label: model.displayName,
+                  }))}
+                />
                 <button
                   className="project-map-dialog-refresh project-map-dialog-refresh-inline"
                   type="button"

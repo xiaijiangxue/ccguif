@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "@/components/ui/button";
 import { useMonthlyBudgetConfig } from "../../../../context-ledger/cost-budget";
 
 function parseBudgetInput(value: string) {
@@ -44,21 +45,20 @@ export function CostBudgetSettingsSection() {
             onChange={(event) => setDraft(event.target.value)}
           />
         </label>
-        <button
+        <Button
           type="button"
-          className="settings-button"
           disabled={!canSave}
           onClick={() => actions.setMonthlyLimitUsd(parsedDraft)}
         >
           {t("settings.costBudgetSave")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="settings-button secondary"
+          variant="secondary"
           onClick={() => actions.clear()}
         >
           {t("settings.costBudgetClear")}
-        </button>
+        </Button>
       </div>
       <div className="settings-help">
         {budget.monthlyLimitUsd == null

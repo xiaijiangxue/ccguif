@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import type { AppSettings } from "@/types";
 import {
   getDaemonStatus,
@@ -415,9 +416,11 @@ export function WebServiceSettings({
           aria-label={t("settings.webServicePortAriaLabel")}
           disabled={isBusy}
         />
-        <button
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             void savePort();
           }}
@@ -428,7 +431,7 @@ export function WebServiceSettings({
           }
         >
           {t("settings.webServiceSavePort")}
-        </button>
+        </Button>
       </div>
 
       <label className="settings-field-label" htmlFor="web-service-fixed-token">
@@ -445,19 +448,23 @@ export function WebServiceSettings({
           aria-label={t("settings.webServiceFixedTokenAriaLabel")}
           disabled={isBusy}
         />
-        <button
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             void saveFixedToken(fixedTokenDraft);
           }}
           disabled={isBusy || !hasFixedTokenDraftChange}
         >
           {t("settings.webServiceSaveToken")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             void clearFixedToken();
           }}
@@ -466,17 +473,19 @@ export function WebServiceSettings({
           }
         >
           {t("settings.webServiceClearToken")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             void generateAndSaveFixedToken();
           }}
           disabled={isBusy}
         >
           {t("settings.webServiceGenerateToken")}
-        </button>
+        </Button>
       </div>
       <div className="settings-help">
         {t("settings.webServiceFixedTokenHint")}
@@ -508,20 +517,24 @@ export function WebServiceSettings({
             ? t("settings.webServiceRunning")
             : t("settings.webServiceStopped")}
         </div>
-        <button
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             void refreshStatus();
           }}
           disabled={isBusy}
         >
           {t("settings.refresh")}
-        </button>
+        </Button>
         {running ? (
-          <button
+          <Button
             type="button"
-            className="ghost settings-button-compact"
+            variant="outline"
+            size="sm"
+            className="settings-button-compact"
             onClick={() => {
               void handleStop();
             }}
@@ -530,11 +543,12 @@ export function WebServiceSettings({
             {action === "stop"
               ? t("settings.running")
               : t("settings.webServiceStop")}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
-            className="primary settings-button-compact"
+            size="sm"
+            className="settings-button-compact"
             onClick={() => {
               void handleStart();
             }}
@@ -543,7 +557,7 @@ export function WebServiceSettings({
             {action === "start"
               ? t("settings.running")
               : t("settings.webServiceStart")}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -568,20 +582,24 @@ export function WebServiceSettings({
             ? t("settings.webServiceDaemonRunning")
             : t("settings.webServiceDaemonStopped")}
         </div>
-        <button
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             void refreshDaemonStatus();
           }}
           disabled={isBusy}
         >
           {t("settings.refresh")}
-        </button>
+        </Button>
         {daemonRunning ? (
-          <button
+          <Button
             type="button"
-            className="ghost settings-button-compact"
+            variant="outline"
+            size="sm"
+            className="settings-button-compact"
             onClick={() => {
               void handleStopDaemon();
             }}
@@ -590,11 +608,12 @@ export function WebServiceSettings({
             {action === "daemon-stop"
               ? t("settings.running")
               : t("settings.webServiceDaemonStop")}
-          </button>
+          </Button>
         ) : (
-          <button
+          <Button
             type="button"
-            className="primary settings-button-compact"
+            size="sm"
+            className="settings-button-compact"
             onClick={() => {
               void handleStartDaemon();
             }}
@@ -603,7 +622,7 @@ export function WebServiceSettings({
             {action === "daemon-start"
               ? t("settings.running")
               : t("settings.webServiceDaemonStart")}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -621,15 +640,17 @@ export function WebServiceSettings({
         addresses.map((address) => (
           <div className="settings-field-row" key={address}>
             <input className="settings-input" value={address} readOnly />
-            <button
+            <Button
               type="button"
-              className="ghost settings-button-compact"
+              variant="outline"
+              size="sm"
+              className="settings-button-compact"
               onClick={() => {
                 void handleCopy(address);
               }}
             >
               {t("settings.copy")}
-            </button>
+            </Button>
           </div>
         ))
       )}
@@ -644,19 +665,23 @@ export function WebServiceSettings({
           readOnly
           placeholder={t("settings.webServiceTokenEmpty")}
         />
-        <button
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => setShowToken((value) => !value)}
           disabled={!rawToken}
         >
           {showToken
             ? t("settings.webServiceHideToken")
             : t("settings.webServiceShowToken")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="ghost settings-button-compact"
+          variant="outline"
+          size="sm"
+          className="settings-button-compact"
           onClick={() => {
             if (rawToken) {
               void handleCopy(rawToken);
@@ -665,7 +690,7 @@ export function WebServiceSettings({
           disabled={!rawToken}
         >
           {t("settings.copy")}
-        </button>
+        </Button>
       </div>
       <div className="settings-help">{t("settings.webServiceTokenHint")}</div>
       {copiedMessage ? (

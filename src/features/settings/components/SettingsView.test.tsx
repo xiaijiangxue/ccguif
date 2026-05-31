@@ -35,6 +35,15 @@ import { SettingsView } from "./SettingsView";
 
 const skillsSectionMock = vi.fn();
 
+async function openCustomSelect(label: string) {
+  const trigger = screen.getByRole("combobox", { name: label });
+  fireEvent.click(trigger);
+  await waitFor(() => {
+    expect(screen.getByRole("listbox")).toBeTruthy();
+  });
+  return trigger;
+}
+
 vi.mock("@tauri-apps/api/app", () => ({
   getVersion: vi.fn(() => new Promise<string>(() => {})),
 }));
@@ -1228,9 +1237,8 @@ describe("SettingsView Display", () => {
       },
     });
 
-    fireEvent.change(screen.getByLabelText("Theme Palette"), {
-      target: { value: "vscode-dark-plus" },
-    });
+    await openCustomSelect("Theme Palette");
+    fireEvent.click(screen.getByRole("option", { name: "vscode-dark-plus" }));
 
     await waitFor(() => {
       expect(onUpdateAppSettings).toHaveBeenCalledWith(
@@ -1253,9 +1261,8 @@ describe("SettingsView Display", () => {
       },
     });
 
-    fireEvent.change(screen.getByLabelText("Theme Palette"), {
-      target: { value: "vscode-light-plus" },
-    });
+    await openCustomSelect("Theme Palette");
+    fireEvent.click(screen.getByRole("option", { name: "vscode-light-plus" }));
 
     await waitFor(() => {
       expect(onUpdateAppSettings).toHaveBeenCalledWith(
@@ -1282,8 +1289,8 @@ describe("SettingsView Display", () => {
       },
     });
 
-    const select = screen.getByLabelText("Theme Palette");
-    const options = within(select).getAllByRole("option");
+    await openCustomSelect("Theme Palette");
+    const options = screen.getAllByRole("option");
 
     expect(options.map((option) => option.getAttribute("value"))).toEqual([
       "vscode-light-modern",
@@ -1594,11 +1601,10 @@ describe("SettingsView Display", () => {
 
     const uiFontSelect = screen.getByTestId("settings-ui-font-select");
     await waitFor(() => {
-      expect(
-        within(uiFontSelect).getByRole("option", { name: "Avenir" }),
-      ).toBeTruthy();
+      expect(uiFontSelect).toBeTruthy();
     });
-    fireEvent.change(uiFontSelect, { target: { value: "Avenir" } });
+    fireEvent.click(uiFontSelect);
+    fireEvent.click(await screen.findByRole("option", { name: "Avenir" }));
 
     await waitFor(() => {
       expect(onUpdateAppSettings).toHaveBeenCalledWith(
@@ -1607,7 +1613,8 @@ describe("SettingsView Display", () => {
     });
 
     const codeFontSelect = screen.getByTestId("settings-code-font-select");
-    fireEvent.change(codeFontSelect, { target: { value: "Avenir" } });
+    fireEvent.click(codeFontSelect);
+    fireEvent.click(await screen.findByRole("option", { name: "Avenir" }));
 
     await waitFor(() => {
       expect(onUpdateAppSettings).toHaveBeenCalledWith(
@@ -1623,19 +1630,13 @@ describe("SettingsView Display", () => {
     await waitFor(() => {
       const uiFontSelect = screen.getByTestId("settings-ui-font-select");
       const codeFontSelect = screen.getByTestId("settings-code-font-select");
-      expect(
-        within(uiFontSelect).getByRole("option", { name: "Avenir" }),
-      ).toBeTruthy();
-      expect(
-        within(uiFontSelect).getByRole("option", { name: "Monaco" }),
-      ).toBeTruthy();
-      expect(
-        within(codeFontSelect).getByRole("option", { name: "Avenir" }),
-      ).toBeTruthy();
-      expect(
-        within(codeFontSelect).getByRole("option", { name: "Monaco" }),
-      ).toBeTruthy();
+      expect(uiFontSelect).toBeTruthy();
+      expect(codeFontSelect).toBeTruthy();
     });
+
+    fireEvent.click(screen.getByTestId("settings-ui-font-select"));
+    expect(await screen.findByRole("option", { name: "Avenir" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Monaco" })).toBeTruthy();
   });
 
   it("resets font families to defaults", async () => {

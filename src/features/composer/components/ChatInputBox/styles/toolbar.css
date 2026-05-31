@@ -133,6 +133,70 @@
   height: 32px;
 }
 
+.button-area-readiness {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 280px;
+}
+
+.button-area-readiness .selector-dropdown--readiness-inline {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  z-index: 9999;
+  min-width: 252px;
+  max-width: min(90vw, 440px);
+  max-height: min(48vh, 380px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--dropdown-bg, #ffffff);
+  border: 1px solid var(--dropdown-border, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.button-area-readiness .composer-readiness-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  min-height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font-size: 11px;
+}
+
+.button-area-readiness .composer-readiness-target-group {
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+
+.button-area-readiness .composer-readiness-activity {
+  display: none;
+}
+
+.button-area-readiness .composer-readiness-provider,
+.button-area-readiness .composer-readiness-divider {
+  display: none;
+}
+
+.button-area-readiness .composer-readiness-chip {
+  min-height: 18px;
+  padding: 0 6px;
+  font-size: 10px;
+  border-radius: 4px;
+}
+
+.button-area-readiness .composer-readiness-mode-impact {
+  font-size: 10px;
+}
+
 @keyframes button-area-inline-tools-enter {
   from {
     opacity: 0;

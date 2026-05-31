@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import Crosshair from 'lucide-react/dist/esm/icons/crosshair';
 import ListCollapse from 'lucide-react/dist/esm/icons/list-collapse';
 import Mail from 'lucide-react/dist/esm/icons/mail';
+import { AppSelect } from '../../../../components/ui/app-select';
 import { AgentIcon } from '../../../../components/AgentIcon';
 import { getFileIcon } from '../../utils/fileIcons';
 import { TokenIndicator } from './TokenIndicator';
@@ -517,21 +518,20 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
                   </label>
                   <label className="context-dual-tooltip-threshold">
                     <span>{t('chat.contextDualViewAutoCompactionThreshold')}</span>
-                    <select
-                      value={codexAutoCompactionThresholdPercent}
+                    <AppSelect
+                      value={String(codexAutoCompactionThresholdPercent)}
                       disabled={!dualUsageSummary.autoCompactionEnabledValue}
-                      onChange={(event) => {
+                      ariaLabel={t('chat.contextDualViewAutoCompactionThreshold')}
+                      onValueChange={(value) => {
                         void onCodexAutoCompactionSettingsChange?.({
-                          thresholdPercent: Number(event.target.value),
+                          thresholdPercent: Number(value),
                         });
                       }}
-                    >
-                      {CODEX_AUTO_COMPACTION_THRESHOLD_OPTIONS.map((thresholdPercent) => (
-                        <option key={thresholdPercent} value={thresholdPercent}>
-                          {thresholdPercent}%
-                        </option>
-                      ))}
-                    </select>
+                      options={CODEX_AUTO_COMPACTION_THRESHOLD_OPTIONS.map((thresholdPercent) => ({
+                        value: String(thresholdPercent),
+                        label: `${thresholdPercent}%`,
+                      }))}
+                    />
                   </label>
                 </div>
                 <div className="context-dual-tooltip-foot">

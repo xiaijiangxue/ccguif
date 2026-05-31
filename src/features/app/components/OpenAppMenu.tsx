@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
 import { TooltipIconButton } from "../../../components/ui/tooltip-icon-button";
+import { DropdownContent } from "@/components/ui/dropdown-content";
 import { openWorkspaceIn } from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
 import type { OpenAppTarget } from "../../../types";
@@ -103,22 +104,6 @@ export function OpenAppMenu({
     });
   };
 
-  useEffect(() => {
-    if (!openMenuOpen) {
-      return;
-    }
-    const handleClick = (event: MouseEvent) => {
-      const target = event.target as Node;
-      const openContains = openMenuRef.current?.contains(target) ?? false;
-      if (!openContains) {
-        setOpenMenuOpen(false);
-      }
-    };
-    window.addEventListener("mousedown", handleClick);
-    return () => {
-      window.removeEventListener("mousedown", handleClick);
-    };
-  }, [openMenuOpen]);
 
   const openWithTarget = async (target: OpenTarget) => {
     try {
@@ -183,7 +168,15 @@ export function OpenAppMenu({
           <ChevronDown size={14} aria-hidden />
         </TooltipIconButton>
         {openMenuOpen && (
-          <div className="open-app-secondary-group popover-surface" role="menu">
+          <DropdownContent
+            anchorEl={openMenuRef.current}
+            open={openMenuOpen}
+            onClose={() => setOpenMenuOpen(false)}
+            side="bottom"
+            align="start"
+            sideOffset={4}
+            minWidth={180}
+          >
             {resolvedOpenTargets.map((target) => (
               <button
                 key={target.id}
@@ -200,7 +193,7 @@ export function OpenAppMenu({
                 <img className="open-app-icon" src={target.icon} alt="" aria-hidden />
               </button>
             ))}
-          </div>
+          </DropdownContent>
         )}
       </div>
     );
@@ -252,7 +245,14 @@ export function OpenAppMenu({
         </button>
       </div>
       {openMenuOpen && (
-        <div className="open-app-dropdown" role="menu">
+        <DropdownContent
+          anchorEl={openMenuRef.current}
+          open={openMenuOpen}
+          onClose={() => setOpenMenuOpen(false)}
+          side="top"
+          sideOffset={4}
+          minWidth={180}
+        >
           {resolvedOpenTargets.map((target) => (
             <button
               key={target.id}
@@ -268,7 +268,7 @@ export function OpenAppMenu({
               {target.label}
             </button>
           ))}
-        </div>
+        </DropdownContent>
       )}
     </div>
   );

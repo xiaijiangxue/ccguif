@@ -28,6 +28,7 @@ import {
   updateEmailInboundSettings,
   updateEmailSenderSettings,
 } from "@/services/tauri";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -666,17 +667,21 @@ export function EmailSenderSettings({
             </div>
             <div className="settings-field">
               <Label htmlFor="email-provider">{t("settings.emailProvider")}</Label>
-              <select
+              <AppSelect
                 id="email-provider"
                 className="settings-select"
                 value={draft.provider}
-                onChange={(event) => updateDraft({ provider: event.target.value as EmailSenderProvider })}
-              >
-                <option value="126">126</option>
-                <option value="163">163</option>
-                <option value="qq">QQ</option>
-                <option value="custom">{t("settings.emailProviderCustom")}</option>
-              </select>
+                ariaLabel={t("settings.emailProvider")}
+                onValueChange={(value) =>
+                  updateDraft({ provider: value as EmailSenderProvider })
+                }
+                options={[
+                  { value: "126", label: "126" },
+                  { value: "163", label: "163" },
+                  { value: "qq", label: "QQ" },
+                  { value: "custom", label: t("settings.emailProviderCustom") },
+                ]}
+              />
             </div>
             <div className="settings-field">
               <Label htmlFor="email-sender-address">{t("settings.emailSenderAddress")}</Label>
@@ -726,17 +731,23 @@ export function EmailSenderSettings({
             </div>
             <div className="settings-field">
               <Label htmlFor="email-security">{t("settings.emailSecurity")}</Label>
-              <select
+              <AppSelect
                 id="email-security"
                 className="settings-select"
                 value={draft.security}
-                onChange={(event) => updateDraft({ security: event.target.value as EmailSenderSettingsModel["security"] })}
                 disabled={smtpFieldsDisabled}
-              >
-                <option value="ssl_tls">SSL/TLS</option>
-                <option value="start_tls">STARTTLS</option>
-                <option value="none">{t("settings.emailSecurityNone")}</option>
-              </select>
+                ariaLabel={t("settings.emailSecurity")}
+                onValueChange={(value) =>
+                  updateDraft({
+                    security: value as EmailSenderSettingsModel["security"],
+                  })
+                }
+                options={[
+                  { value: "ssl_tls", label: "SSL/TLS" },
+                  { value: "start_tls", label: "STARTTLS" },
+                  { value: "none", label: t("settings.emailSecurityNone") },
+                ]}
+              />
             </div>
             <div className="settings-field">
               <Label htmlFor="email-secret">{t("settings.emailSecret")}</Label>
@@ -861,17 +872,21 @@ export function EmailSenderSettings({
               </div>
               <div className="settings-field">
                 <Label htmlFor="email-inbound-provider">{t("settings.emailProvider")}</Label>
-                <select
+                <AppSelect
                   id="email-inbound-provider"
                   className="settings-select"
                   value={inboundDraft.provider}
-                  onChange={(event) => updateInboundDraft({ provider: event.target.value as EmailSenderProvider })}
-                >
-                  <option value="126">126</option>
-                  <option value="163">163</option>
-                  <option value="qq">QQ</option>
-                  <option value="custom">{t("settings.emailProviderCustom")}</option>
-                </select>
+                  ariaLabel={t("settings.emailProvider")}
+                  onValueChange={(value) =>
+                    updateInboundDraft({ provider: value as EmailSenderProvider })
+                  }
+                  options={[
+                    { value: "126", label: "126" },
+                    { value: "163", label: "163" },
+                    { value: "qq", label: "QQ" },
+                    { value: "custom", label: t("settings.emailProviderCustom") },
+                  ]}
+                />
               </div>
               <div className="settings-field">
                 <Label htmlFor="email-imap-host">{t("settings.emailImapHost")}</Label>

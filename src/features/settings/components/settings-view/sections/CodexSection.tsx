@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Stethoscope from "lucide-react/dist/esm/icons/stethoscope";
+import { AppSelect } from "@/components/ui/app-select";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsPanel, TabsTab } from "@/components/ui/tabs";
 import type {
@@ -514,20 +516,22 @@ export function CodexSection({
         <label className="settings-field-label" htmlFor="backend-mode">
           {t("settings.backendMode")}
         </label>
-        <select
+        <AppSelect
           id="backend-mode"
           className="settings-select"
           value={appSettings.backendMode}
-          onChange={(event) =>
+          ariaLabel={t("settings.backendMode")}
+          onValueChange={(value) =>
             void onUpdateAppSettings({
               ...appSettings,
-              backendMode: event.target.value as AppSettings["backendMode"],
+              backendMode: value as AppSettings["backendMode"],
             })
           }
-        >
-          <option value="local">{t("settings.backendLocal")}</option>
-          <option value="remote">{t("settings.backendRemote")}</option>
-        </select>
+          options={[
+            { value: "local", label: t("settings.backendLocal") },
+            { value: "remote", label: t("settings.backendRemote") },
+          ]}
+        />
         <div className="settings-help">{t("settings.backendRemoteDesc")}</div>
       </div>
 
@@ -607,20 +611,20 @@ export function CodexSection({
                 placeholder={t("settings.codexPlaceholder")}
                 onChange={(event) => setCodexPathDraft(event.target.value)}
               />
-              <button
+              <Button
                 type="button"
-                className="ghost"
+                variant="outline"
                 onClick={() => void handleBrowseCodex()}
               >
                 {t("settings.browse")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="ghost"
+                variant="outline"
                 onClick={() => setCodexPathDraft("")}
               >
                 {t("settings.usePath")}
-              </button>
+              </Button>
             </div>
             <div className="settings-help">
               {t("settings.pathResolutionDesc")}
@@ -637,13 +641,13 @@ export function CodexSection({
                 placeholder={t("settings.codexArgsPlaceholder")}
                 onChange={(event) => setCodexArgsDraft(event.target.value)}
               />
-              <button
+              <Button
                 type="button"
-                className="ghost"
+                variant="outline"
                 onClick={() => setCodexArgsDraft("")}
               >
                 {t("settings.clear")}
-              </button>
+              </Button>
             </div>
             <div className="settings-help">
               {t("settings.codexArgsDesc")}{" "}
@@ -652,20 +656,21 @@ export function CodexSection({
             </div>
             <div className="settings-field-actions">
               {codexDirty ? (
-                <button
+                <Button
                   type="button"
-                  className="primary"
                   onClick={() => {
                     void handleSaveCodexSettings();
                   }}
                   disabled={isSavingSettings}
                 >
                   {isSavingSettings ? t("settings.saving") : t("common.save")}
-                </button>
+                </Button>
               ) : null}
-              <button
+              <Button
                 type="button"
-                className="ghost settings-button-compact"
+                variant="outline"
+                size="sm"
+                className="settings-button-compact"
                 onClick={() => {
                   void handleRunDoctor();
                 }}
@@ -675,10 +680,12 @@ export function CodexSection({
                 {doctorState.status === "running"
                   ? t("settings.running")
                   : t("settings.runDoctor")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="ghost settings-button-compact"
+                variant="outline"
+                size="sm"
+                className="settings-button-compact"
                 onClick={() => {
                   void requestInstallPlan("codex", doctorState.result);
                 }}
@@ -690,7 +697,7 @@ export function CodexSection({
                 {resolveInstallerAction(doctorState.result) === "installLatest"
                   ? t("settings.cliInstallLatest")
                   : t("settings.cliUpdateLatest")}
-              </button>
+              </Button>
             </div>
 
             <DoctorResultCard
@@ -718,40 +725,41 @@ export function CodexSection({
                 placeholder={t("settings.claudePlaceholder")}
                 onChange={(event) => setClaudePathDraft(event.target.value)}
               />
-              <button
+              <Button
                 type="button"
-                className="ghost"
+                variant="outline"
                 onClick={() => void handleBrowseClaude()}
               >
                 {t("settings.browse")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="ghost"
+                variant="outline"
                 onClick={() => setClaudePathDraft("")}
               >
                 {t("settings.usePath")}
-              </button>
+              </Button>
             </div>
             <div className="settings-help">
               {t("settings.pathResolutionDesc")}
             </div>
             <div className="settings-field-actions">
               {claudeDirty ? (
-                <button
+                <Button
                   type="button"
-                  className="primary"
                   onClick={() => {
                     void handleSaveClaudeSettings();
                   }}
                   disabled={isSavingSettings}
                 >
                   {isSavingSettings ? t("settings.saving") : t("common.save")}
-                </button>
+                </Button>
               ) : null}
-              <button
+              <Button
                 type="button"
-                className="ghost settings-button-compact"
+                variant="outline"
+                size="sm"
+                className="settings-button-compact"
                 onClick={() => {
                   void handleRunClaudeDoctor();
                 }}
@@ -761,10 +769,12 @@ export function CodexSection({
                 {claudeDoctorState.status === "running"
                   ? t("settings.running")
                   : t("settings.runClaudeDoctor")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="ghost settings-button-compact"
+                variant="outline"
+                size="sm"
+                className="settings-button-compact"
                 onClick={() => {
                   void requestInstallPlan("claude", claudeDoctorState.result);
                 }}
@@ -777,7 +787,7 @@ export function CodexSection({
                 "installLatest"
                   ? t("settings.cliInstallLatest")
                   : t("settings.cliUpdateLatest")}
-              </button>
+              </Button>
             </div>
 
             <DoctorResultCard
@@ -887,9 +897,8 @@ export function CodexSection({
                   </div>
                 ) : null}
                 <div className="settings-field-actions">
-                  <button
+                  <Button
                     type="button"
-                    className="primary"
                     disabled={
                       !installerState.plan.canRun ||
                       installerState.status === "running"
@@ -901,10 +910,10 @@ export function CodexSection({
                     {installerState.status === "running"
                       ? t("settings.cliInstallerRunning")
                       : t("settings.cliInstallerConfirm")}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="ghost"
+                    variant="outline"
                     disabled={installerState.status === "running"}
                     onClick={() => {
                       installPlanRequestSeqRef.current += 1;
@@ -923,7 +932,7 @@ export function CodexSection({
                     }}
                   >
                     {t("common.cancel")}
-                  </button>
+                  </Button>
                 </div>
               </>
             ) : null}

@@ -8,6 +8,7 @@ import GripVertical from "lucide-react/dist/esm/icons/grip-vertical";
 import MoreHorizontal from "lucide-react/dist/esm/icons/more-horizontal";
 import Pencil from "lucide-react/dist/esm/icons/pencil";
 import Plus from "lucide-react/dist/esm/icons/plus";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -113,12 +114,14 @@ export function ProjectsSection({
         <div className="settings-subsection-title">{t("settings.groupsTitle")}</div>
         <Popover open={createGroupOpen} onOpenChange={setCreateGroupOpen}>
           <PopoverTrigger asChild>
-            <button
-              className="ghost icon-button"
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
               aria-label={t("settings.addGroupButton")}
             >
               <Plus aria-hidden />
-            </button>
+            </Button>
           </PopoverTrigger>
           <PopoverContent align="end" className="p-3">
             <div className="settings-popover-content">
@@ -254,13 +257,14 @@ export function ProjectsSection({
 
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <button
+                              <Button
                                 type="button"
-                                className="ghost icon-button"
+                                variant="ghost"
+                                size="icon-sm"
                                 aria-label={t("settings.groupMoreActions")}
                               >
                                 <MoreHorizontal aria-hidden />
-                              </button>
+                              </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48">
                               <DropdownMenuItem
@@ -344,50 +348,54 @@ export function ProjectsSection({
                     <div className="settings-project-path">{workspace.path}</div>
                   </div>
                   <div className="settings-project-actions">
-                    <select
+                    <AppSelect
                       className="settings-select settings-select--compact"
                       value={groupValue}
-                      onChange={(event) => {
-                        const nextGroupId = event.target.value || null;
+                      ariaLabel={t("settings.groupsTitle")}
+                      onValueChange={(value) => {
+                        const nextGroupId = value || null;
                         void onAssignWorkspaceGroup(
                           workspace.id,
                           nextGroupId,
                         );
                       }}
-                    >
-                      <option value="">{ungroupedLabel}</option>
-                      {workspaceGroups.map((entry) => (
-                        <option key={entry.id} value={entry.id}>
-                          {entry.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
+                      options={[
+                        { value: "", label: ungroupedLabel },
+                        ...workspaceGroups.map((entry) => ({
+                          value: entry.id,
+                          label: entry.name,
+                        })),
+                      ]}
+                    />
+                    <Button
                       type="button"
-                      className="ghost icon-button"
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => onMoveWorkspace(workspace.id, "up")}
                       disabled={index === 0}
                       aria-label={t("settings.moveProjectUp")}
                     >
                       <ChevronUp aria-hidden />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="ghost icon-button"
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => onMoveWorkspace(workspace.id, "down")}
                       disabled={index === group.workspaces.length - 1}
                       aria-label={t("settings.moveProjectDown")}
                     >
                       <ChevronDown aria-hidden />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
-                      className="ghost icon-button"
+                      variant="ghost"
+                      size="icon-sm"
                       onClick={() => onDeleteWorkspace(workspace.id)}
                       aria-label={t("settings.deleteProject")}
                     >
                       <Trash2 aria-hidden />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               );

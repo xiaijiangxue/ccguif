@@ -1,6 +1,15 @@
 import { useTranslation } from 'react-i18next';
 import type { DropdownItemProps } from '../types';
 import { sanitizeSvg } from '../utils/sanitize';
+import Check from "lucide-react/dist/esm/icons/check";
+
+/**
+ * DropdownItem props — additional selector-friendly props
+ */
+type DropdownItemExtendedProps = {
+  /** Show the item as selected (renders Check icon) */
+  selected?: boolean;
+};
 
 /**
  * DropdownItem - Dropdown menu item component
@@ -10,7 +19,8 @@ export const DropdownItem = ({
   isActive = false,
   onClick,
   onMouseEnter,
-}: DropdownItemProps) => {
+  selected = false,
+}: DropdownItemProps & DropdownItemExtendedProps) => {
   const { t } = useTranslation();
   const scopeLabel = (() => {
     const data = item.data as Record<string, unknown> | undefined;
@@ -155,6 +165,11 @@ export const DropdownItem = ({
           </>
         )}
       </div>
+      {selected && (
+        <span className="dropdown-item-check" aria-hidden>
+          <Check size={16} />
+        </span>
+      )}
     </div>
   );
 };

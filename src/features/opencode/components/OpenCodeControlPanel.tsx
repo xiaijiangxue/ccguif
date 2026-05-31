@@ -8,6 +8,7 @@ import CheckCircle2 from "lucide-react/dist/esm/icons/check-circle-2";
 import XCircle from "lucide-react/dist/esm/icons/x-circle";
 import CircleDashed from "lucide-react/dist/esm/icons/circle-dashed";
 import SlidersHorizontal from "lucide-react/dist/esm/icons/sliders-horizontal";
+import { AppSelect } from "@/components/ui/app-select";
 import { useOpenCodeControlPanel } from "../hooks/useOpenCodeControlPanel";
 import { OpenCodeProviderSection } from "./OpenCodeProviderSection";
 import { OpenCodeMcpSection } from "./OpenCodeMcpSection";
@@ -890,19 +891,19 @@ export function OpenCodeControlPanel({
               <Bot size={12} aria-hidden />
             </span>
             {onSelectAgent ? (
-              <select
+              <AppSelect
                 className="opencode-panel-select"
                 aria-label="OpenCode Agent Selector"
                 value={selectedAgent ?? ""}
-                onChange={(event) => onSelectAgent(event.target.value || null)}
-              >
-                <option value="">default</option>
-                {sortedAgentOptions.map((agent) => (
-                  <option key={agent.id} value={agent.id}>
-                    {agent.isPrimary ? `🔥 ${agent.id}` : agent.id}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => onSelectAgent(value || null)}
+                options={[
+                  { value: "", label: "default" },
+                  ...sortedAgentOptions.map((agent) => ({
+                    value: agent.id,
+                    label: agent.isPrimary ? `🔥 ${agent.id}` : agent.id,
+                  })),
+                ]}
+              />
             ) : (
               <strong>{snapshot?.agent ?? selectedAgent ?? "default"}</strong>
             )}
@@ -912,26 +913,32 @@ export function OpenCodeControlPanel({
               <Brain size={12} aria-hidden />
             </span>
             {onSelectModel ? (
-              <select
+              <AppSelect
                 className="opencode-panel-select"
                 aria-label="OpenCode Model Selector"
                 value={selectedModelId ?? ""}
-                onChange={(event) => onSelectModel(event.target.value)}
-              >
-                {modelOptions.length === 0 && (
-                  <option value={selectedModelId ?? ""}>
-                    {resolvedModelValue ? formatModelOptionLabel(resolvedModelValue) : "无可用模型"}
-                  </option>
-                )}
-                {modelOptions.map((item) => {
-                  const fullLabel = item.displayName || item.model || item.id;
-                  return (
-                    <option key={item.id} value={item.id} title={fullLabel}>
-                      {formatModelOptionLabel(fullLabel)}
-                    </option>
-                  );
-                })}
-              </select>
+                disabled={modelOptions.length === 0}
+                onValueChange={onSelectModel}
+                options={
+                  modelOptions.length === 0
+                    ? [
+                        {
+                          value: selectedModelId ?? "",
+                          label: resolvedModelValue
+                            ? formatModelOptionLabel(resolvedModelValue)
+                            : "无可用模型",
+                        },
+                      ]
+                    : modelOptions.map((item) => {
+                        const fullLabel = item.displayName || item.model || item.id;
+                        return {
+                          value: item.id,
+                          label: formatModelOptionLabel(fullLabel),
+                          title: fullLabel,
+                        };
+                      })
+                }
+              />
             ) : (
               <strong>{resolvedModelValue ?? "未选择模型"}</strong>
             )}
@@ -941,19 +948,19 @@ export function OpenCodeControlPanel({
               <Cpu size={12} aria-hidden />
             </span>
             {onSelectVariant ? (
-              <select
+              <AppSelect
                 className="opencode-panel-select"
                 aria-label="OpenCode Variant Selector"
                 value={selectedVariant ?? ""}
-                onChange={(event) => onSelectVariant(event.target.value || null)}
-              >
-                <option value="">default</option>
-                {variantOptions.map((variant) => (
-                  <option key={variant} value={variant}>
-                    {variant}
-                  </option>
-                ))}
-              </select>
+                onValueChange={(value) => onSelectVariant(value || null)}
+                options={[
+                  { value: "", label: "default" },
+                  ...variantOptions.map((variant) => ({
+                    value: variant,
+                    label: variant,
+                  })),
+                ]}
+              />
             ) : (
               <strong>{snapshot?.variant ?? selectedVariant ?? "default"}</strong>
             )}

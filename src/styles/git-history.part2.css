@@ -1466,7 +1466,7 @@
   color: var(--text-secondary);
 }
 
-.git-history-create-branch-field select,
+.git-history-create-branch-field [data-slot="select-trigger"],
 .git-history-create-branch-field input {
   height: 32px;
   border-radius: 8px;
@@ -1482,13 +1482,13 @@
   color: color-mix(in srgb, var(--text-muted) 80%, transparent);
 }
 
-.git-history-create-branch-field select:focus-visible,
+.git-history-create-branch-field [data-slot="select-trigger"]:focus-visible,
 .git-history-create-branch-field input:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent-primary, #2563eb) 36%, transparent);
   outline-offset: -1px;
 }
 
-.git-history-create-branch-field select:disabled,
+.git-history-create-branch-field [data-slot="select-trigger"][data-disabled],
 .git-history-create-branch-field input:disabled {
   opacity: 0.66;
   cursor: not-allowed;

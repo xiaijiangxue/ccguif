@@ -298,7 +298,7 @@
   font-weight: 650;
 }
 
-.task-center__filters select,
+.task-center__filters [data-slot="select-trigger"],
 .task-center__actions button {
   border: 1px solid color-mix(in srgb, var(--border-subtle, #334155) 82%, transparent);
   border-radius: 999px;
@@ -307,7 +307,7 @@
   font: inherit;
 }
 
-.task-center__filters select {
+.task-center__filters [data-slot="select-trigger"] {
   min-width: 128px;
   padding: 8px 12px;
 }

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Switch } from 'antd';
+import Check from "lucide-react/dist/esm/icons/check";
+import { DropdownContent } from '@/components/ui/dropdown-content';
 import { AgentIcon } from '../../../../../components/AgentIcon';
 import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } from '../providers/agentProvider';
 import type { AccountRateLimitsInfo, CodexSpeedMode, ProviderId, SelectedAgent } from '../types';
@@ -61,7 +63,6 @@ export const ConfigSelect = ({
   const [usageLoading, setUsageLoading] = useState(false);
   
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const agentAbortControllerRef = useRef<AbortController | null>(null);
   const usageLoadingRef = useRef(false);
 
@@ -186,31 +187,6 @@ export const ConfigSelect = ({
   }, [onRefreshAccountRateLimits]);
 
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-        setActiveSubmenu('none');
-      }
-    };
-
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  useEffect(() => {
     if (activeSubmenu !== 'agent') return;
     loadAgents();
   }, [activeSubmenu, loadAgents]);
@@ -311,7 +287,7 @@ export const ConfigSelect = ({
                   <span className="model-description" style={{ fontStyle: 'normal' }}>{t('settings.agent.createAgentHint')}</span>
                 ) : null}
               </div>
-              {isSelected && <span className="codicon codicon-check check-mark" />}
+              {isSelected && <Check size={16} className="check-mark" />}
             </div>
           );
         })
@@ -436,7 +412,7 @@ export const ConfigSelect = ({
         }}
       >
         <span>{t('composer.speedStandard')}</span>
-        {codexSpeedMode === 'standard' && <span className="codicon codicon-check check-mark" />}
+        {codexSpeedMode === 'standard' && <Check size={16} className="check-mark" />}
       </div>
       <div
         className="selector-option selector-option-speed-fast"
@@ -446,7 +422,7 @@ export const ConfigSelect = ({
         }}
       >
         <span>{t('composer.speedFast')}</span>
-        {codexSpeedMode === 'fast' && <span className="codicon codicon-check check-mark" />}
+        {codexSpeedMode === 'fast' && <Check size={16} className="check-mark" />}
       </div>
     </div>
   );
@@ -463,17 +439,14 @@ export const ConfigSelect = ({
       </button>
 
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="selector-dropdown"
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            marginBottom: '4px',
-            zIndex: 10000,
-            minWidth: '200px'
-          }}
+        <DropdownContent
+          anchorEl={buttonRef.current}
+          open={isOpen}
+          onClose={() => setIsOpen(false)}
+          side="top"
+          sideOffset={4}
+          align="start"
+          minWidth={200}
         >
           {/* Agent Item (Disabled) */}
           <div
@@ -696,7 +669,7 @@ export const ConfigSelect = ({
               </div>
             </>
           )}
-        </div>
+        </DropdownContent>
       )}
     </div>
   );

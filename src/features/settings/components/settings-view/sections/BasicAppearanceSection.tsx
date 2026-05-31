@@ -33,6 +33,14 @@ import Sun from "lucide-react/dist/esm/icons/sun";
 import TerminalSquare from "lucide-react/dist/esm/icons/terminal-square";
 import Type from "lucide-react/dist/esm/icons/type";
 import type { LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   DEFAULT_OPEN_APP_ID,
@@ -84,13 +92,13 @@ type BasicAppearanceSectionProps = {
   handleUserMsgHexInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleResetUserMsgColor: () => void;
   uiFontDraft: string;
-  handleUiFontSelectChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleUiFontSelectChange: (value: string | null) => void;
   uiFontSelectOptions: string[];
   defaultUiPrimaryFont: string;
   setUiFontDraft: (next: string) => void;
   codeFontDraft: string;
   codeFontSelectOptions: string[];
-  handleCodeFontSelectChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
+  handleCodeFontSelectChange: (value: string | null) => void;
   defaultCodePrimaryFont: string;
   setCodeFontDraft: (next: string) => void;
   codeFontSizeDraft: number;
@@ -308,22 +316,30 @@ export function BasicAppearanceSection({
               <span className="settings-basic-field-label">{t("settings.themePreset")}</span>
             </div>
             <div className="settings-control settings-basic-theme-preset-control">
-              <div className="settings-select-wrap settings-basic-theme-preset-select-wrap">
-                <select
-                  className="settings-select settings-basic-theme-preset-select"
+              <Select
+                value={activeThemePresetId}
+                onValueChange={(value) =>
+                  void onThemePresetChange(value as ThemePresetId)
+                }
+              >
+                <SelectTrigger
+                  className="settings-basic-theme-preset-select-trigger"
                   aria-label={t("settings.themePreset")}
-                  value={activeThemePresetId}
-                  onChange={(event) =>
-                    void onThemePresetChange(event.target.value as ThemePresetId)
-                  }
                 >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="settings-basic-select-popup">
                   {themePresetOptions.map((option) => (
-                    <option key={option.id} value={option.id}>
+                    <SelectItem
+                      key={option.id}
+                      className="settings-basic-select-item"
+                      value={option.id}
+                    >
                       {option.label}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
             <div className="settings-help">
               {t("settings.themePresetDescription", {
@@ -438,23 +454,26 @@ export function BasicAppearanceSection({
               }}
             />
             <span className="settings-scale-value">{uiScaleDraftPercentLabel}</span>
-            <button
+            <Button
               type="button"
-              className="primary settings-button-compact settings-scale-save"
+              size="sm"
+              className="settings-button-compact settings-scale-save"
               onClick={handleSaveUiScale}
               disabled={uiScaleDraft === clampedUiScale}
               data-testid="settings-ui-scale-save"
             >
               {t("common.save")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="ghost settings-button-compact settings-scale-reset"
+              variant="outline"
+              size="sm"
+              className="settings-button-compact settings-scale-reset"
               onClick={handleResetUiScaleDraft}
               data-testid="settings-ui-scale-reset"
             >
               {t("settings.uiScaleReset")}
-            </button>
+            </Button>
           </div>
           <div className="settings-help" title={scaleShortcutTitle}>
             {scaleShortcutText}
@@ -472,14 +491,16 @@ export function BasicAppearanceSection({
               {t("settings.clientUiVisibility.description")}
             </div>
           </div>
-          <button
+          <Button
             type="button"
-            className="ghost settings-button-compact settings-client-ui-visibility-reset"
+            variant="outline"
+            size="sm"
+            className="settings-button-compact settings-client-ui-visibility-reset"
             onClick={clientUiVisibility.resetVisibility}
           >
             <RotateCcw size={14} aria-hidden />
             {t("settings.clientUiVisibility.reset")}
-          </button>
+          </Button>
         </div>
         {CLIENT_UI_PANEL_REGISTRY.map((panel) => {
           const panelVisible = clientUiVisibility.isPanelVisible(panel.id);
@@ -610,15 +631,17 @@ export function BasicAppearanceSection({
             data-testid="settings-user-msg-color-hex-input"
           />
           {normalizedUserMsgColor ? (
-            <button
+            <Button
               type="button"
-              className="ghost settings-color-reset"
+              variant="outline"
+              size="sm"
+              className="settings-color-reset"
               onClick={handleResetUserMsgColor}
               data-testid="settings-user-msg-color-reset"
             >
               <RotateCcw size={14} aria-hidden />
               {t("settings.userMsgColorReset")}
-            </button>
+            </Button>
           ) : null}
         </div>
         <div className="settings-help settings-color-hint">
@@ -633,23 +656,33 @@ export function BasicAppearanceSection({
           </label>
           <div className="settings-field-row settings-field-row--font">
             <div className="settings-select-wrap settings-select-wrap--font">
-              <select
-                id="ui-font-family"
-                className="settings-select"
-                value={uiFontDraft}
-                onChange={handleUiFontSelectChange}
-                data-testid="settings-ui-font-select"
-              >
-                {uiFontSelectOptions.map((fontName) => (
-                  <option key={fontName} value={fontName}>
-                    {fontName}
-                  </option>
-                ))}
-              </select>
+              <Select value={uiFontDraft} onValueChange={handleUiFontSelectChange}>
+                <SelectTrigger
+                  id="ui-font-family"
+                  className="settings-font-select-trigger"
+                  aria-label={t("settings.uiFontFamily")}
+                  data-testid="settings-ui-font-select"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="settings-basic-select-popup">
+                  {uiFontSelectOptions.map((fontName) => (
+                    <SelectItem
+                      key={fontName}
+                      className="settings-basic-select-item"
+                      value={fontName}
+                    >
+                      {fontName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <button
+            <Button
               type="button"
-              className="ghost settings-button-compact settings-ui-font-reset settings-font-reset"
+              variant="outline"
+              size="sm"
+              className="settings-button-compact settings-ui-font-reset settings-font-reset"
               onClick={() => {
                 setUiFontDraft(defaultUiPrimaryFont);
                 void onUpdateAppSettings({
@@ -659,7 +692,7 @@ export function BasicAppearanceSection({
               }}
             >
               {t("settings.reset")}
-            </button>
+            </Button>
           </div>
           <div className="settings-help">
             {t("settings.uiFontFamilyDesc")}
@@ -671,23 +704,33 @@ export function BasicAppearanceSection({
           </label>
           <div className="settings-field-row settings-field-row--font">
             <div className="settings-select-wrap settings-select-wrap--font">
-              <select
-                id="code-font-family"
-                className="settings-select"
-                value={codeFontDraft}
-                onChange={handleCodeFontSelectChange}
-                data-testid="settings-code-font-select"
-              >
-                {codeFontSelectOptions.map((fontName) => (
-                  <option key={fontName} value={fontName}>
-                    {fontName}
-                  </option>
-                ))}
-              </select>
+              <Select value={codeFontDraft} onValueChange={handleCodeFontSelectChange}>
+                <SelectTrigger
+                  id="code-font-family"
+                  className="settings-font-select-trigger"
+                  aria-label={t("settings.codeFontFamily")}
+                  data-testid="settings-code-font-select"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="settings-basic-select-popup">
+                  {codeFontSelectOptions.map((fontName) => (
+                    <SelectItem
+                      key={fontName}
+                      className="settings-basic-select-item"
+                      value={fontName}
+                    >
+                      {fontName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <button
+            <Button
               type="button"
-              className="ghost settings-button-compact settings-font-reset"
+              variant="outline"
+              size="sm"
+              className="settings-button-compact settings-font-reset"
               onClick={() => {
                 setCodeFontDraft(defaultCodePrimaryFont);
                 void onUpdateAppSettings({
@@ -697,7 +740,7 @@ export function BasicAppearanceSection({
               }}
             >
               {t("settings.reset")}
-            </button>
+            </Button>
           </div>
           <div className="settings-help">
             {t("settings.codeFontFamilyDesc")}
@@ -723,16 +766,18 @@ export function BasicAppearanceSection({
               }}
             />
             <div className="settings-scale-value">{codeFontSizeDraft}px</div>
-            <button
+            <Button
               type="button"
-              className="ghost settings-button-compact"
+              variant="outline"
+              size="sm"
+              className="settings-button-compact"
               onClick={() => {
                 setCodeFontSizeDraft(CODE_FONT_SIZE_DEFAULT);
                 void handleCommitCodeFontSize(CODE_FONT_SIZE_DEFAULT);
               }}
             >
               {t("settings.reset")}
-            </button>
+            </Button>
           </div>
           <div className="settings-help">
             {t("settings.codeFontSizeDesc")}

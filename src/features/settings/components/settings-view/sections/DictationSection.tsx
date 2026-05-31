@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import type { TFunction } from "i18next";
+import { AppSelect } from "@/components/ui/app-select";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import type { AppSettings, DictationModelStatus } from "@/types";
 import { formatDownloadSize } from "@/utils/formatting";
@@ -81,23 +83,22 @@ export function DictationSection({
         <label className="settings-field-label" htmlFor="dictation-model">
           {t("settings.dictationModel")}
         </label>
-        <select
+        <AppSelect
           id="dictation-model"
           className="settings-select"
           value={appSettings.dictationModelId}
-          onChange={(event) =>
+          ariaLabel={t("settings.dictationModel")}
+          onValueChange={(value) =>
             void onUpdateAppSettings({
               ...appSettings,
-              dictationModelId: event.target.value,
+              dictationModelId: value,
             })
           }
-        >
-          {dictationModels.map((model) => (
-            <option key={model.id} value={model.id}>
-              {model.label} ({model.size})
-            </option>
-          ))}
-        </select>
+          options={dictationModels.map((model) => ({
+            value: model.id,
+            label: `${model.label} (${model.size})`,
+          }))}
+        />
         <div className="settings-help">
           {selectedDictationModel.note} {t("settings.downloadSize")}{" "}
           {selectedDictationModel.size}.
@@ -107,37 +108,39 @@ export function DictationSection({
         <label className="settings-field-label" htmlFor="dictation-language">
           {t("settings.preferredDictationLanguage")}
         </label>
-        <select
+        <AppSelect
           id="dictation-language"
           className="settings-select"
           value={appSettings.dictationPreferredLanguage ?? ""}
-          onChange={(event) =>
+          ariaLabel={t("settings.preferredDictationLanguage")}
+          onValueChange={(value) =>
             void onUpdateAppSettings({
               ...appSettings,
-              dictationPreferredLanguage: event.target.value || null,
+              dictationPreferredLanguage: value || null,
             })
           }
-        >
-          <option value="">{t("settings.autoDetectOnly")}</option>
-          <option value="en">{t("settings.languageEnglish")}</option>
-          <option value="es">{t("settings.languageSpanish")}</option>
-          <option value="fr">{t("settings.languageFrench")}</option>
-          <option value="de">{t("settings.languageGerman")}</option>
-          <option value="it">{t("settings.languageItalian")}</option>
-          <option value="pt">{t("settings.languagePortuguese")}</option>
-          <option value="nl">{t("settings.languageDutch")}</option>
-          <option value="sv">{t("settings.languageSwedish")}</option>
-          <option value="no">{t("settings.languageNorwegian")}</option>
-          <option value="da">{t("settings.languageDanish")}</option>
-          <option value="fi">{t("settings.languageFinnish")}</option>
-          <option value="pl">{t("settings.languagePolish")}</option>
-          <option value="tr">{t("settings.languageTurkish")}</option>
-          <option value="ru">{t("settings.languageRussian")}</option>
-          <option value="uk">{t("settings.languageUkrainian")}</option>
-          <option value="ja">{t("settings.languageJapanese")}</option>
-          <option value="ko">{t("settings.languageKorean")}</option>
-          <option value="zh">{t("settings.languageChinese")}</option>
-        </select>
+          options={[
+            { value: "", label: t("settings.autoDetectOnly") },
+            { value: "en", label: t("settings.languageEnglish") },
+            { value: "es", label: t("settings.languageSpanish") },
+            { value: "fr", label: t("settings.languageFrench") },
+            { value: "de", label: t("settings.languageGerman") },
+            { value: "it", label: t("settings.languageItalian") },
+            { value: "pt", label: t("settings.languagePortuguese") },
+            { value: "nl", label: t("settings.languageDutch") },
+            { value: "sv", label: t("settings.languageSwedish") },
+            { value: "no", label: t("settings.languageNorwegian") },
+            { value: "da", label: t("settings.languageDanish") },
+            { value: "fi", label: t("settings.languageFinnish") },
+            { value: "pl", label: t("settings.languagePolish") },
+            { value: "tr", label: t("settings.languageTurkish") },
+            { value: "ru", label: t("settings.languageRussian") },
+            { value: "uk", label: t("settings.languageUkrainian") },
+            { value: "ja", label: t("settings.languageJapanese") },
+            { value: "ko", label: t("settings.languageKorean") },
+            { value: "zh", label: t("settings.languageChinese") },
+          ]}
+        />
         <div className="settings-help">
           {t("settings.languageDetectionDesc")}
         </div>
@@ -146,23 +149,25 @@ export function DictationSection({
         <label className="settings-field-label" htmlFor="dictation-hold-key">
           {t("settings.holdToDictateKey")}
         </label>
-        <select
+        <AppSelect
           id="dictation-hold-key"
           className="settings-select"
           value={appSettings.dictationHoldKey ?? ""}
-          onChange={(event) =>
+          ariaLabel={t("settings.holdToDictateKey")}
+          onValueChange={(value) =>
             void onUpdateAppSettings({
               ...appSettings,
-              dictationHoldKey: event.target.value,
+              dictationHoldKey: value,
             })
           }
-        >
-          <option value="">{t("settings.holdToDictateOff")}</option>
-          <option value="alt">{t("settings.holdToDictateOption")}</option>
-          <option value="shift">{t("settings.holdToDictateShift")}</option>
-          <option value="control">{t("settings.holdToDictateControl")}</option>
-          <option value="meta">{t("settings.holdToDictateCommand")}</option>
-        </select>
+          options={[
+            { value: "", label: t("settings.holdToDictateOff") },
+            { value: "alt", label: t("settings.holdToDictateOption") },
+            { value: "shift", label: t("settings.holdToDictateShift") },
+            { value: "control", label: t("settings.holdToDictateControl") },
+            { value: "meta", label: t("settings.holdToDictateCommand") },
+          ]}
+        />
         <div className="settings-help">
           {t("settings.holdToDictateDesc")}
         </div>
@@ -205,34 +210,37 @@ export function DictationSection({
           )}
           <div className="settings-field-actions">
             {dictationModelStatus.state === "missing" && (
-              <button
+              <Button
                 type="button"
-                className="primary"
                 onClick={onDownloadDictationModel}
                 disabled={!onDownloadDictationModel}
               >
                 {t("settings.downloadModel")}
-              </button>
+              </Button>
             )}
             {dictationModelStatus.state === "downloading" && (
-              <button
+              <Button
                 type="button"
-                className="ghost settings-button-compact"
+                variant="outline"
+                size="sm"
+                className="settings-button-compact"
                 onClick={onCancelDictationDownload}
                 disabled={!onCancelDictationDownload}
               >
                 {t("settings.cancelDownload")}
-              </button>
+              </Button>
             )}
             {dictationReady && (
-              <button
+              <Button
                 type="button"
-                className="ghost settings-button-compact"
+                variant="outline"
+                size="sm"
+                className="settings-button-compact"
                 onClick={onRemoveDictationModel}
                 disabled={!onRemoveDictationModel}
               >
                 {t("settings.removeModel")}
-              </button>
+              </Button>
             )}
           </div>
         </div>

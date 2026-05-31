@@ -23,6 +23,7 @@ import Search from "lucide-react/dist/esm/icons/search";
 import Upload from "lucide-react/dist/esm/icons/upload";
 import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
+import { AppSelect } from "@/components/ui/app-select";
 import { matchesShortcutForPlatform } from "../../../utils/shortcuts";
 import { formatRelativeTime } from "../../../utils/time";
 import FileIcon from "../../../components/FileIcon";
@@ -1859,23 +1860,22 @@ export function GitDiffPanel({
                   </button>
                   <label className="git-root-depth">
                     <span>{t("git.depth")}</span>
-                    <select
+                    <AppSelect
                       className="git-root-select"
-                      value={gitRootScanDepth}
-                      onChange={(event) => {
-                        const value = Number(event.target.value);
+                      value={String(gitRootScanDepth)}
+                      disabled={gitRootScanLoading}
+                      ariaLabel={t("git.depth")}
+                      onValueChange={(nextValue) => {
+                        const value = Number(nextValue);
                         if (!Number.isNaN(value)) {
                           onGitRootScanDepthChange?.(value);
                         }
                       }}
-                      disabled={gitRootScanLoading}
-                    >
-                      {DEPTH_OPTIONS.map((depth) => (
-                        <option key={depth} value={depth}>
-                          {depth}
-                        </option>
-                      ))}
-                    </select>
+                      options={DEPTH_OPTIONS.map((depth) => ({
+                        value: String(depth),
+                        label: String(depth),
+                      }))}
+                    />
                   </label>
                   {hasGitRoot && onClearGitRoot && (
                     <button

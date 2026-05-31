@@ -7,6 +7,7 @@ import Layers3 from 'lucide-react/dist/esm/icons/layers-3';
 import Clock3 from 'lucide-react/dist/esm/icons/clock-3';
 import Tag from 'lucide-react/dist/esm/icons/tag';
 import type { EngineType } from '../../../../types';
+import type { ComposerSendReadiness } from '../../utils/composerSendReadiness';
 import type {
   AccountRateLimitsInfo,
   DropdownItemData,
@@ -21,6 +22,7 @@ import type {
   StreamActivityPhase,
   TriggerQuery,
 } from './types.js';
+import type { ProviderModelGroup } from './modelOptions.js';
 import type { TooltipState } from './hooks/useTooltip.js';
 import { ButtonArea } from './ButtonArea.js';
 import { CompletionDropdown, Dropdown } from './Dropdown/index.js';
@@ -261,6 +263,12 @@ export function ChatInputBoxFooter({
   onAddModel,
   onRefreshModelConfig,
   isModelConfigRefreshing,
+  sendReadiness,
+  onJumpToRequest,
+  onToggleContextSources,
+  contextSourcesExpanded,
+  modelGroups,
+  onProviderModelSelect,
   onClearAgent,
   fileCompletion,
   memoryCompletion,
@@ -324,6 +332,12 @@ export function ChatInputBoxFooter({
   onAddModel?: (providerId?: string) => void;
   onRefreshModelConfig?: (providerId?: string) => Promise<void> | void;
   isModelConfigRefreshing?: boolean;
+  sendReadiness?: ComposerSendReadiness | null;
+  onJumpToRequest?: () => void;
+  onToggleContextSources?: () => void;
+  contextSourcesExpanded?: boolean;
+  modelGroups?: ProviderModelGroup[];
+  onProviderModelSelect?: (providerId: ProviderId, modelId: string) => void;
   onClearAgent: () => void;
   fileCompletion: CompletionController;
   memoryCompletion: CompletionController;
@@ -549,6 +563,12 @@ export function ChatInputBoxFooter({
         onAddModel={onAddModel}
         onRefreshModelConfig={onRefreshModelConfig}
         isModelConfigRefreshing={isModelConfigRefreshing}
+        sendReadiness={sendReadiness}
+        onJumpToRequest={onJumpToRequest}
+        onToggleContextSources={onToggleContextSources}
+        contextSourcesExpanded={contextSourcesExpanded}
+        modelGroups={modelGroups}
+        onProviderModelSelect={onProviderModelSelect}
         onClearAgent={onClearAgent}
         shortcutActions={shortcutActions}
         mainSurface={mainSurface}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { DropdownContent } from '@/components/ui/dropdown-content';
 import type { ShortcutAction } from '../types';
 
 interface ShortcutActionsSelectProps {
@@ -11,7 +12,6 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
   const menuId = useId();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const hasActions = Boolean(actions && actions.length > 0);
   const actionCount = actions?.length ?? 0;
@@ -31,32 +31,6 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
     }
     setIsOpen((prev) => !prev);
   }, [hasActions]);
-
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !hasActions) {
@@ -163,20 +137,14 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
       </button>
 
       {isOpen && (
-        <div
-          id={menuId}
-          ref={dropdownRef}
-          className="selector-dropdown"
-          role="menu"
-          aria-label={t('chat.shortcutActionsAriaLabel')}
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            marginBottom: '4px',
-            zIndex: 10000,
-            minWidth: '220px',
-          }}
+        <DropdownContent
+          anchorEl={buttonRef.current}
+          open={isOpen}
+          onClose={() => setIsOpen(false)}
+          side="top"
+          sideOffset={4}
+          align="start"
+          minWidth={220}
         >
           {actions?.map((action, index) => (
             <button
@@ -200,7 +168,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
               <span>{action.label}</span>
             </button>
           ))}
-        </div>
+        </DropdownContent>
       )}
     </div>
   );

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AVAILABLE_MODES, type PermissionMode } from '../types';
-import xuanzhonIcon from '../../../../../assets/xuanzhong.svg';
+import Check from "lucide-react/dist/esm/icons/check";
+import { DropdownContent } from '@/components/ui/dropdown-content';
 import {
   MODE_SELECT_FLASH_DURATION_MS,
   MODE_SELECT_FLASH_EVENT,
@@ -36,7 +37,6 @@ export const ModeSelect = ({
   const [isChevronFlashing, setIsChevronFlashing] = useState(false);
   const [flashCycle, setFlashCycle] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const flashTimerRef = useRef<number | null>(null);
   const fallbackMode = AVAILABLE_MODES[0] ?? {
     id: 'default' as PermissionMode,
@@ -127,34 +127,6 @@ export const ModeSelect = ({
     setIsOpen(false);
   }, [onChange, onSelectCollaborationMode, provider]);
 
-  /**
-   * Close on outside click
-   */
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    // Delay adding event listener to prevent immediate trigger
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
   useEffect(() => {
     if (typeof window === 'undefined') {
       return undefined;
@@ -231,16 +203,15 @@ export const ModeSelect = ({
       </button>
 
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="selector-dropdown selector-dropdown--mode"
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            marginBottom: '4px',
-            zIndex: 10000,
-          }}
+        <DropdownContent
+          anchorEl={buttonRef.current}
+          open={isOpen}
+          onClose={() => setIsOpen(false)}
+          side="top"
+          sideOffset={4}
+          align="start"
+          minWidth={240}
+          className="selector-dropdown--mode"
         >
           {modeOptions.map((mode) => (
             <div
@@ -263,11 +234,11 @@ export const ModeSelect = ({
                 <span className="mode-description">{getModeText(mode.id, 'description')}</span>
               </div>
               {mode.id === selectedModeId && (
-                <img src={xuanzhonIcon} className="check-mark" style={{ width: 20, height: 20 }} aria-hidden />
+                <Check size={20} className="check-mark" aria-hidden />
               )}
             </div>
           ))}
-        </div>
+        </DropdownContent>
       )}
     </div>
   );

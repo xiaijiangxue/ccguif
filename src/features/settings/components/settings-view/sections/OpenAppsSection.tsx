@@ -1,6 +1,8 @@
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import ChevronUp from "lucide-react/dist/esm/icons/chevron-up";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
+import { AppSelect } from "@/components/ui/app-select";
+import { Button } from "@/components/ui/button";
 import type { OpenAppTarget } from "@/types";
 import { useOpenAppIcons } from "../../../../app/hooks/useOpenAppIcons";
 import { GENERIC_APP_ICON, getKnownOpenAppIcon } from "../../../../app/utils/openAppIcons";
@@ -85,21 +87,22 @@ export function OpenAppsSection({
                 </label>
                 <label className="settings-open-app-field settings-open-app-field--type">
                   <span className="settings-visually-hidden">{t("settings.type")}</span>
-                  <select
+                  <AppSelect
                     className="settings-select settings-select--compact settings-open-app-kind"
                     value={target.kind}
-                    onChange={(event) =>
+                    ariaLabel={t("settings.type")}
+                    onValueChange={(value) =>
                       handleOpenAppKindChange(
                         index,
-                        event.target.value as OpenAppTarget["kind"],
+                        value as OpenAppTarget["kind"],
                       )
                     }
-                    aria-label={`Open app type ${index + 1}`}
-                  >
-                    <option value="app">{t("settings.typeApp")}</option>
-                    <option value="command">{t("settings.typeCommand")}</option>
-                    <option value="finder">{t("settings.typeFinder")}</option>
-                  </select>
+                    options={[
+                      { value: "app", label: t("settings.typeApp") },
+                      { value: "command", label: t("settings.typeCommand") },
+                      { value: "finder", label: t("settings.typeFinder") },
+                    ]}
+                  />
                 </label>
                 {target.kind === "app" && (
                   <label className="settings-open-app-field settings-open-app-field--appname">
@@ -170,48 +173,51 @@ export function OpenAppsSection({
                   {t("settings.defaultRadio")}
                 </label>
                 <div className="settings-open-app-order">
-                  <button
+                  <Button
                     type="button"
-                    className="ghost icon-button"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => handleMoveOpenApp(index, "up")}
                     disabled={index === 0}
                     aria-label={t("settings.moveUp")}
                   >
                     <ChevronUp aria-hidden />
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="ghost icon-button"
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => handleMoveOpenApp(index, "down")}
                     disabled={index === openAppDrafts.length - 1}
                     aria-label={t("settings.moveDown")}
                   >
                     <ChevronDown aria-hidden />
-                  </button>
+                  </Button>
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="ghost icon-button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => handleDeleteOpenApp(index)}
                   disabled={openAppDrafts.length <= 1}
                   aria-label={t("settings.removeAppAriaLabel")}
                   title={t("settings.removeApp")}
                 >
                   <Trash2 aria-hidden />
-                </button>
+                </Button>
               </div>
             </div>
           );
         })}
       </div>
       <div className="settings-open-app-footer">
-        <button
+        <Button
           type="button"
-          className="ghost"
+          variant="outline"
           onClick={handleAddOpenApp}
         >
           {t("settings.addApp")}
-        </button>
+        </Button>
         <div className="settings-help">
           {t("settings.openInHelp")}
         </div>

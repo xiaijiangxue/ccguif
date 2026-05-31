@@ -6,6 +6,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { AppSelect } from "../../../components/ui/app-select";
 import type { CustomPromptOption } from "../../../types";
 import { expandCustomPromptText, getPromptArgumentHint } from "../../../utils/customPrompts";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
@@ -459,19 +460,21 @@ export function PromptPanel({
               </label>
               <label className="prompt-editor-label">
                 {t("prompts.scope")}
-                <select
+                <AppSelect
                   className="prompt-scope-select"
                   value={editor.scope}
-                  onChange={(event) =>
+                  disabled={editor.mode === "edit"}
+                  ariaLabel={t("prompts.scope")}
+                  onValueChange={(value) =>
                     updateEditor({
-                      scope: event.target.value as PromptEditorState["scope"],
+                      scope: value as PromptEditorState["scope"],
                     })
                   }
-                  disabled={editor.mode === "edit"}
-                >
-                  <option value="workspace">{t("prompts.workspace")}</option>
-                  <option value="global">{t("prompts.general")}</option>
-                </select>
+                  options={[
+                    { value: "workspace", label: t("prompts.workspace") },
+                    { value: "global", label: t("prompts.general") },
+                  ]}
+                />
               </label>
             </div>
             <div className="prompt-editor-row">

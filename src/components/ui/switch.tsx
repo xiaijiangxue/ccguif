@@ -8,7 +8,7 @@ function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
   return (
     <SwitchPrimitive.Root
       className={cn(
-        "inline-flex h-[calc(var(--thumb-size)+2px)] w-[calc(var(--thumb-size)*2-2px)] shrink-0 items-center rounded-full p-px outline-none transition-[background-color,box-shadow] duration-200 [--thumb-size:--spacing(5)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background data-checked:bg-primary data-unchecked:bg-input data-disabled:opacity-64 sm:[--thumb-size:--spacing(4)]",
+        "inline-flex h-6 w-11 shrink-0 items-center rounded-full p-px text-transparent outline-none transition-all duration-200 motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-[color:var(--primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50 data-[checked]:bg-primary/80 data-[unchecked]:bg-[color:color-mix(in_srgb,var(--input)_88%,var(--background)_12%)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08),0_1px_3px_rgba(15,23,42,0.28)] data-[checked]:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_1px_3px_rgba(15,23,42,0.3),0_6px_18px_rgba(37,99,235,0.18)]",
         className,
       )}
       data-slot="switch"
@@ -16,7 +16,7 @@ function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "pointer-events-none block aspect-square h-full origin-left in-[[role=switch]:active,[data-slot=label]:active,[data-slot=field-label]:active]:not-data-disabled:scale-x-110 in-[[role=switch]:active,[data-slot=label]:active,[data-slot=field-label]:active]:rounded-[var(--thumb-size)/calc(var(--thumb-size)*1.1)] rounded-(--thumb-size) bg-background shadow-sm/5 will-change-transform [transition:translate_.15s,border-radius_.15s,scale_.1s_.1s,transform-origin_.15s] data-checked:origin-[var(--thumb-size)_50%] data-checked:translate-x-[calc(var(--thumb-size)-4px)]",
+          "pointer-events-none block size-5 rounded-full bg-[rgba(246,247,250,0.98)] shadow-[0_1px_4px_rgba(15,23,42,0.28)] ring-1 ring-black/5 transition-[translate,transform,background-color,box-shadow] duration-200 motion-reduce:transition-none will-change-transform data-[checked]:translate-x-5 in-[[role=switch]:active,[data-slot=label]:active,[data-slot=field-label]:active]:not-data-[disabled]:scale-[0.97]",
         )}
         data-slot="switch-thumb"
       />

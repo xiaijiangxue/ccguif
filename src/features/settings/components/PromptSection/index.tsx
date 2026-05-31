@@ -16,6 +16,7 @@ import {
   subscribePromptCreationRequests,
 } from "../../../prompts/promptEvents";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -342,17 +343,16 @@ export function PromptSection({
         </div>
         {workspaces.length > 0 ? (
           <div className="settings-select-wrap">
-            <select
+            <AppSelect
               className="settings-select"
               value={selectedWorkspaceId ?? ""}
-              onChange={(event) => onWorkspaceChange(event.target.value || null)}
-            >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
+              ariaLabel={t("settings.workspacePickerLabel")}
+              onValueChange={(value) => onWorkspaceChange(value || null)}
+              options={workspaces.map((workspace) => ({
+                value: workspace.id,
+                label: workspace.name,
+              }))}
+            />
           </div>
         ) : (
           <div className="settings-inline-muted">
@@ -375,17 +375,19 @@ export function PromptSection({
 
           <div className="settings-prompt-toolbar settings-prompt-toolbar--primary">
             <div className="settings-select-wrap settings-prompt-filter-wrap">
-              <select
+              <AppSelect
                 className="settings-select settings-select--compact"
                 value={scopeFilter}
-                onChange={(event) =>
-                  setScopeFilter(event.target.value as "all" | "workspace" | "global")
+                ariaLabel={t("settings.prompt.scope")}
+                onValueChange={(value) =>
+                  setScopeFilter(value as "all" | "workspace" | "global")
                 }
-              >
-                <option value="all">{t("settings.prompt.scopeAll")}</option>
-                <option value="workspace">{t("settings.prompt.scopeWorkspace")}</option>
-                <option value="global">{t("settings.prompt.scopeGlobal")}</option>
-              </select>
+                options={[
+                  { value: "all", label: t("settings.prompt.scopeAll") },
+                  { value: "workspace", label: t("settings.prompt.scopeWorkspace") },
+                  { value: "global", label: t("settings.prompt.scopeGlobal") },
+                ]}
+              />
             </div>
             <Button
               type="button"
@@ -500,23 +502,25 @@ export function PromptSection({
                 </label>
                 <label className="settings-field">
                   <span>{t("settings.prompt.scope")}</span>
-                  <select
+                  <AppSelect
                     className="settings-select"
                     value={editor.scope}
-                    onChange={(event) =>
+                    ariaLabel={t("settings.prompt.scope")}
+                    onValueChange={(value) =>
                       setEditor((prev) =>
                         prev
                           ? {
                               ...prev,
-                              scope: event.target.value as "workspace" | "global",
+                              scope: value as "workspace" | "global",
                             }
                           : prev,
                       )
                     }
-                  >
-                    <option value="workspace">{t("settings.prompt.scopeWorkspace")}</option>
-                    <option value="global">{t("settings.prompt.scopeGlobal")}</option>
-                  </select>
+                    options={[
+                      { value: "workspace", label: t("settings.prompt.scopeWorkspace") },
+                      { value: "global", label: t("settings.prompt.scopeGlobal") },
+                    ]}
+                  />
                 </label>
                 <label className="settings-field">
                   <span>{t("settings.prompt.descriptionLabel")}</span>

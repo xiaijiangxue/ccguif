@@ -11,6 +11,7 @@ import Settings2 from "lucide-react/dist/esm/icons/settings-2";
 import Hash from "lucide-react/dist/esm/icons/hash";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import Link2 from "lucide-react/dist/esm/icons/link-2";
+import { AppSelect } from "@/components/ui/app-select";
 import type { EngineStatus, EngineType } from "../../../types";
 import type {
   KanbanNewThreadResultMode,
@@ -515,40 +516,36 @@ export function TaskCreateModal({
                     <ImagePlus size={16} />
                   </button>
                   <div className="kanban-task-selector">
-                    <select
+                    <AppSelect
                       className="kanban-select"
                       value={engineType}
-                      onChange={(e) =>
-                        setEngineType(e.target.value as EngineType)
-                      }
-                    >
-                      {engineStatuses.map((engine) => (
-                        <option
-                          key={engine.engineType}
-                          value={engine.engineType}
-                          disabled={!engine.installed}
-                        >
-                          {formatEngineName(engine.engineType)}
-                          {!engine.installed ? ` (${t("kanban.task.notInstalled")})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                      ariaLabel={t("kanban.task.engineLabel")}
+                      onValueChange={(value) => setEngineType(value as EngineType)}
+                      options={engineStatuses.map((engine) => ({
+                        value: engine.engineType,
+                        label: `${formatEngineName(engine.engineType)}${
+                          !engine.installed ? ` (${t("kanban.task.notInstalled")})` : ""
+                        }`,
+                        disabled: !engine.installed,
+                      }))}
+                    />
                   </div>
                   <div className="kanban-task-selector">
-                    <select
+                    <AppSelect
                       className="kanban-select"
                       value={modelId ?? ""}
-                      onChange={(e) => setModelId(e.target.value || null)}
-                    >
-                      {availableModels.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.displayName}
-                        </option>
-                      ))}
-                      {availableModels.length === 0 && (
-                        <option value="">{t("kanban.task.noModels")}</option>
-                      )}
-                    </select>
+                      ariaLabel={t("kanban.task.modelLabel")}
+                      disabled={availableModels.length === 0}
+                      onValueChange={(value) => setModelId(value || null)}
+                      options={
+                        availableModels.length === 0
+                          ? [{ value: "", label: t("kanban.task.noModels") }]
+                          : availableModels.map((model) => ({
+                              value: model.id,
+                              label: model.displayName,
+                            }))
+                      }
+                    />
                   </div>
                 </>
               }
@@ -622,16 +619,18 @@ export function TaskCreateModal({
                         value={recurringInterval}
                         onChange={(e) => setRecurringInterval(Math.max(1, Number(e.target.value) || 1))}
                       />
-                      <select
+                      <AppSelect
                         className="kanban-select"
                         value={recurringUnit}
-                        onChange={(e) => setRecurringUnit(e.target.value as KanbanRecurringUnit)}
-                      >
-                        <option value="minutes">{t("kanban.task.schedule.minutes")}</option>
-                        <option value="hours">{t("kanban.task.schedule.hours")}</option>
-                        <option value="days">{t("kanban.task.schedule.days")}</option>
-                        <option value="weeks">{t("kanban.task.schedule.weeks")}</option>
-                      </select>
+                        ariaLabel={t("kanban.task.schedule.every")}
+                        onValueChange={(value) => setRecurringUnit(value as KanbanRecurringUnit)}
+                        options={[
+                          { value: "minutes", label: t("kanban.task.schedule.minutes") },
+                          { value: "hours", label: t("kanban.task.schedule.hours") },
+                          { value: "days", label: t("kanban.task.schedule.days") },
+                          { value: "weeks", label: t("kanban.task.schedule.weeks") },
+                        ]}
+                      />
                     </div>
                   </div>
 
@@ -640,20 +639,18 @@ export function TaskCreateModal({
                       <Settings2 size={13} className="kanban-task-config-label-icon" />
                       {t("kanban.task.schedule.executionModeLabel")}
                     </span>
-                    <select
+                    <AppSelect
                       className="kanban-select"
                       value={recurringExecutionMode}
-                      onChange={(e) =>
-                        setRecurringExecutionMode(e.target.value as KanbanRecurringExecutionMode)
+                      ariaLabel={t("kanban.task.schedule.executionModeLabel")}
+                      onValueChange={(value) =>
+                        setRecurringExecutionMode(value as KanbanRecurringExecutionMode)
                       }
-                    >
-                      <option value="same_thread">
-                        {t("kanban.task.schedule.sameThread")}
-                      </option>
-                      <option value="new_thread">
-                        {t("kanban.task.schedule.newThread")}
-                      </option>
-                    </select>
+                      options={[
+                        { value: "same_thread", label: t("kanban.task.schedule.sameThread") },
+                        { value: "new_thread", label: t("kanban.task.schedule.newThread") },
+                      ]}
+                    />
                   </div>
 
                   {recurringExecutionMode === "same_thread" && (
@@ -683,20 +680,18 @@ export function TaskCreateModal({
                         <GitBranch size={13} className="kanban-task-config-label-icon" />
                         {t("kanban.task.schedule.resultPassing")}
                       </span>
-                      <select
+                      <AppSelect
                         className="kanban-select"
                         value={newThreadResultMode}
-                        onChange={(e) =>
-                          setNewThreadResultMode(e.target.value as KanbanNewThreadResultMode)
+                        ariaLabel={t("kanban.task.schedule.resultPassing")}
+                        onValueChange={(value) =>
+                          setNewThreadResultMode(value as KanbanNewThreadResultMode)
                         }
-                      >
-                        <option value="pass">
-                          {t("kanban.task.schedule.passResult")}
-                        </option>
-                        <option value="none">
-                          {t("kanban.task.schedule.blockResult")}
-                        </option>
-                      </select>
+                        options={[
+                          { value: "pass", label: t("kanban.task.schedule.passResult") },
+                          { value: "none", label: t("kanban.task.schedule.blockResult") },
+                        ]}
+                      />
                     </div>
                   )}
                 </>
@@ -708,18 +703,19 @@ export function TaskCreateModal({
                     <Link2 size={13} className="kanban-task-config-label-icon" />
                     {t("kanban.task.chain.upstreamLabel")}
                   </span>
-                  <select
+                  <AppSelect
                     className="kanban-select"
                     value={previousTaskId}
-                    onChange={(e) => setPreviousTaskId(e.target.value)}
-                  >
-                    <option value="">{t("kanban.task.chain.none")}</option>
-                    {chainCandidates.map((task) => (
-                      <option key={task.id} value={task.id}>
-                        {formatUpstreamTaskLabel(task)}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel={t("kanban.task.chain.upstreamLabel")}
+                    onValueChange={setPreviousTaskId}
+                    options={[
+                      { value: "", label: t("kanban.task.chain.none") },
+                      ...chainCandidates.map((task) => ({
+                        value: task.id,
+                        label: formatUpstreamTaskLabel(task),
+                      })),
+                    ]}
+                  />
                 </div>
               )}
             </div>

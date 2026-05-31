@@ -1,9 +1,6 @@
 import type { TFunction } from 'i18next';
-import type { ComposerSendReadiness } from '../../utils/composerSendReadiness';
-import type { Attachment, ModelInfo, ProviderId, QueuedMessage } from './types.js';
-import type { ProviderModelGroup } from './modelOptions.js';
+import type { Attachment, QueuedMessage } from './types.js';
 import { AttachmentList } from './AttachmentList.js';
-import { ComposerReadinessBar } from './ComposerReadinessBar.js';
 import { MessageQueue } from './MessageQueue.js';
 
 export function ChatInputBoxHeader({
@@ -19,18 +16,6 @@ export function ChatInputBoxHeader({
   onFuseFromQueue,
   canFuseFromQueue = false,
   fusingQueueMessageId = null,
-  sendReadiness,
-  onJumpToRequest,
-  onToggleContextSources,
-  contextSourcesExpanded,
-  selectedModel,
-  models,
-  modelGroups,
-  onModelSelect,
-  onProviderModelSelect,
-  onAddModel,
-  onRefreshModelConfig,
-  isModelConfigRefreshing,
   showOpenSourceBanner,
   onDismissOpenSourceBanner,
 }: {
@@ -46,18 +31,6 @@ export function ChatInputBoxHeader({
   onFuseFromQueue?: (id: string) => void;
   canFuseFromQueue?: boolean;
   fusingQueueMessageId?: string | null;
-  sendReadiness?: ComposerSendReadiness | null;
-  onJumpToRequest?: () => void;
-  onToggleContextSources?: () => void;
-  contextSourcesExpanded?: boolean;
-  selectedModel?: string;
-  models?: ModelInfo[];
-  modelGroups?: ProviderModelGroup[];
-  onModelSelect?: (modelId: string) => void;
-  onProviderModelSelect?: (providerId: ProviderId, modelId: string) => void;
-  onAddModel?: () => void;
-  onRefreshModelConfig?: () => Promise<void> | void;
-  isModelConfigRefreshing?: boolean;
   showOpenSourceBanner?: boolean;
   onDismissOpenSourceBanner?: () => void;
 }) {
@@ -66,7 +39,6 @@ export function ChatInputBoxHeader({
     showOpenSourceBanner ||
     sdkStatusLoading ||
     !sdkInstalled ||
-    Boolean(sendReadiness) ||
     (messageQueue && messageQueue.length > 0) ||
     attachments.length > 0;
 
@@ -118,24 +90,6 @@ export function ChatInputBoxHeader({
             </button>
           )}
         </div>
-      )}
-
-      {sendReadiness && (
-        <ComposerReadinessBar
-          readiness={sendReadiness}
-          onJumpToRequest={onJumpToRequest}
-          onToggleContextSources={onToggleContextSources}
-          contextSourcesExpanded={contextSourcesExpanded}
-          selectedModel={selectedModel}
-          models={models}
-          modelGroups={modelGroups}
-          currentProvider={currentProvider}
-          onModelSelect={onModelSelect}
-          onProviderModelSelect={onProviderModelSelect}
-          onAddModel={onAddModel}
-          onRefreshModelConfig={onRefreshModelConfig}
-          isModelConfigRefreshing={isModelConfigRefreshing}
-        />
       )}
 
       {/* Message queue */}

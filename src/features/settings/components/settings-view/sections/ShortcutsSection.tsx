@@ -31,6 +31,7 @@ import ZoomIn from "lucide-react/dist/esm/icons/zoom-in";
 import ZoomOut from "lucide-react/dist/esm/icons/zoom-out";
 import FolderOpen from "lucide-react/dist/esm/icons/folder-open";
 import MonitorCog from "lucide-react/dist/esm/icons/monitor-cog";
+import { Button } from "@/components/ui/button";
 import { formatShortcutForPlatform, getDefaultInterruptShortcut } from "@/utils/shortcuts";
 import type {
   ShortcutActionMetadata,
@@ -161,13 +162,15 @@ export function ShortcutsSection({
                         {t(item.defaultLabelKey ?? "settings.defaultColon")}{" "}
                         {formatShortcutForPlatform(defaultShortcut)}
                       </span>
-                      <button
+                      <Button
                         type="button"
-                        className="ghost settings-button-compact settings-shortcuts-item-clear"
+                        variant="outline"
+                        size="sm"
+                        className="settings-button-compact settings-shortcuts-item-clear"
                         onClick={() => void updateShortcut(item.setting, null)}
                       >
                         {t("settings.clear")}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 );

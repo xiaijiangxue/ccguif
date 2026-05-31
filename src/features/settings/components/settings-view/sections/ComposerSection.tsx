@@ -1,3 +1,4 @@
+import { AppSelect } from "@/components/ui/app-select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import type { AppSettings } from "@/types";
@@ -108,22 +109,17 @@ export function ComposerSection({
         <label className="settings-field-label" htmlFor="composer-preset">
           {t("settings.preset")}
         </label>
-        <select
+        <AppSelect
           id="composer-preset"
           className="settings-select"
           value={appSettings.composerEditorPreset}
-          onChange={(event) =>
-            handleComposerPresetChange(
-              event.target.value as ComposerPreset,
-            )
-          }
-        >
-          {Object.entries(COMPOSER_PRESET_LABELS(t)).map(([preset, label]) => (
-            <option key={preset} value={preset}>
-              {label}
-            </option>
-          ))}
-        </select>
+          ariaLabel={t("settings.preset")}
+          onValueChange={(value) => handleComposerPresetChange(value as ComposerPreset)}
+          options={Object.entries(COMPOSER_PRESET_LABELS(t)).map(([preset, label]) => ({
+            value: preset,
+            label,
+          }))}
+        />
         <div className="settings-help">
           {t("settings.presetDesc")}
         </div>

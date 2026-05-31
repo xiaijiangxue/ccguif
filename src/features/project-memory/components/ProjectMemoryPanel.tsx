@@ -13,6 +13,7 @@ import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import Copy from "lucide-react/dist/esm/icons/copy";
 import ShieldCheck from "lucide-react/dist/esm/icons/shield-check";
 import Wrench from "lucide-react/dist/esm/icons/wrench";
+import { AppSelect } from "@/components/ui/app-select";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
 import { Markdown } from "../../messages/components/Markdown";
 import { useProjectMemory } from "../hooks/useProjectMemory";
@@ -847,56 +848,64 @@ export function ProjectMemoryPanel({
             placeholder={t("memory.searchPlaceholder")}
           />
         </label>
-        <select
+        <AppSelect
           value={kind ?? ""}
-          onChange={(event) => setKind(event.target.value || null)}
           className="project-memory-kind-select"
-        >
-          <option value="">{t("memory.kind.all")}</option>
-          <option value="project_context">{t("memory.kind.projectContext")}</option>
-          <option value="conversation">{t("memory.kind.conversation")}</option>
-          <option value="code_decision">{t("memory.kind.codeDecision")}</option>
-          <option value="known_issue">{t("memory.kind.knownIssue")}</option>
-          <option value="note">{t("memory.kind.note")}</option>
-        </select>
-        <select
+          ariaLabel={t("memory.kind.all")}
+          onValueChange={(value) => setKind(value || null)}
+          options={[
+            { value: "", label: t("memory.kind.all") },
+            { value: "project_context", label: t("memory.kind.projectContext") },
+            { value: "conversation", label: t("memory.kind.conversation") },
+            { value: "code_decision", label: t("memory.kind.codeDecision") },
+            { value: "known_issue", label: t("memory.kind.knownIssue") },
+            { value: "note", label: t("memory.kind.note") },
+          ]}
+        />
+        <AppSelect
           value={importance ?? ""}
-          onChange={(event) => setImportance(event.target.value || null)}
           className="project-memory-kind-select"
-        >
-          <option value="">{t("memory.importance.all")}</option>
-          <option value="high">{t("memory.importance.high")}</option>
-          <option value="medium">{t("memory.importance.medium")}</option>
-          <option value="low">{t("memory.importance.low")}</option>
-        </select>
-        <select
+          ariaLabel={t("memory.importance.all")}
+          onValueChange={(value) => setImportance(value || null)}
+          options={[
+            { value: "", label: t("memory.importance.all") },
+            { value: "high", label: t("memory.importance.high") },
+            { value: "medium", label: t("memory.importance.medium") },
+            { value: "low", label: t("memory.importance.low") },
+          ]}
+        />
+        <AppSelect
           value={reviewFilter}
-          onChange={(event) =>
-            setReviewFilter(event.target.value as ProjectMemoryReviewState | "all")
-          }
           className="project-memory-kind-select"
-        >
-          <option value="all">{t("memory.review.all")}</option>
-          <option value="unreviewed">{t("memory.review.unreviewed")}</option>
-          <option value="kept">{t("memory.review.kept")}</option>
-          <option value="converted">{t("memory.review.converted")}</option>
-          <option value="obsolete">{t("memory.review.obsolete")}</option>
-          <option value="dismissed">{t("memory.review.dismissed")}</option>
-        </select>
-        <select
+          ariaLabel={t("memory.review.all")}
+          onValueChange={(value) =>
+            setReviewFilter(value as ProjectMemoryReviewState | "all")
+          }
+          options={[
+            { value: "all", label: t("memory.review.all") },
+            { value: "unreviewed", label: t("memory.review.unreviewed") },
+            { value: "kept", label: t("memory.review.kept") },
+            { value: "converted", label: t("memory.review.converted") },
+            { value: "obsolete", label: t("memory.review.obsolete") },
+            { value: "dismissed", label: t("memory.review.dismissed") },
+          ]}
+        />
+        <AppSelect
           value={healthFilter}
-          onChange={(event) =>
-            setHealthFilter(event.target.value as ProjectMemoryHealthState | "all")
-          }
           className="project-memory-kind-select"
-        >
-          <option value="all">{t("memory.health.all")}</option>
-          <option value="complete">{t("memory.health.complete")}</option>
-          <option value="input_only">{t("memory.health.inputOnly")}</option>
-          <option value="assistant_only">{t("memory.health.assistantOnly")}</option>
-          <option value="pending_fusion">{t("memory.health.pendingFusion")}</option>
-          <option value="capture_failed">{t("memory.health.captureFailed")}</option>
-        </select>
+          ariaLabel={t("memory.health.all")}
+          onValueChange={(value) =>
+            setHealthFilter(value as ProjectMemoryHealthState | "all")
+          }
+          options={[
+            { value: "all", label: t("memory.health.all") },
+            { value: "complete", label: t("memory.health.complete") },
+            { value: "input_only", label: t("memory.health.inputOnly") },
+            { value: "assistant_only", label: t("memory.health.assistantOnly") },
+            { value: "pending_fusion", label: t("memory.health.pendingFusion") },
+            { value: "capture_failed", label: t("memory.health.captureFailed") },
+          ]}
+        />
         <input
           className="project-memory-tag-input"
           list="project-memory-tag-suggestions"
@@ -972,18 +981,20 @@ export function ProjectMemoryPanel({
             <span className="project-memory-injection-mode-label">
               {t("memory.manualInjectionMode")}
             </span>
-            <select
+            <AppSelect
               className="project-memory-kind-select project-memory-injection-mode-select"
               value={manualInjectionMode}
-              onChange={(event) => {
-                const nextMode = event.target.value === "summary" ? "summary" : "detail";
+              ariaLabel={t("memory.manualInjectionMode")}
+              onValueChange={(value) => {
+                const nextMode = value === "summary" ? "summary" : "detail";
                 setManualInjectionModeState(nextMode);
                 setManualMemoryInjectionMode(nextMode);
               }}
-            >
-              <option value="detail">{t("memory.manualInjectionModeDetail")}</option>
-              <option value="summary">{t("memory.manualInjectionModeSummary")}</option>
-            </select>
+              options={[
+                { value: "detail", label: t("memory.manualInjectionModeDetail") },
+                { value: "summary", label: t("memory.manualInjectionModeSummary") },
+              ]}
+            />
           </div>
           <div className="project-memory-toggle-hint">
             {t("memory.manualInjectionModeHint")}
@@ -1709,30 +1720,32 @@ export function ProjectMemoryPanel({
               <h2 className="project-memory-modal-title">{t("memory.title")}</h2>
               <label className="project-memory-workspace-picker">
                 <span>{t("memory.workspacePickerLabel")}</span>
-                <select
+                <AppSelect
                   value={workspaceSelectValue}
-                  onChange={(event) => {
-                    const nextWorkspaceId = event.target.value;
+                  ariaLabel={t("memory.workspacePickerLabel")}
+                  onValueChange={(value) => {
+                    const nextWorkspaceId = value;
                     if (nextWorkspaceId && nextWorkspaceId !== workspaceId) {
                       onSelectWorkspace?.(nextWorkspaceId);
                     }
                   }}
                   disabled={!hasWorkspacePicker || !onSelectWorkspace}
-                  aria-label={t("memory.workspacePickerLabel")}
-                >
-                  {hasWorkspacePicker ? (
-                    workspaces.map((workspace) => (
-                      <option key={workspace.id} value={workspace.id}>
-                        {workspace.name || workspace.path || workspace.id}
-                        {workspace.connected ? "" : " (disconnected)"}
-                      </option>
-                    ))
-                  ) : (
-                    <option value={workspaceSelectValue}>
-                      {workspaceId ?? t("memory.workspacePickerEmpty")}
-                    </option>
-                  )}
-                </select>
+                  options={
+                    hasWorkspacePicker
+                      ? workspaces.map((workspace) => ({
+                          value: workspace.id,
+                          label: `${workspace.name || workspace.path || workspace.id}${
+                            workspace.connected ? "" : " (disconnected)"
+                          }`,
+                        }))
+                      : [
+                          {
+                            value: workspaceSelectValue,
+                            label: workspaceId ?? t("memory.workspacePickerEmpty"),
+                          },
+                        ]
+                  }
+                />
               </label>
               <div className="project-memory-modal-actions">
                 <button

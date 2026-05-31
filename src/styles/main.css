@@ -208,46 +208,10 @@ body[data-panel-resizing="true"] .main {
   color: var(--text-stronger);
 }
 
-.open-app-secondary-group {
-  position: absolute;
-  left: 50%;
-  top: calc(100% + 6px);
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 10px;
-  z-index: 20;
-}
 
-.open-app-secondary-option {
-  width: 24px;
-  height: 24px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  color: var(--text-muted);
-}
 
-.open-app-secondary-option .open-app-icon {
-  width: 18px;
-  height: 18px;
-}
 
-.open-app-secondary-option:hover {
-  background: var(--surface-control-hover);
-  color: var(--text-stronger);
-}
 
-.open-app-secondary-option.is-active {
-  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 42%, transparent);
-  background: color-mix(in srgb, var(--accent-primary, #2563eb) 24%, transparent);
-}
 
 .open-app-button {
   display: inline-flex;
@@ -356,37 +320,8 @@ body[data-panel-resizing="true"] .main {
   justify-content: center;
 }
 
-.open-app-dropdown {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 8px);
-  min-width: 160px;
-  padding: 6px;
-  border-radius: 12px;
-  background: var(--surface-popover);
-  border: 1px solid var(--border-muted);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3);
-  z-index: 5;
-}
 
-.open-app-option {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 12px;
-  text-align: left;
-}
 
-.open-app-option:hover,
-.open-app-option.is-active {
-  background: var(--surface-hover);
-  color: var(--text-stronger);
-}
 
 .launch-script-menu {
   position: relative;

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppSelect } from "@/components/ui/app-select";
 import type { TaskRunRecord, TaskRunStatus } from "../types";
 import { hasActiveRunConflict } from "../utils/taskRunProjection";
 import {
@@ -92,31 +93,34 @@ export function TaskCenterView({
         <div className="task-center__filters">
           <label>
             {t("taskCenter.statusFilter")}
-            <select
+            <AppSelect
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as TaskRunStatus | "all")}
-            >
-              <option value="all">{t("taskCenter.filterAll")}</option>
-              {STATUS_ORDER.map((status) => (
-                <option key={status} value={status}>
-                  {t(`taskCenter.status.${status}`)}
-                </option>
-              ))}
-            </select>
+              ariaLabel={t("taskCenter.statusFilter")}
+              onValueChange={(value) => setStatusFilter(value as TaskRunStatus | "all")}
+              options={[
+                { value: "all", label: t("taskCenter.filterAll") },
+                ...STATUS_ORDER.map((status) => ({
+                  value: status,
+                  label: t(`taskCenter.status.${status}`),
+                })),
+              ]}
+            />
           </label>
           <label>
             {t("taskCenter.engineFilter")}
-            <select
+            <AppSelect
               value={engineFilter}
-              onChange={(event) =>
-                setEngineFilter(event.target.value as TaskRunRecord["engine"] | "all")
+              ariaLabel={t("taskCenter.engineFilter")}
+              onValueChange={(value) =>
+                setEngineFilter(value as TaskRunRecord["engine"] | "all")
               }
-            >
-              <option value="all">{t("taskCenter.filterAll")}</option>
-              <option value="codex">Codex</option>
-              <option value="claude">Claude Code</option>
-              <option value="gemini">Gemini</option>
-            </select>
+              options={[
+                { value: "all", label: t("taskCenter.filterAll") },
+                { value: "codex", label: "Codex" },
+                { value: "claude", label: "Claude Code" },
+                { value: "gemini", label: "Gemini" },
+              ]}
+            />
           </label>
         </div>
       </header>

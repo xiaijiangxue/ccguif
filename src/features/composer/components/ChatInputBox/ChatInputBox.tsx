@@ -74,11 +74,8 @@ import {
   shouldTriggerFileTagRenderOnSpaceKey,
 } from './utils/imeCompatibility.js';
 import {
-  MODEL_CONFIG_PROVIDERS,
   isRelevantModelStorageKey,
   readModelStorageSnapshot,
-  resolveAvailableModels,
-  resolveModelConfigProvider,
   resolveProviderModelGroups,
   type ModelStorageSnapshot,
 } from './modelOptions.js';
@@ -328,15 +325,6 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       };
     }, []);
 
-    const availableModels = useMemo(
-      () => resolveAvailableModels({
-        currentProvider,
-        models,
-        selectedModel,
-        modelStorageSnapshot,
-      }),
-      [currentProvider, modelStorageSnapshot, models, selectedModel],
-    );
     const providerModelGroups = useMemo(
       () => resolveProviderModelGroups({
         currentProvider,
@@ -1272,13 +1260,6 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       },
       [currentProvider, onModelSelect, onProviderSelect]
     );
-    const handleOpenCurrentProviderModelSettings = useCallback(() => {
-      onOpenModelSettings?.(resolveModelConfigProvider(currentProvider));
-    }, [currentProvider, onOpenModelSettings]);
-    const handleRefreshCurrentProviderModelConfig = useCallback(() => {
-      return onRefreshModelConfig?.(resolveModelConfigProvider(currentProvider));
-    }, [currentProvider, onRefreshModelConfig]);
-    const supportsModelConfigActions = MODEL_CONFIG_PROVIDERS.has(currentProvider);
 
     /**
      * Focus input box
@@ -1506,28 +1487,6 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
               attachments={attachments}
               onRemoveAttachment={handleRemoveAttachment}
               messageQueue={messageQueue}
-              sendReadiness={sendReadiness}
-              onJumpToRequest={onJumpToRequest}
-              onToggleContextSources={onToggleContextSources}
-              contextSourcesExpanded={contextSourcesExpanded}
-              selectedModel={selectedModel}
-              models={availableModels}
-              modelGroups={onProviderSelect ? providerModelGroups : undefined}
-              onModelSelect={onModelSelect ? handleModelSelect : undefined}
-              onProviderModelSelect={
-                onModelSelect && onProviderSelect ? handleProviderModelSelect : undefined
-              }
-              onAddModel={
-                onOpenModelSettings && supportsModelConfigActions
-                  ? handleOpenCurrentProviderModelSettings
-                  : undefined
-              }
-              onRefreshModelConfig={
-                onRefreshModelConfig && supportsModelConfigActions
-                  ? handleRefreshCurrentProviderModelConfig
-                  : undefined
-              }
-              isModelConfigRefreshing={isModelConfigRefreshing}
               onRemoveFromQueue={onRemoveFromQueue}
               onFuseFromQueue={onFuseFromQueue}
               canFuseFromQueue={canFuseFromQueue}
@@ -1707,6 +1666,14 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
               onAddModel={onOpenModelSettings}
               onRefreshModelConfig={onRefreshModelConfig}
               isModelConfigRefreshing={isModelConfigRefreshing}
+              sendReadiness={sendReadiness}
+              onJumpToRequest={onJumpToRequest}
+              onToggleContextSources={onToggleContextSources}
+              contextSourcesExpanded={contextSourcesExpanded}
+              modelGroups={onProviderSelect ? providerModelGroups : undefined}
+              onProviderModelSelect={
+                onModelSelect && onProviderSelect ? handleProviderModelSelect : undefined
+              }
               onClearAgent={() => onAgentSelect?.(null)}
               fileCompletion={fileCompletion}
               memoryCompletion={memoryCompletion}

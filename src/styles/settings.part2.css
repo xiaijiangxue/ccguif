@@ -2036,14 +2036,6 @@
   }
 }
 
-.settings-toggle-row {
-  min-height: 64px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--border-muted) 90%, transparent);
-  background: color-mix(in srgb, var(--surface-card) 78%, transparent);
-}
-
 .settings-toggle-title {
   font-size: 13px;
 }

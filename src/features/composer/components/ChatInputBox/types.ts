@@ -6,6 +6,7 @@
 import type { ReactNode } from 'react';
 import { CODEX_MODEL_CATALOG } from "../../../models/codexModelCatalog";
 import type { ComposerSendReadiness } from '../../utils/composerSendReadiness';
+import type { ProviderModelGroup } from './modelOptions';
 
 // ============================================================
 // Core Entity Types
@@ -830,6 +831,18 @@ export interface ButtonAreaProps {
   toolSurface?: ReactNode;
   /** Status panel toggle rendered inside the tool popover icon row */
   panelToggleSurface?: ReactNode;
+  /** Composer send readiness state for inline model info display */
+  sendReadiness?: ComposerSendReadiness | null;
+  /** Jump to request callback */
+  onJumpToRequest?: () => void;
+  /** Toggle context sources callback */
+  onToggleContextSources?: () => void;
+  /** Whether context sources panel is expanded */
+  contextSourcesExpanded?: boolean;
+  /** Provider-grouped model options for model selector */
+  modelGroups?: ProviderModelGroup[];
+  /** Provider-scoped model selection callback */
+  onProviderModelSelect?: (providerId: ProviderId, modelId: string) => void;
 }
 
 export interface ShortcutAction {

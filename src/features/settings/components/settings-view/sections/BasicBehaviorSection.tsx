@@ -477,22 +477,10 @@ export function BasicBehaviorSection({
           {appSettings.notificationSoundsEnabled ? (
             <div className="settings-sound-config settings-sound-config-shadcn">
               <div className="settings-sound-control-item">
-                <Label className="settings-field-label" htmlFor="notification-sound-select-native">
+                <Label className="settings-field-label" htmlFor="notification-sound-select">
                   {t("settings.soundSelectLabel")}
                 </Label>
                 <div className="settings-sound-select-row settings-sound-select-row-shadcn">
-                  <select
-                    id="notification-sound-select-native"
-                    className="settings-sound-native-select-sr"
-                    value={selectedNotificationSound}
-                    onChange={(event) => handleNotificationSoundOptionChange(event.target.value)}
-                  >
-                    {soundOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
                   <Select
                     value={selectedNotificationSound}
                     onValueChange={handleNotificationSoundOptionChange}

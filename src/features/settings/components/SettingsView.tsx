@@ -1,7 +1,9 @@
 // @ts-nocheck
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppSelect } from "@/components/ui/app-select";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
 import { ask, open } from "@tauri-apps/plugin-dialog";
 import type { DropResult } from "@hello-pangea/dnd";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
@@ -973,8 +975,10 @@ export function SettingsView({
   );
 
   const handleUiFontSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      const nextFontName = event.target.value;
+    (nextFontName: string | null) => {
+      if (!nextFontName) {
+        return;
+      }
       setUiFontDraft(nextFontName);
       void handleCommitUiFont(nextFontName);
     },
@@ -1000,8 +1004,10 @@ export function SettingsView({
   );
 
   const handleCodeFontSelectChange = useCallback(
-    (event: React.ChangeEvent<HTMLSelectElement>) => {
-      const nextFontName = event.target.value;
+    (nextFontName: string | null) => {
+      if (!nextFontName) {
+        return;
+      }
       setCodeFontDraft(nextFontName);
       void handleCommitCodeFont(nextFontName);
     },
@@ -1762,19 +1768,16 @@ export function SettingsView({
               </div>
               {projects.length > 0 ? (
                 <div className="settings-select-wrap">
-                  <select
+                  <AppSelect
                     className="settings-select"
                     value={selectedSettingsWorkspace?.id ?? ""}
-                    onChange={(event) =>
-                      setSettingsWorkspaceId(event.target.value || null)
-                    }
-                  >
-                    {projects.map((workspace) => (
-                      <option key={workspace.id} value={workspace.id}>
-                        {workspace.name}
-                      </option>
-                    ))}
-                  </select>
+                    ariaLabel={t("settings.workspacePickerLabel")}
+                    onValueChange={(value) => setSettingsWorkspaceId(value || null)}
+                    options={projects.map((workspace) => ({
+                      value: workspace.id,
+                      label: workspace.name,
+                    }))}
+                  />
                 </div>
               ) : (
                 <div className="settings-inline-muted">
@@ -2276,9 +2279,9 @@ export function SettingsView({
               </div>
               <div className="settings-about-tagline">{t("about.tagline")}</div>
               <div className="settings-about-links">
-                <button
+                <Button
                   type="button"
-                  className="ghost"
+                  variant="outline"
                   onClick={() =>
                     void openUrl(
                       "https://github.com/zhukunpenglinyutong/desktop-cc-gui",
@@ -2286,7 +2289,7 @@ export function SettingsView({
                   }
                 >
                   {t("about.github")}
-                </button>
+                </Button>
               </div>
               <div className="settings-about-wechat">
                 <div className="settings-about-wechat-label">

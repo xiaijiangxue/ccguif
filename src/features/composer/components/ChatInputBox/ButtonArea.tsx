@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import DatabaseZap from 'lucide-react/dist/esm/icons/database-zap';
 import X from 'lucide-react/dist/esm/icons/x';
 import type { ButtonAreaProps, MemoryReferenceMode, PermissionMode, ReasoningEffort } from './types';
+import { ComposerReadinessBar } from './ComposerReadinessBar';
 import { ConfigSelect, ModeSelect, ReasoningSelect, ShortcutActionsSelect } from './selectors';
 
 // Stable no-op callbacks to avoid re-renders when optional handlers are not provided
@@ -75,6 +76,18 @@ export const ButtonArea = ({
   mainSurface,
   toolSurface,
   panelToggleSurface,
+  sendReadiness,
+  onJumpToRequest,
+  onToggleContextSources,
+  contextSourcesExpanded,
+  modelGroups,
+  onProviderModelSelect,
+  selectedModel,
+  models,
+  onModelSelect,
+  onAddModel,
+  onRefreshModelConfig,
+  isModelConfigRefreshing,
 }: ButtonAreaProps) => {
   const { t } = useTranslation();
   const isPlanModeEnabled = (selectedCollaborationModeId ?? 'code') === 'plan';
@@ -488,6 +501,25 @@ export const ButtonArea = ({
         </div>
 
         <div className="button-area-right">
+          {sendReadiness && (
+            <div className="button-area-readiness">
+              <ComposerReadinessBar
+                readiness={sendReadiness}
+                onJumpToRequest={onJumpToRequest}
+                onToggleContextSources={onToggleContextSources}
+                contextSourcesExpanded={contextSourcesExpanded}
+                selectedModel={selectedModel}
+                models={models}
+                modelGroups={modelGroups}
+                currentProvider={currentProvider}
+                onModelSelect={onModelSelect}
+                onProviderModelSelect={onProviderModelSelect}
+                onAddModel={onAddModel}
+                onRefreshModelConfig={onRefreshModelConfig}
+                isModelConfigRefreshing={isModelConfigRefreshing}
+              />
+            </div>
+          )}
           {isLoading ? (
             <button
               className={`submit-button stop-button is-${resolvedStopButtonPhase}`}

@@ -259,7 +259,7 @@
 }
 
 .input-editable {
-  min-height: calc(1.5em * 1);
+  min-height: calc(1.5em * 4);
   outline: none;
   color: var(--text-primary);
   font-size: 14.5px;

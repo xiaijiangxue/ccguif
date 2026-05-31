@@ -1,16 +1,10 @@
 /* ============================================================
    Dropdown Menu
+   Visual styling is now handled by Tailwind classes on the component.
+   These are layout-only overrides for the completion dropdown.
    ============================================================ */
 .completion-dropdown {
-  position: fixed;
-  background: var(--dropdown-bg, #252526);
-  border: 1px solid var(--dropdown-border);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  z-index: 1001;
   max-height: 300px;
-  overflow-y: auto;
-  min-width: 280px;
 }
 
 .completion-dropdown--prompt {

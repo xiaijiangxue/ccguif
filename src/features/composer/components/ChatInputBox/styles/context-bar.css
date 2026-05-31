@@ -857,7 +857,7 @@
   accent-color: var(--codex-token-fill);
 }
 
-.context-dual-tooltip-threshold select {
+.context-dual-tooltip-threshold [data-slot="select-trigger"] {
   height: 24px;
   min-width: 74px;
   border: 1px solid color-mix(in srgb, var(--codex-token-fill) 38%, transparent);
@@ -868,7 +868,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.context-dual-tooltip-threshold select:disabled {
+.context-dual-tooltip-threshold [data-slot="select-trigger"][data-disabled] {
   opacity: 0.55;
 }
 

@@ -381,6 +381,7 @@
   border: none;
   border-radius: 0;
   background: transparent;
+  box-shadow: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 20px;
@@ -442,19 +443,12 @@
 .settings-section-basic .settings-toggle-row [data-slot="switch"] {
   width: 44px;
   height: 26px;
-  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 94%, transparent);
-  background: color-mix(in srgb, var(--settings-basic-control) 92%, var(--settings-basic-surface-strong) 8%);
-  box-shadow: none;
-}
-
-.settings-section-basic .settings-toggle-row [data-slot="switch"][data-checked] {
-  border-color: color-mix(in srgb, var(--primary) 30%, var(--settings-basic-control-border) 70%);
-  background: color-mix(in srgb, var(--primary) 30%, var(--settings-basic-control) 70%);
 }
 
 .settings-section-basic .settings-toggle-row [data-slot="switch"] [data-slot="switch-thumb"] {
   background: #f6f7fa;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
+  border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .settings-section-basic .settings-cli-engine-toggle-row {
@@ -645,6 +639,49 @@
   min-width: 120px;
 }
 
+.settings-section-basic .settings-scale-control .settings-input--range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 48%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control) 82%, transparent);
+  box-shadow: none;
+}
+
+.settings-section-basic .settings-scale-control .settings-input--range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--settings-basic-control-border) 74%);
+  background: color-mix(in srgb, #ffffff 88%, var(--settings-basic-surface) 12%);
+  box-shadow: none;
+}
+
+.settings-section-basic .settings-scale-control .settings-input--range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 48%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control) 82%, transparent);
+  box-shadow: none;
+}
+
+.settings-section-basic .settings-scale-control .settings-input--range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 44%, #c9d8f6 56%);
+}
+
+.settings-section-basic .settings-scale-control .settings-input--range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--settings-basic-control-border) 74%);
+  background: color-mix(in srgb, #ffffff 88%, var(--settings-basic-surface) 12%);
+  box-shadow: none;
+}
+
 .settings-section-basic .settings-scale-control .settings-scale-save {
   margin-left: auto;
   flex: 0 0 auto;
@@ -823,8 +860,9 @@
 .settings-section-basic .settings-select {
   min-height: 36px;
   border-radius: 10px;
-  border-color: var(--settings-basic-control-border);
-  background: color-mix(in srgb, var(--settings-basic-control) 88%, transparent);
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 76%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-surface-strong) 84%, var(--settings-basic-control) 16%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
   color: var(--settings-basic-text);
 }
 
@@ -834,7 +872,11 @@
 
 .settings-section-basic .settings-input:focus,
 .settings-section-basic .settings-select:focus {
-  border-color: color-mix(in srgb, var(--primary) 48%, #9cb0d9 52%);
+  border-color: color-mix(in srgb, var(--primary) 34%, #9cb0d9 66%);
+  background: color-mix(in srgb, var(--settings-basic-surface-strong) 90%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+    0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .settings-section-basic .settings-field-row {
@@ -852,6 +894,11 @@
 
 .settings-section-basic .settings-field-row .settings-input {
   min-width: 0;
+}
+
+.settings-section-basic .settings-field-row .settings-select-wrap [data-slot="select-trigger"],
+.settings-section-basic .settings-basic-theme-preset-control [data-slot="select-trigger"] {
+  width: 100%;
 }
 
 .settings-section-basic .settings-field-row--font {
@@ -872,14 +919,103 @@
   content: "";
   position: absolute;
   top: 50%;
-  right: 13px;
-  width: 8px;
-  height: 8px;
-  border-right: 1.6px solid color-mix(in srgb, var(--settings-basic-text-muted) 82%, #fff 18%);
-  border-bottom: 1.6px solid color-mix(in srgb, var(--settings-basic-text-muted) 82%, #fff 18%);
-  transform: translateY(-68%) rotate(45deg);
+  right: 16px;
+  width: 9px;
+  height: 9px;
+  border-right: 1.5px solid color-mix(in srgb, var(--settings-basic-text-muted) 72%, #fff 28%);
+  border-bottom: 1.5px solid color-mix(in srgb, var(--settings-basic-text-muted) 72%, #fff 28%);
+  transform: translateY(-70%) rotate(45deg);
   pointer-events: none;
   opacity: 0.9;
+}
+
+.settings-section-basic .settings-font-select-trigger,
+.settings-section-basic .settings-basic-theme-preset-select-trigger {
+  width: 100%;
+  height: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 74%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.16) 28%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 86%, var(--settings-basic-control) 14%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  padding-inline: 16px 42px;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
+  color: var(--settings-basic-text);
+}
+
+.settings-section-basic .settings-font-select-trigger:hover,
+.settings-section-basic .settings-basic-theme-preset-select-trigger:hover {
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 56%, var(--primary) 44%);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.18) 28%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 82%, var(--settings-basic-control-hover) 18%);
+}
+
+.settings-section-basic .settings-font-select-trigger:focus-visible,
+.settings-section-basic .settings-basic-theme-preset-select-trigger:focus-visible,
+.settings-section-basic .settings-font-select-trigger[data-popup-open],
+.settings-section-basic .settings-basic-theme-preset-select-trigger[data-popup-open] {
+  border-color: color-mix(in srgb, var(--primary) 38%, #9cb0d9 62%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+    0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.settings-section-basic .settings-font-select-trigger [data-slot="select-icon"],
+.settings-section-basic .settings-basic-theme-preset-select-trigger [data-slot="select-icon"] {
+  color: color-mix(in srgb, var(--settings-basic-text-muted) 72%, #fff 28%);
+}
+
+.settings-basic-select-popup {
+  padding: 6px;
+}
+
+.settings-basic-select-popup [data-slot="select-list"] {
+  min-width: max(var(--anchor-width), 220px);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 68%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.14) 22%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 96%, var(--settings-basic-control) 4%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035),
+    0 18px 48px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+}
+
+.settings-basic-select-item {
+  min-height: 38px;
+  border-radius: 10px;
+  padding-inline: 10px 14px;
+  color: var(--settings-basic-text);
+  font-size: 13px;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+}
+
+.settings-basic-select-item[data-highlighted] {
+  background: color-mix(in srgb, var(--primary) 12%, var(--settings-basic-control-hover) 88%);
+  color: var(--settings-basic-text);
+}
+
+.settings-basic-select-item [data-slot="select-item-indicator"] {
+  color: color-mix(in srgb, var(--primary) 72%, var(--settings-basic-text) 28%);
 }
 
 .settings-section-basic .settings-select-wrap--font .settings-select,
@@ -891,35 +1027,42 @@
   height: 44px;
   min-height: 44px;
   max-height: 44px;
-  padding-inline: 14px 34px;
+  padding-inline: 16px 42px;
   padding-block: 0;
   border-radius: 12px;
-  border-color: color-mix(in srgb, var(--settings-basic-control-border) 92%, transparent);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--settings-basic-control) 96%, transparent) 0%,
-    color-mix(in srgb, var(--settings-basic-surface) 70%, var(--settings-basic-control) 30%) 100%
-  );
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 10%, transparent);
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 74%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.16) 28%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 86%, var(--settings-basic-control) 14%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
   transition: border-color 140ms ease, box-shadow 140ms ease, background-color 140ms ease;
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: -0.01em;
 }
 
 .settings-section-basic .settings-select-wrap--font .settings-select:hover,
 .settings-section-basic .settings-basic-theme-preset-select-wrap .settings-select:hover {
-  border-color: color-mix(in srgb, var(--settings-basic-control-border) 70%, var(--primary) 30%);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--settings-basic-control-hover) 92%, transparent) 0%,
-    color-mix(in srgb, var(--settings-basic-surface) 62%, var(--settings-basic-control-hover) 38%) 100%
-  );
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 56%, var(--primary) 44%);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.18) 28%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 82%, var(--settings-basic-control-hover) 18%);
 }
 
 .settings-section-basic .settings-select-wrap--font .settings-select:focus,
 .settings-section-basic .settings-basic-theme-preset-select-wrap .settings-select:focus {
-  border-color: color-mix(in srgb, var(--primary) 54%, #9cb0d9 46%);
+  border-color: color-mix(in srgb, var(--primary) 38%, #9cb0d9 62%);
   box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #ffffff 18%, transparent);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+    0 0 0 3px color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .settings-section-basic .settings-font-reset {
@@ -960,21 +1103,35 @@
   transform: translateY(1px);
 }
 
-.settings-section-basic .ghost.settings-button-compact,
-.settings-section-basic .ghost.settings-color-reset,
+.settings-section-basic [data-variant="outline"].settings-button-compact,
+.settings-section-basic [data-variant="outline"].settings-color-reset,
 .settings-section-basic .ghost.settings-sound-test-btn {
   min-height: 36px;
   padding: 0 12px;
   border-radius: 10px;
-  border: 1px solid var(--settings-basic-control-border);
-  background: color-mix(in srgb, var(--settings-basic-control) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 72%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.14) 20%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 82%, var(--settings-basic-control) 18%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
   color: var(--settings-basic-text);
 }
 
-.settings-section-basic .ghost.settings-button-compact:hover,
-.settings-section-basic .ghost.settings-color-reset:hover,
+.settings-section-basic [data-variant="outline"].settings-button-compact:hover,
+.settings-section-basic [data-variant="outline"].settings-color-reset:hover,
 .settings-section-basic .ghost.settings-sound-test-btn:hover {
-  background: color-mix(in srgb, var(--settings-basic-control-hover) 90%, transparent);
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 56%, var(--primary) 44%);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(255, 255, 255, 0.16) 20%, transparent) 0%,
+      transparent 100%
+    ),
+    color-mix(in srgb, var(--settings-basic-surface-strong) 78%, var(--settings-basic-control-hover) 22%);
 }
 
 .settings-section-basic .settings-color-config-card {

@@ -1199,7 +1199,7 @@
   flex: 0 0 auto;
 }
 
-.project-memory-workspace-picker select {
+.project-memory-workspace-picker [data-slot="select-trigger"] {
   min-width: 0;
   flex: 1;
   border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.16));

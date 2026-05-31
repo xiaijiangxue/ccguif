@@ -25,6 +25,7 @@ import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import Save from "lucide-react/dist/esm/icons/save";
 import Search from "lucide-react/dist/esm/icons/search";
 import X from "lucide-react/dist/esm/icons/x";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -969,17 +970,16 @@ export function SkillsSection({
               <label className="settings-workspace-picker-label">
                 {t("settings.skillsPanel.enginePicker")}
               </label>
-              <select
+              <AppSelect
                 className="settings-select settings-select--compact"
                 value={engine}
-                onChange={(event) => setEngine(event.target.value as GlobalEngine)}
-              >
-                {ENGINE_ORDER.map((value) => (
-                  <option key={value} value={value}>
-                    {engineLabel(value)}
-                  </option>
-                ))}
-              </select>
+                ariaLabel={t("settings.skillsPanel.enginePicker")}
+                onValueChange={(value) => setEngine(value as GlobalEngine)}
+                options={ENGINE_ORDER.map((value) => ({
+                  value,
+                  label: engineLabel(value),
+                }))}
+              />
 
               <Button
                 type="button"

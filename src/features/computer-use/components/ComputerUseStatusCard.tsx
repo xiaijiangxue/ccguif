@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { listWorkspaces } from "../../../services/tauri";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -735,20 +736,30 @@ export function ComputerUseStatusCard() {
                   <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("settings.computerUse.broker.workspace")}</span>
-                      <select
+                      <AppSelect
                         className="h-9 w-full rounded-md border bg-background px-2 text-sm"
                         value={selectedWorkspaceId}
-                        onChange={(event) => setSelectedWorkspaceId(event.target.value)}
                         disabled={isBrokerRunning || selectableWorkspaces.length === 0}
-                      >
-                        {selectableWorkspaces.length === 0 ? <option value="">{t("settings.computerUse.broker.noWorkspace")}</option> : null}
-                        {selectableWorkspaces.map((workspace) => (
-                          <option key={workspace.id} value={workspace.id}>
-                            {workspace.name}
-                            {workspace.connected ? "" : ` ${t("settings.computerUse.broker.disconnectedWorkspace")}`}
-                          </option>
-                        ))}
-                      </select>
+                        ariaLabel={t("settings.computerUse.broker.workspace")}
+                        onValueChange={setSelectedWorkspaceId}
+                        options={
+                          selectableWorkspaces.length === 0
+                            ? [
+                                {
+                                  value: "",
+                                  label: t("settings.computerUse.broker.noWorkspace"),
+                                },
+                              ]
+                            : selectableWorkspaces.map((workspace) => ({
+                                value: workspace.id,
+                                label: `${workspace.name}${
+                                  workspace.connected
+                                    ? ""
+                                    : ` ${t("settings.computerUse.broker.disconnectedWorkspace")}`
+                                }`,
+                              }))
+                        }
+                      />
                     </label>
                     <label className="space-y-1">
                       <span className="text-xs font-medium text-muted-foreground">{t("settings.computerUse.broker.instruction")}</span>

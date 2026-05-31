@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import xuanzhonIcon from '../../../../../assets/xuanzhong.svg';
+import Check from "lucide-react/dist/esm/icons/check";
 import type { ModelInfo, ProviderId } from '../types';
 import type { ProviderModelGroup } from '../modelOptions';
 import { EngineIcon } from '../../../../engine/components/EngineIcon';
+import { DropdownContent } from '@/components/ui/dropdown-content';
 
 interface ModelSelectProps {
   value: string;
@@ -77,6 +78,24 @@ export const ModelSelect = ({
   const [refreshConfigError, setRefreshConfigError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isReadiness = triggerVariant === 'readiness';
+
+  // Click-outside handler for readiness inline dropdown
+  useEffect(() => {
+    if (!isReadiness || !isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isReadiness, isOpen]);
 
   const effectiveModels = useMemo(() => {
     if (models.length > 0) {
@@ -160,34 +179,6 @@ export const ModelSelect = ({
     });
   }, [isRefreshingConfig, onRefreshConfig]);
 
-  /**
-   * Close on outside click
-   */
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    // Delay adding event listener to prevent immediate trigger
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 0);
-
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
   return (
     <div
       className={triggerVariant === 'readiness' ? 'composer-readiness-model-select' : undefined}
@@ -225,109 +216,208 @@ export const ModelSelect = ({
       </button>
 
       {isOpen && (
-        <div
-          ref={dropdownRef}
-          className="selector-dropdown selector-dropdown--model"
-          style={{
-            position: 'absolute',
-            bottom: '100%',
-            left: 0,
-            marginBottom: '4px',
-            zIndex: 10000,
-          }}
-        >
-          {hasGroupedModels ? (
-            <div className="selector-model-groups">
-              {modelGroups!.map((group, groupIndex) => (
-                <div key={group.providerId} className="selector-model-group">
-                  {groupIndex > 0 && <div className="selector-model-group-divider" />}
-                  <div className="selector-model-group-title">
-                    <span>{group.providerLabel}</span>
-                  </div>
-                  {group.models.map((model) => {
-                    const isSelected = group.providerId === currentProvider && model.id === value;
-                    return (
-                      <div
-                        key={`${group.providerId}:${model.id}`}
-                        className={`selector-option selector-option--model-compact ${isSelected ? 'selected' : ''}`}
-                        onClick={() => handleGroupedSelect(group.providerId, model.id)}
-                      >
-                        <ModelIcon provider={group.providerId} size={18} />
-                        <span className="selector-model-label">{getModelLabel(model)}</span>
-                        <div className="selector-model-check-slot">
-                          {isSelected && (
-                            <img src={xuanzhonIcon} aria-hidden />
-                          )}
+        isReadiness ? (
+          <div
+            ref={dropdownRef}
+            className="selector-dropdown selector-dropdown--model selector-dropdown--readiness-inline"
+          >
+            {hasGroupedModels ? (
+              <div className="selector-model-groups">
+                {modelGroups!.map((group, groupIndex) => (
+                  <div key={group.providerId} className="selector-model-group">
+                    {groupIndex > 0 && <div className="selector-model-group-divider" />}
+                    <div className="selector-model-group-title">
+                      <span>{group.providerLabel}</span>
+                    </div>
+                    {group.models.map((model) => {
+                      const isSelected = group.providerId === currentProvider && model.id === value;
+                      return (
+                        <div
+                          key={`${group.providerId}:${model.id}`}
+                          className={`selector-option selector-option--model-compact ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleGroupedSelect(group.providerId, model.id)}
+                        >
+                          <ModelIcon provider={group.providerId} size={18} />
+                          <span className="selector-model-label">{getModelLabel(model)}</span>
+                          <div className="selector-model-check-slot">
+                            {isSelected && (
+                              <Check size={18} className="check-mark" aria-hidden />
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <>
-              <div className="selector-dropdown-title">{t('models.selectModel')}</div>
-              {effectiveModels.map((model) => (
-                <div
-                  key={model.id}
-                  className={`selector-option ${model.id === value ? 'selected' : ''}`}
-                  onClick={() => handleSelect(model.id)}
-                >
-                  <ModelIcon provider={currentProvider} size={20} />
-                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
-                    <span>{getModelLabel(model)}</span>
-                    {getModelDescription(model) && (
-                      <span className="model-description">{getModelDescription(model)}</span>
-                    )}
+                      );
+                    })}
                   </div>
-                  <div style={{ width: 20, height: 20, flexShrink: 0, marginLeft: 'auto' }}>
-                    {model.id === value && (
-                      <img src={xuanzhonIcon} style={{ width: 20, height: 20 }} aria-hidden />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-          {(onAddModel || onRefreshConfig) && (
-            <>
-              <div className="selector-divider" />
-              <div className="selector-action-footer">
-                {onAddModel && (
-                  <button
-                    type="button"
-                    className="selector-footer-action selector-footer-action-add"
-                    onClick={handleAddModelClick}
-                  >
-                    {t('models.addModel')}
-                  </button>
-                )}
-                {onRefreshConfig && (
-                  <button
-                    type="button"
-                    className="selector-footer-action selector-footer-action-refresh"
-                    onClick={handleRefreshConfigClick}
-                    disabled={isRefreshingConfig}
-                    aria-busy={isRefreshingConfig}
-                    title={t(isRefreshingConfig ? 'models.refreshingConfig' : 'models.refreshConfig')}
-                  >
-                    <span
-                      className={`codicon codicon-refresh${isRefreshingConfig ? ' selector-refresh-icon-spinning' : ''}`}
-                      aria-hidden
-                    />
-                    <span>{t(isRefreshingConfig ? 'models.refreshingConfig' : 'models.refreshConfig')}</span>
-                  </button>
-                )}
+                ))}
               </div>
-              {refreshConfigError && (
-                <div className="selector-refresh-error" role="status">
-                  {t('models.refreshConfigFailed', { message: refreshConfigError })}
+            ) : (
+              <>
+                <div className="selector-dropdown-title">{t('models.selectModel')}</div>
+                {effectiveModels.map((model) => (
+                  <div
+                    key={model.id}
+                    className={`selector-option ${model.id === value ? 'selected' : ''}`}
+                    onClick={() => handleSelect(model.id)}
+                  >
+                    <ModelIcon provider={currentProvider} size={20} />
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                      <span>{getModelLabel(model)}</span>
+                      {getModelDescription(model) && (
+                        <span className="model-description">{getModelDescription(model)}</span>
+                      )}
+                    </div>
+                    <div style={{ width: 20, height: 20, flexShrink: 0, marginLeft: 'auto' }}>
+                      {model.id === value && (
+                        <Check size={18} className="check-mark" aria-hidden />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+            {(onAddModel || onRefreshConfig) && (
+              <>
+                <div className="selector-divider" />
+                <div className="selector-action-footer">
+                  {onAddModel && (
+                    <button
+                      type="button"
+                      className="selector-footer-action selector-footer-action-add"
+                      onClick={handleAddModelClick}
+                    >
+                      {t('models.addModel')}
+                    </button>
+                  )}
+                  {onRefreshConfig && (
+                    <button
+                      type="button"
+                      className="selector-footer-action selector-footer-action-refresh"
+                      onClick={handleRefreshConfigClick}
+                      disabled={isRefreshingConfig}
+                      aria-busy={isRefreshingConfig}
+                      title={t(isRefreshingConfig ? 'models.refreshingConfig' : 'models.refreshConfig')}
+                    >
+                      <span
+                        className={`codicon codicon-refresh${isRefreshingConfig ? ' selector-refresh-icon-spinning' : ''}`}
+                        aria-hidden
+                      />
+                      <span>{t(isRefreshingConfig ? 'models.refreshingConfig' : 'models.refreshConfig')}</span>
+                    </button>
+                  )}
                 </div>
-              )}
-            </>
-          )}
-        </div>
+                {refreshConfigError && (
+                  <div className="selector-refresh-error" role="status">
+                    {t('models.refreshConfigFailed', { message: refreshConfigError })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <DropdownContent
+            anchorEl={buttonRef.current}
+            open={isOpen}
+            onClose={() => setIsOpen(false)}
+            side="top"
+            sideOffset={4}
+            align="start"
+            minWidth={252}
+            maxHeight="min(48vh, 380px)"
+            className="selector-dropdown--model"
+          >
+            {hasGroupedModels ? (
+              <div className="selector-model-groups">
+                {modelGroups!.map((group, groupIndex) => (
+                  <div key={group.providerId} className="selector-model-group">
+                    {groupIndex > 0 && <div className="selector-model-group-divider" />}
+                    <div className="selector-model-group-title">
+                      <span>{group.providerLabel}</span>
+                    </div>
+                    {group.models.map((model) => {
+                      const isSelected = group.providerId === currentProvider && model.id === value;
+                      return (
+                        <div
+                          key={`${group.providerId}:${model.id}`}
+                          className={`selector-option selector-option--model-compact ${isSelected ? 'selected' : ''}`}
+                          onClick={() => handleGroupedSelect(group.providerId, model.id)}
+                        >
+                          <ModelIcon provider={group.providerId} size={18} />
+                          <span className="selector-model-label">{getModelLabel(model)}</span>
+                          <div className="selector-model-check-slot">
+                            {isSelected && (
+                              <Check size={18} className="check-mark" aria-hidden />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="selector-dropdown-title">{t('models.selectModel')}</div>
+                {effectiveModels.map((model) => (
+                  <div
+                    key={model.id}
+                    className={`selector-option ${model.id === value ? 'selected' : ''}`}
+                    onClick={() => handleSelect(model.id)}
+                  >
+                    <ModelIcon provider={currentProvider} size={20} />
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+                      <span>{getModelLabel(model)}</span>
+                      {getModelDescription(model) && (
+                        <span className="model-description">{getModelDescription(model)}</span>
+                      )}
+                    </div>
+                    <div style={{ width: 20, height: 20, flexShrink: 0, marginLeft: 'auto' }}>
+                      {model.id === value && (
+                        <Check size={18} className="check-mark" aria-hidden />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+            {(onAddModel || onRefreshConfig) && (
+              <>
+                <div className="selector-divider" />
+                <div className="selector-action-footer">
+                  {onAddModel && (
+                    <button
+                      type="button"
+                      className="selector-footer-action selector-footer-action-add"
+                      onClick={handleAddModelClick}
+                    >
+                      {t('models.addModel')}
+                    </button>
+                  )}
+                  {onRefreshConfig && (
+                    <button
+                      type="button"
+                      className="selector-footer-action selector-footer-action-refresh"
+                      onClick={handleRefreshConfigClick}
+                      disabled={isRefreshingConfig}
+                      aria-busy={isRefreshingConfig}
+                      title={t(isRefreshingConfig ? 'models.refreshingConfig' : 'models.refreshConfig')}
+                    >
+                      <span
+                        className={`codicon codicon-refresh${isRefreshingConfig ? ' selector-refresh-icon-spinning' : ''}`}
+                        aria-hidden
+                      />
+                      <span>{t(isRefreshingConfig ? 'models.refreshingConfig' : 'models.refreshConfig')}</span>
+                    </button>
+                  )}
+                </div>
+                {refreshConfigError && (
+                  <div className="selector-refresh-error" role="status">
+                    {t('models.refreshConfigFailed', { message: refreshConfigError })}
+                  </div>
+                )}
+              </>
+            )}
+          </DropdownContent>
+        )
       )}
     </div>
   );

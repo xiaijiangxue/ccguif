@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { AppSelect } from "@/components/ui/app-select";
 import type {
   LocalUsageDailyCodeChange,
   LocalUsageDailyUsage,
@@ -257,17 +258,16 @@ export function UsageSection({
       <div className="settings-usage-workspace-picker">
         {workspaces.length > 0 ? (
           <div className="settings-select-wrap">
-            <select
+            <AppSelect
               className="settings-select"
               value={selectedWorkspaceId}
-              onChange={(event) => onWorkspaceChange(event.target.value)}
-            >
-              {workspaces.map((workspace) => (
-                <option key={workspace.id} value={workspace.id}>
-                  {workspace.name}
-                </option>
-              ))}
-            </select>
+              ariaLabel={t("settings.workspacePickerLabel")}
+              onValueChange={onWorkspaceChange}
+              options={workspaces.map((workspace) => ({
+                value: workspace.id,
+                label: workspace.name,
+              }))}
+            />
           </div>
         ) : (
           <div className="settings-inline-muted">{t("settings.workspacePickerEmpty")}</div>
