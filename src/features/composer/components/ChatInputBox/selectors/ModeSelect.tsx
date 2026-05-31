@@ -177,7 +177,7 @@ export const ModeSelect = ({
   }, [flashCycle, isChevronFlashing]);
 
   const menuContentClassName = cn(
-    "z-[10001] min-w-[240px] overflow-hidden rounded-[14px] border border-[color:color-mix(in_srgb,var(--border)_74%,#dce5f2_26%)] bg-[color:color-mix(in_srgb,white_96%,var(--accent)_4%)] p-1.5 text-popover-foreground shadow-[0_14px_34px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur-[10px]",
+    "selector-menu-surface z-[10001] min-w-[240px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

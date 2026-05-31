@@ -68,6 +68,13 @@ export const TokenIndicator = ({
   const claudeFreshnessLabel = t(`chat.claudeContextFreshness.${claudeFreshness}`, {
     defaultValue: t('chat.claudeContextFreshness.unknown'),
   });
+  const claudeFreshnessChipLabel = claudeFreshness === 'live'
+    ? '实时'
+    : claudeFreshness === 'restored'
+      ? '恢复'
+      : claudeFreshness === 'estimated'
+        ? '估算'
+        : '等待';
   const claudeWindowUnavailableLabel = claudeFreshness === 'estimated'
     ? t('chat.claudeContextWindowCapacityPending')
     : t('chat.claudeContextUnavailable');
@@ -84,25 +91,13 @@ export const TokenIndicator = ({
   const tooltip = usedText && maxText
     ? `${formattedPercentage} · ${usedText} / ${maxText} ${' '}${t('chat.context')}`
     : t('chat.usagePercentage', { percentage: formattedPercentage });
-  const claudeTotalBreakdown = [
-    inputText ? t('chat.claudeContextInputDetail', { tokens: inputText }) : null,
-    outputText ? t('chat.claudeContextOutputDetail', { tokens: outputText }) : null,
-  ].filter(Boolean).join(' · ');
+  const claudeHeaderTitle = t('chat.claudeContextTooltipTitle').replace(/\s*窗口[:：]?\s*$/, '').replace(/[:：]\s*$/, '');
   const claudeCachedNote = cachedText
     ? t('chat.claudeContextCachedExcludedDetail', { tokens: cachedText })
     : null;
-  const claudeWindowBreakdown = [
-    inputText ? t('chat.claudeContextInputDetail', { tokens: inputText }) : null,
-    cachedText ? t('chat.claudeContextCachedDetail', { tokens: cachedText }) : null,
-  ].filter(Boolean).join(' + ');
+  const claudeEstimatedNote = t('chat.claudeContextEstimatedWindow');
+  const claudeWindowSummary = claudeUsedText ?? claudeWindowUnavailableLabel;
   const categoryUsages = claudeContextUsage?.categoryUsages ?? [];
-  const categoryRowSplitIndex = Math.ceil(categoryUsages.length / 2);
-  const categoryUsageRows = categoryUsages.length > 0
-    ? [
-      categoryUsages.slice(0, categoryRowSplitIndex),
-      categoryUsages.slice(categoryRowSplitIndex),
-    ].filter((row) => row.length > 0)
-    : [];
   const tokenIndicatorClassName = [
     'token-indicator',
     resolvedPercentage === null ? 'token-indicator--pending' : null,
@@ -143,84 +138,109 @@ export const TokenIndicator = ({
         <div className={tooltipClassName}>
           {claudeContextUsage ? (
             <div className="claude-context-tooltip">
-              <div className="context-dual-tooltip-title">
-                {t('chat.claudeContextTooltipTitle')}
+              <div className="claude-context-tooltip-header">
+                <div className="claude-context-tooltip-heading">
+                  <span className="claude-context-tooltip-brand">Claude</span>
+                  <span className="claude-context-tooltip-title">{claudeHeaderTitle}</span>
+                </div>
+                <span className="claude-context-tooltip-chip">
+                  {claudeFreshnessChipLabel}
+                </span>
               </div>
-              <div className="context-dual-tooltip-grid">
-                <div className="context-dual-tooltip-kv context-dual-tooltip-kv--wide context-dual-tooltip-kv--detail">
-                  <span className="context-dual-tooltip-key">
+              <div className="claude-context-tooltip-summary">
+                <div className="claude-context-tooltip-pill">
+                  <span className="claude-context-tooltip-pill-label">
                     {t('chat.claudeContextTooltipTotalLabel')}
                   </span>
-                  <span className="context-dual-tooltip-value">
+                  <span className="claude-context-tooltip-pill-value">
                     {totalText ?? t('chat.claudeContextPending')}
                   </span>
-                  {claudeTotalBreakdown ? (
-                    <span className="context-dual-tooltip-note context-dual-tooltip-note--detail">
-                      {claudeTotalBreakdown}
-                    </span>
-                  ) : null}
-                  {claudeCachedNote ? (
-                    <span className="context-dual-tooltip-note context-dual-tooltip-note--detail">
-                      {claudeCachedNote}
-                    </span>
-                  ) : null}
                 </div>
-                <div className="context-dual-tooltip-kv">
-                  <span className="context-dual-tooltip-key">
-                    {t('chat.contextDualViewTooltipUsedLabel')}
-                  </span>
-                  <span className="context-dual-tooltip-value">{claudeUsedPercent}</span>
-                </div>
-                <div className="context-dual-tooltip-kv">
-                  <span className="context-dual-tooltip-key">
-                    {t('chat.contextDualViewTooltipRemainingLabel')}
-                  </span>
-                  <span className="context-dual-tooltip-value">{claudeRemainingPercent}</span>
-                </div>
-                <div className="context-dual-tooltip-kv context-dual-tooltip-kv--wide context-dual-tooltip-kv--detail">
-                  <span className="context-dual-tooltip-key">
+                <div className="claude-context-tooltip-pill">
+                  <span className="claude-context-tooltip-pill-label">
                     {t('chat.claudeContextTooltipWindowTokensLabel')}
                   </span>
-                  <span className="context-dual-tooltip-value">
+                  <span className="claude-context-tooltip-pill-value">
+                    {claudeWindowSummary}
+                  </span>
+                </div>
+              </div>
+
+              <div className="claude-context-tooltip-stats">
+                <div className="claude-context-tooltip-stat">
+                  <span className="claude-context-tooltip-stat-label">input</span>
+                  <span className="claude-context-tooltip-stat-value">
+                    {inputText ?? t('chat.claudeContextPending')}
+                  </span>
+                </div>
+                <div className="claude-context-tooltip-stat">
+                  <span className="claude-context-tooltip-stat-label">output</span>
+                  <span className="claude-context-tooltip-stat-value">
+                    {outputText ?? t('chat.claudeContextPending')}
+                  </span>
+                </div>
+                <div className="claude-context-tooltip-stat">
+                  <span className="claude-context-tooltip-stat-label">cached</span>
+                  <span className="claude-context-tooltip-stat-value">
+                    {cachedText ?? t('chat.claudeContextPending')}
+                  </span>
+                </div>
+                <div className="claude-context-tooltip-stat">
+                  <span className="claude-context-tooltip-stat-label">
+                    {t('chat.contextDualViewTooltipRemainingLabel')}
+                  </span>
+                  <span className="claude-context-tooltip-stat-value">
+                    {claudeRemainingPercent}
+                  </span>
+                </div>
+                <div className="claude-context-tooltip-stat">
+                  <span className="claude-context-tooltip-stat-label">
+                    {t('chat.contextDualViewTooltipUsedLabel')}
+                  </span>
+                  <span className="claude-context-tooltip-stat-value">
+                    {claudeUsedPercent}
+                  </span>
+                </div>
+                <div className="claude-context-tooltip-stat">
+                  <span className="claude-context-tooltip-stat-label">window</span>
+                  <span className="claude-context-tooltip-stat-value">
                     {claudeWindowTokensValue}
                   </span>
-                  {claudeWindowBreakdown ? (
-                    <span className="context-dual-tooltip-note context-dual-tooltip-note--detail">
-                      {claudeWindowBreakdown}
-                    </span>
-                  ) : null}
                 </div>
-                {categoryUsages.length > 0 ? (
-                  <div className="context-dual-tooltip-kv context-dual-tooltip-kv--wide context-dual-tooltip-kv--detail">
-                    <span className="context-dual-tooltip-key">
-                      {t('chat.claudeContextCategoryTitle')}
-                    </span>
-                    <div className="claude-context-category-grid">
-                      {categoryUsageRows.map((row, rowIndex) => (
-                        <div className="claude-context-category-row" key={`category-row-${rowIndex}`}>
-                          {row.map((usage) => {
-                            const tokens = formatTokens(usage.tokens) ?? String(usage.tokens);
-                            const percent = typeof usage.percent === 'number' && isFinite(usage.percent)
-                              ? formatPercent(usage.percent)
-                              : null;
-                            return (
-                              <span className="claude-context-category-item" key={`${usage.name}:${usage.tokens}`}>
-                                <span className="claude-context-category-name">{usage.name}</span>
-                                <span className="claude-context-category-value">
-                                  <span>{tokens}</span>
-                                  {percent ? <span>{percent}</span> : null}
-                                </span>
-                              </span>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
               </div>
-              <div className="context-dual-tooltip-divider" />
-              <div className="context-dual-tooltip-status">
+
+              {categoryUsages.length > 0 ? (
+                <div className="claude-context-tooltip-categories">
+                  <div className="claude-context-tooltip-categories-title">
+                    {t('chat.claudeContextCategoryTitle')}
+                  </div>
+                  <div className="claude-context-tooltip-categories-grid">
+                    {categoryUsages.map((usage) => {
+                      const tokens = formatTokens(usage.tokens) ?? String(usage.tokens);
+                      const percent = typeof usage.percent === 'number' && isFinite(usage.percent)
+                        ? formatPercent(usage.percent)
+                        : null;
+
+                      return (
+                        <span className="claude-context-tooltip-category-chip" key={`${usage.name}:${usage.tokens}`}>
+                          <span className="claude-context-tooltip-category-name">{usage.name}</span>
+                          <span className="claude-context-tooltip-category-value">
+                            {tokens}
+                            {percent ? ` · ${percent}` : ''}
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="claude-context-tooltip-divider" />
+              <div className="claude-context-tooltip-footnote">
+                {claudeEstimatedNote}
+                {claudeCachedNote ? `，${claudeCachedNote}` : ''}
+              </div>
+              <div className="claude-context-tooltip-source">
                 {claudeFreshnessLabel}
               </div>
             </div>
