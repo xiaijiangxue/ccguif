@@ -265,7 +265,7 @@ export const ModelSelect = ({
             surfaceId={hoverSurfaceId}
             onPointerEnter={isReadiness ? () => hoverCloseControllerRef.current.cancel() : undefined}
             onPointerLeave={isReadiness ? handleDropdownPointerLeave : undefined}
-            className="selector-dropdown--model selector-dropdown--readiness-inline selector-dropdown--model-readiness-compact"
+            className="selector-menu-surface selector-dropdown--model selector-dropdown--readiness-inline selector-dropdown--model-readiness-compact"
           >
             {hasGroupedModels ? (
               <div className="selector-model-groups">
@@ -370,7 +370,7 @@ export const ModelSelect = ({
             minWidth={252}
             maxHeight="min(48vh, 380px)"
             surfaceId={hoverSurfaceId}
-            className="selector-dropdown--model"
+            className="selector-menu-surface selector-dropdown--model"
           >
             {hasGroupedModels ? (
               <div className="selector-model-groups">
