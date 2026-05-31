@@ -1,12 +1,12 @@
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import ChevronUp from "lucide-react/dist/esm/icons/chevron-up";
 import Trash2 from "lucide-react/dist/esm/icons/trash-2";
-import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import type { OpenAppTarget } from "@/types";
 import { useOpenAppIcons } from "../../../../app/hooks/useOpenAppIcons";
 import { GENERIC_APP_ICON, getKnownOpenAppIcon } from "../../../../app/utils/openAppIcons";
 import type { OpenAppDraft } from "../actions/settingsViewActions";
+import { OpenAppKindSelect } from "./OpenAppKindSelect";
 
 type OpenAppsSectionProps = {
   active: boolean;
@@ -87,7 +87,7 @@ export function OpenAppsSection({
                 </label>
                 <label className="settings-open-app-field settings-open-app-field--type">
                   <span className="settings-visually-hidden">{t("settings.type")}</span>
-                  <AppSelect
+                  <OpenAppKindSelect
                     className="settings-select settings-select--compact settings-open-app-kind"
                     value={target.kind}
                     ariaLabel={t("settings.type")}

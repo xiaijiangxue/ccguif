@@ -69,6 +69,7 @@
     "tauri:build:win": "npm run doctor:win && tauri build --config src-tauri/tauri.windows.conf.json"
   },
   "dependencies": {
+    "@ark-ui/react": "^5.37.0",
     "@base-ui/react": "^1.2.0",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.11",

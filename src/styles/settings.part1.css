@@ -1054,26 +1054,41 @@
 
 .settings-open-app-input--label {
   width: 140px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .settings-open-app-kind {
   width: 96px;
   min-width: 96px;
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .settings-open-app-input--appname {
   width: 220px;
   max-width: 240px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .settings-open-app-input--command {
   width: 200px;
   max-width: 220px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .settings-open-app-input--args {
   flex: 1;
   min-width: 140px;
+  height: 36px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .settings-open-app-footer {
