@@ -66,6 +66,7 @@ import {
   DEFAULT_UI_FONT_FAMILY,
 } from "../../../../../utils/fonts";
 import { LanguageSelector } from "../../LanguageSelector";
+import { SettingsFontArkSelect } from "./SettingsFontArkSelect";
 
 type BasicAppearanceSectionProps = {
   appSettings: AppSettings;
@@ -655,28 +656,15 @@ export function BasicAppearanceSection({
             {t("settings.uiFontFamily")}
           </label>
           <div className="settings-field-row settings-field-row--font">
-            <div className="settings-select-wrap settings-select-wrap--font">
-              <Select value={uiFontDraft} onValueChange={handleUiFontSelectChange}>
-                <SelectTrigger
-                  id="ui-font-family"
-                  className="settings-font-select-trigger"
-                  aria-label={t("settings.uiFontFamily")}
-                  data-testid="settings-ui-font-select"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="settings-basic-select-popup">
-                  {uiFontSelectOptions.map((fontName) => (
-                    <SelectItem
-                      key={fontName}
-                      className="settings-basic-select-item"
-                      value={fontName}
-                    >
-                      {fontName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="settings-select-wrap settings-select-wrap--font settings-select-wrap--font-ark">
+              <SettingsFontArkSelect
+                id="ui-font-family"
+                value={uiFontDraft}
+                options={uiFontSelectOptions}
+                ariaLabel={t("settings.uiFontFamily")}
+                testId="settings-ui-font-select"
+                onValueChange={handleUiFontSelectChange}
+              />
             </div>
             <Button
               type="button"
@@ -703,28 +691,15 @@ export function BasicAppearanceSection({
             {t("settings.codeFontFamily")}
           </label>
           <div className="settings-field-row settings-field-row--font">
-            <div className="settings-select-wrap settings-select-wrap--font">
-              <Select value={codeFontDraft} onValueChange={handleCodeFontSelectChange}>
-                <SelectTrigger
-                  id="code-font-family"
-                  className="settings-font-select-trigger"
-                  aria-label={t("settings.codeFontFamily")}
-                  data-testid="settings-code-font-select"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="settings-basic-select-popup">
-                  {codeFontSelectOptions.map((fontName) => (
-                    <SelectItem
-                      key={fontName}
-                      className="settings-basic-select-item"
-                      value={fontName}
-                    >
-                      {fontName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="settings-select-wrap settings-select-wrap--font settings-select-wrap--font-ark">
+              <SettingsFontArkSelect
+                id="code-font-family"
+                value={codeFontDraft}
+                options={codeFontSelectOptions}
+                ariaLabel={t("settings.codeFontFamily")}
+                testId="settings-code-font-select"
+                onValueChange={handleCodeFontSelectChange}
+              />
             </div>
             <Button
               type="button"

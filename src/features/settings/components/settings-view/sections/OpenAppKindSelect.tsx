@@ -2,7 +2,6 @@
 
 import { Portal } from "@ark-ui/react/portal";
 import { Select, createListCollection } from "@ark-ui/react/select";
-import CheckIcon from "lucide-react/dist/esm/icons/check";
 import ChevronsUpDownIcon from "lucide-react/dist/esm/icons/chevrons-up-down";
 import * as React from "react";
 
@@ -74,11 +73,6 @@ export function OpenAppKindSelect({
                   item={option}
                   className="group flex min-h-9 w-full min-w-0 cursor-default items-center gap-2 rounded-xl px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors data-[highlighted]:bg-accent/72 data-[state=checked]:bg-[color-mix(in_srgb,var(--accent-primary,#4d8ff0)_12%,white)]"
                 >
-                  <span className="flex size-4 shrink-0 items-center justify-center">
-                    <Select.ItemIndicator className="flex size-4 items-center justify-center text-[color:var(--accent-primary,#4d8ff0)]">
-                      <CheckIcon className="size-3.5" />
-                    </Select.ItemIndicator>
-                  </span>
                   <Select.ItemText className="min-w-0 flex-1 whitespace-nowrap text-left font-medium text-foreground/92">
                     {option.label}
                   </Select.ItemText>
