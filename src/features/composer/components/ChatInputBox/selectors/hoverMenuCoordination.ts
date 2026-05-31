@@ -1,4 +1,5 @@
 const HOVER_MENU_OPEN_EVENT = 'ccguif:hover-menu-open';
+const HOVER_MENU_CLOSE_DELAY_MS = 140;
 
 type HoverMenuOpenDetail = {
   id: string;
@@ -34,5 +35,46 @@ export function subscribeToHoverMenuOpen(
   window.addEventListener(HOVER_MENU_OPEN_EVENT, handleOpen as EventListener);
   return () => {
     window.removeEventListener(HOVER_MENU_OPEN_EVENT, handleOpen as EventListener);
+  };
+}
+
+export function createHoverMenuCloseController(
+  onClose: () => void,
+  delayMs = HOVER_MENU_CLOSE_DELAY_MS,
+) {
+  let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+
+  return {
+    schedule() {
+      if (typeof window === 'undefined') {
+        onClose();
+        return;
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(() => {
+        timeoutId = null;
+        onClose();
+      }, delayMs);
+    },
+    cancel() {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    },
+    cleanup() {
+      if (typeof window === 'undefined') {
+        return;
+      }
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+    },
   };
 }

@@ -73,7 +73,7 @@
   order: 1;
   margin: 0;
   flex: 0 0 auto;
-  gap: 14px;
+  gap: 2px;
   align-items: stretch;
 }
 
@@ -112,10 +112,10 @@
   justify-content: center;
   width: 34px;
   min-height: 28px;
-  margin: 0 4px 0 -14px;
+  margin: 0 -2px 0 -14px;
   padding: 0;
   border: none;
-  border-right: 1px solid var(--sp-dock-tab-border);
+  border-right: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
   background: transparent;

@@ -9,7 +9,7 @@ import {
   MODE_SELECT_FLASH_DURATION_MS,
   MODE_SELECT_FLASH_EVENT,
 } from './modeSelectFlash';
-import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ModeSelectProps {
   value: PermissionMode;
@@ -42,6 +42,7 @@ export const ModeSelect = ({
   const [flashCycle, setFlashCycle] = useState(0);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const flashTimerRef = useRef<number | null>(null);
+  const hoverCloseControllerRef = useRef(createHoverMenuCloseController(() => setIsOpen(false)));
   const fallbackMode = AVAILABLE_MODES[0] ?? {
     id: 'default' as PermissionMode,
     label: 'Default Mode',
@@ -129,11 +130,18 @@ export const ModeSelect = ({
       return;
     }
 
-    setIsOpen(false);
+    hoverCloseControllerRef.current.schedule();
   }, []);
 
   useEffect(() => {
     return subscribeToHoverMenuOpen(hoverMenuId, () => setIsOpen(false));
+  }, []);
+
+  useEffect(() => {
+    const hoverCloseController = hoverCloseControllerRef.current;
+    return () => {
+      hoverCloseController.cleanup();
+    };
   }, []);
 
   useEffect(() => {
@@ -223,6 +231,7 @@ export const ModeSelect = ({
         style={flashingButtonStyle}
         title={getModeText(currentMode.id, 'tooltip') || `${t('chat.currentMode', { mode: getModeText(currentMode.id, 'label') })}`}
         onPointerEnter={() => {
+          hoverCloseControllerRef.current.cancel();
           announceHoverMenuOpen(hoverMenuId);
           setIsOpen(true);
         }}
@@ -243,6 +252,7 @@ export const ModeSelect = ({
         <Menu.Positioner className="z-[10001] outline-none">
           <Menu.Content
             className={cn(menuContentClassName, "selector-dropdown--mode")}
+            onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handlePointerLeave}
           >
             {modeOptions.map((mode) => (

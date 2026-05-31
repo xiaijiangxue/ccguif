@@ -9,7 +9,7 @@ import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } fr
 import type { AccountRateLimitsInfo, CodexSpeedMode, ProviderId, SelectedAgent } from '../types';
 import { formatRelativeTime } from '../../../../../utils/time';
 import { cn } from '@/lib/utils';
-import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ConfigSelectProps {
   currentProvider: string;
@@ -87,6 +87,7 @@ export const ConfigSelect = ({
     setUsageMenuOpen(false);
     setIsOpen(false);
   }, []);
+  const hoverCloseControllerRef = useRef(createHoverMenuCloseController(closeAllMenus));
 
   const handleTriggerPointerLeave = useCallback((event: ReactPointerEvent) => {
     const nextTarget = event.relatedTarget;
@@ -94,8 +95,8 @@ export const ConfigSelect = ({
       return;
     }
 
-    closeAllMenus();
-  }, [closeAllMenus]);
+    hoverCloseControllerRef.current.schedule();
+  }, []);
 
   const handleMenuPointerLeave = useCallback((event: ReactPointerEvent) => {
     const nextTarget = event.relatedTarget;
@@ -103,8 +104,8 @@ export const ConfigSelect = ({
       return;
     }
 
-    closeAllMenus();
-  }, [closeAllMenus]);
+    hoverCloseControllerRef.current.schedule();
+  }, []);
 
   const handlePlanModeToggle = useCallback(
     (enabled: boolean) => {
@@ -217,6 +218,13 @@ export const ConfigSelect = ({
   }, [closeAllMenus]);
 
   useEffect(() => {
+    const hoverCloseController = hoverCloseControllerRef.current;
+    return () => {
+      hoverCloseController.cleanup();
+    };
+  }, []);
+
+  useEffect(() => {
     if (!agentMenuOpen) return;
     loadAgents();
   }, [agentMenuOpen, loadAgents]);
@@ -290,6 +298,7 @@ export const ConfigSelect = ({
         className="selector-button config-button"
         title={t('settings.configure', 'Configure')}
         onPointerEnter={() => {
+          hoverCloseControllerRef.current.cancel();
           announceHoverMenuOpen(hoverMenuId);
           setIsOpen(true);
         }}
@@ -303,6 +312,7 @@ export const ConfigSelect = ({
           <Menu.Content
             className={cn(baseMenuContentClassName, "min-w-[220px]")}
             aria-label={t('settings.configure', 'Configure')}
+            onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handleMenuPointerLeave}
           >
             <Menu.Root
@@ -349,6 +359,7 @@ export const ConfigSelect = ({
                 <Menu.Positioner className="z-[10002] outline-none">
                   <Menu.Content
                     className={cn(baseMenuContentClassName, "min-w-[320px] max-w-[360px] max-h-[360px] overflow-y-auto overscroll-contain")}
+                    onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
                     onPointerLeave={handleMenuPointerLeave}
                   >
                     {agentsLoading ? (
@@ -519,6 +530,7 @@ export const ConfigSelect = ({
                     <Menu.Positioner className="z-[10002] outline-none">
                       <Menu.Content
                         className={cn(baseMenuContentClassName, "min-w-[180px]")}
+                        onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
                         onPointerLeave={handleMenuPointerLeave}
                       >
                         <Menu.Item
@@ -600,6 +612,7 @@ export const ConfigSelect = ({
                     <Menu.Positioner className="z-[10002] outline-none">
                       <Menu.Content
                         className={cn(baseMenuContentClassName, "selector-usage-dropdown min-w-[280px]")}
+                        onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
                         onPointerLeave={handleMenuPointerLeave}
                       >
                         <div className="selector-usage-header">

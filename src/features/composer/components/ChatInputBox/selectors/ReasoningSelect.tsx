@@ -5,7 +5,7 @@ import { Portal } from '@ark-ui/react/portal';
 import Check from "lucide-react/dist/esm/icons/check";
 import { REASONING_LEVELS, type ReasoningEffort } from '../types';
 import { cn } from '@/lib/utils';
-import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ReasoningSelectProps {
   value: ReasoningEffort | null;
@@ -32,6 +32,7 @@ export const ReasoningSelect = ({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const hoverCloseControllerRef = useRef(createHoverMenuCloseController(() => setIsOpen(false)));
   const visibleLevels = REASONING_LEVELS.filter((level) => {
     if (options === undefined) {
       return true;
@@ -76,11 +77,18 @@ export const ReasoningSelect = ({
       return;
     }
 
-    setIsOpen(false);
+    hoverCloseControllerRef.current.schedule();
   }, []);
 
   useEffect(() => {
     return subscribeToHoverMenuOpen(hoverMenuId, () => setIsOpen(false));
+  }, []);
+
+  useEffect(() => {
+    const hoverCloseController = hoverCloseControllerRef.current;
+    return () => {
+      hoverCloseController.cleanup();
+    };
   }, []);
 
   const menuContentClassName = cn(
@@ -115,6 +123,7 @@ export const ReasoningSelect = ({
         aria-label={triggerLabel}
         title={t('reasoning.title', { defaultValue: 'Select reasoning depth' })}
         onPointerEnter={() => {
+          hoverCloseControllerRef.current.cancel();
           announceHoverMenuOpen(hoverMenuId);
           setIsOpen(true);
         }}
@@ -130,7 +139,11 @@ export const ReasoningSelect = ({
 
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
-          <Menu.Content className={menuContentClassName} onPointerLeave={handlePointerLeave}>
+          <Menu.Content
+            className={menuContentClassName}
+            onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
+            onPointerLeave={handlePointerLeave}
+          >
             {showDefaultOption && (
               <Menu.Item
                 className={menuItemClassName}

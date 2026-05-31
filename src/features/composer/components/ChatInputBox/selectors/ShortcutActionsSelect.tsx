@@ -4,7 +4,7 @@ import { Menu } from '@ark-ui/react/menu';
 import { Portal } from '@ark-ui/react/portal';
 import type { ShortcutAction } from '../types';
 import { cn } from '@/lib/utils';
-import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ShortcutActionsSelectProps {
   actions?: ShortcutAction[];
@@ -16,6 +16,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const hasActions = Boolean(actions && actions.length > 0);
+  const hoverCloseControllerRef = useRef(createHoverMenuCloseController(() => setIsOpen(false)));
 
   const closeMenuAndFocusTrigger = useCallback(() => {
     setIsOpen(false);
@@ -28,11 +29,18 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
       return;
     }
 
-    setIsOpen(false);
+    hoverCloseControllerRef.current.schedule();
   }, []);
 
   useEffect(() => {
     return subscribeToHoverMenuOpen(hoverMenuId, () => setIsOpen(false));
+  }, []);
+
+  useEffect(() => {
+    const hoverCloseController = hoverCloseControllerRef.current;
+    return () => {
+      hoverCloseController.cleanup();
+    };
   }, []);
 
   if (!hasActions) {
@@ -70,6 +78,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
         title={t('chat.shortcutActionsEntry')}
         aria-label={t('chat.shortcutActionsEntry')}
         onPointerEnter={() => {
+          hoverCloseControllerRef.current.cancel();
           announceHoverMenuOpen(hoverMenuId);
           setIsOpen(true);
         }}
@@ -80,7 +89,11 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
 
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
-          <Menu.Content className={menuContentClassName} onPointerLeave={handlePointerLeave}>
+          <Menu.Content
+            className={menuContentClassName}
+            onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
+            onPointerLeave={handlePointerLeave}
+          >
             {actions?.map((action) => (
               <Menu.Item
               key={action.key}
