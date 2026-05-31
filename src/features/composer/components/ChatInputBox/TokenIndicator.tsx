@@ -19,8 +19,9 @@ export const TokenIndicator = ({
 
   // Circumference
   const circumference = 2 * Math.PI * radius;
-  const resolvedPercentage = typeof percentage === 'number' && isFinite(percentage)
-    ? Math.max(percentage, 0)
+  const preferredPercentage = claudeContextUsage?.usedPercent ?? percentage;
+  const resolvedPercentage = typeof preferredPercentage === 'number' && isFinite(preferredPercentage)
+    ? Math.max(preferredPercentage, 0)
     : null;
   const clampedPercentage = resolvedPercentage !== null
     ? Math.min(resolvedPercentage, 100)
@@ -91,7 +92,6 @@ export const TokenIndicator = ({
   const tooltip = usedText && maxText
     ? `${formattedPercentage} · ${usedText} / ${maxText} ${' '}${t('chat.context')}`
     : t('chat.usagePercentage', { percentage: formattedPercentage });
-  const claudeHeaderTitle = t('chat.claudeContextTooltipTitle').replace(/\s*窗口[:：]?\s*$/, '').replace(/[:：]\s*$/, '');
   const claudeCachedNote = cachedText
     ? t('chat.claudeContextCachedExcludedDetail', { tokens: cachedText })
     : null;
@@ -141,7 +141,6 @@ export const TokenIndicator = ({
               <div className="claude-context-tooltip-header">
                 <div className="claude-context-tooltip-heading">
                   <span className="claude-context-tooltip-brand">Claude</span>
-                  <span className="claude-context-tooltip-title">{claudeHeaderTitle}</span>
                 </div>
                 <span className="claude-context-tooltip-chip">
                   {claudeFreshnessChipLabel}
@@ -240,9 +239,11 @@ export const TokenIndicator = ({
                 {claudeEstimatedNote}
                 {claudeCachedNote ? `，${claudeCachedNote}` : ''}
               </div>
-              <div className="claude-context-tooltip-source">
-                {claudeFreshnessLabel}
-              </div>
+              {claudeFreshness !== 'estimated' ? (
+                <div className="claude-context-tooltip-source">
+                  {claudeFreshnessLabel}
+                </div>
+              ) : null}
             </div>
           ) : (
             tooltip

@@ -1131,10 +1131,10 @@
 }
 
 .token-tooltip--claude {
-  width: min(420px, calc(100vw - 24px));
+  width: min(368px, calc(100vw - 24px));
   max-width: calc(100vw - 24px);
-  padding: 12px;
-  border-radius: 16px;
+  padding: 14px;
+  border-radius: 18px;
   white-space: normal;
   line-height: 1.4;
   color: color-mix(in srgb, var(--foreground) 94%, #253041 6%);
@@ -1159,7 +1159,7 @@
 
 .claude-context-tooltip {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .claude-context-tooltip-header {
@@ -1178,17 +1178,10 @@
 
 .claude-context-tooltip-brand {
   color: color-mix(in srgb, var(--accent) 74%, #f97316 26%);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.claude-context-tooltip-title {
-  min-width: 0;
-  color: var(--foreground);
-  font-size: 14px;
-  font-weight: 650;
 }
 
 .claude-context-tooltip-chip {
@@ -1205,16 +1198,18 @@
 .claude-context-tooltip-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
 }
 
 .claude-context-tooltip-pill {
   display: grid;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 12px;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
   background: color-mix(in srgb, white 82%, var(--accent) 18%);
   border: 1px solid color-mix(in srgb, var(--border) 72%, #e1e9f4 28%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .claude-context-tooltip-pill-label {
@@ -1225,7 +1220,7 @@
 
 .claude-context-tooltip-pill-value {
   color: var(--foreground);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
@@ -1233,28 +1228,29 @@
 
 .claude-context-tooltip-stats {
   display: grid;
-  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
 }
 
 .claude-context-tooltip-stat {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  gap: 2px;
+  padding: 8px 0 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
 }
 
 .claude-context-tooltip-stat-label {
   color: color-mix(in srgb, var(--muted-foreground) 88%, #667281 12%);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
+  text-transform: none;
 }
 
 .claude-context-tooltip-stat-value {
   color: var(--foreground);
-  font-size: 12px;
+  font-size: 14px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  text-align: right;
   white-space: nowrap;
 }
 
@@ -1372,11 +1368,9 @@
   border-bottom-color: color-mix(in srgb, rgba(255, 255, 255, 0.12) 78%, transparent);
 }
 
-:root[data-theme="dark"] .claude-context-tooltip-title,
 :root[data-theme="dark"] .claude-context-tooltip-pill-value,
 :root[data-theme="dark"] .claude-context-tooltip-stat-value,
 :root[data-theme="dark"] .claude-context-tooltip-category-name,
-:root[data-theme="dim"] .claude-context-tooltip-title,
 :root[data-theme="dim"] .claude-context-tooltip-pill-value,
 :root[data-theme="dim"] .claude-context-tooltip-stat-value,
 :root[data-theme="dim"] .claude-context-tooltip-category-name {
@@ -1394,6 +1388,7 @@
 :root[data-theme="dim"] .claude-context-tooltip-pill {
   background: rgba(255, 255, 255, 0.04);
   border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 :root[data-theme="dark"] .claude-context-tooltip-pill-label,
@@ -1428,6 +1423,7 @@
     max-width: calc(100vw - 24px);
   }
 
+  .claude-context-tooltip-stats,
   .claude-context-tooltip-summary {
     grid-template-columns: minmax(0, 1fr);
   }
