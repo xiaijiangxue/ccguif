@@ -48,7 +48,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
   }
 
   const menuContentClassName = cn(
-    "selector-menu-surface z-[10001] min-w-[220px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
+    "selector-menu-surface selector-shortcut-menu-surface z-[10001] min-w-[220px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

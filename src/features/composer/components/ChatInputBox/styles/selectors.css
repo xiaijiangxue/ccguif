@@ -842,6 +842,12 @@
   outline-offset: 1px;
 }
 
+.selector-shortcut-menu-surface:focus-visible,
+.selector-shortcut-menu-surface [data-scope="menu"][data-part="content"]:focus-visible,
+.selector-shortcut-menu-surface .selector-option.selector-option-button:focus-visible {
+  outline: none;
+}
+
 .selector-add-footer,
 .selector-action-footer {
   background: color-mix(in srgb, white 78%, var(--accent) 22%);

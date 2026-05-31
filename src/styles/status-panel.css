@@ -2089,6 +2089,17 @@ button.sp-subagent-main:focus-visible,
   line-height: 1.2;
 }
 
+.sp-cost-budget .sp-checkpoint-validation-guide {
+  align-items: flex-start;
+}
+
+.sp-cost-budget .sp-checkpoint-validation-guide-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .sp-cost-budget .sp-checkpoint-section-title {
   font-size: var(--sp-cost-budget-label-size);
 }
