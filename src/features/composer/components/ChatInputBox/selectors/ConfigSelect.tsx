@@ -9,6 +9,7 @@ import { agentProvider, CREATE_NEW_AGENT_ID, EMPTY_STATE_ID, type AgentItem } fr
 import type { AccountRateLimitsInfo, CodexSpeedMode, ProviderId, SelectedAgent } from '../types';
 import { formatRelativeTime } from '../../../../../utils/time';
 import { cn } from '@/lib/utils';
+import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ConfigSelectProps {
   currentProvider: string;
@@ -56,6 +57,7 @@ export const ConfigSelect = ({
   onAgentSelect,
   onOpenAgentSettings,
 }: ConfigSelectProps) => {
+  const hoverMenuId = 'config-select';
   const USAGE_REFRESH_TIMEOUT_MS = 10_000;
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -85,6 +87,15 @@ export const ConfigSelect = ({
     setUsageMenuOpen(false);
     setIsOpen(false);
   }, []);
+
+  const handleTriggerPointerLeave = useCallback((event: ReactPointerEvent) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Element && nextTarget.closest('[data-scope="menu"]')) {
+      return;
+    }
+
+    closeAllMenus();
+  }, [closeAllMenus]);
 
   const handleMenuPointerLeave = useCallback((event: ReactPointerEvent) => {
     const nextTarget = event.relatedTarget;
@@ -202,6 +213,10 @@ export const ConfigSelect = ({
   }, [onRefreshAccountRateLimits]);
 
   useEffect(() => {
+    return subscribeToHoverMenuOpen(hoverMenuId, closeAllMenus);
+  }, [closeAllMenus]);
+
+  useEffect(() => {
     if (!agentMenuOpen) return;
     loadAgents();
   }, [agentMenuOpen, loadAgents]);
@@ -274,6 +289,11 @@ export const ConfigSelect = ({
         ref={buttonRef}
         className="selector-button config-button"
         title={t('settings.configure', 'Configure')}
+        onPointerEnter={() => {
+          announceHoverMenuOpen(hoverMenuId);
+          setIsOpen(true);
+        }}
+        onPointerLeave={handleTriggerPointerLeave}
       >
         <span className="codicon codicon-settings" />
       </Menu.Trigger>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@ark-ui/react/menu';
 import { Portal } from '@ark-ui/react/portal';
@@ -9,6 +9,7 @@ import {
   MODE_SELECT_FLASH_DURATION_MS,
   MODE_SELECT_FLASH_EVENT,
 } from './modeSelectFlash';
+import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ModeSelectProps {
   value: PermissionMode;
@@ -34,6 +35,7 @@ export const ModeSelect = ({
   selectedCollaborationModeId,
   onSelectCollaborationMode,
 }: ModeSelectProps) => {
+  const hoverMenuId = 'mode-select';
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isChevronFlashing, setIsChevronFlashing] = useState(false);
@@ -121,6 +123,19 @@ export const ModeSelect = ({
     setIsOpen(false);
   }, [onChange, onSelectCollaborationMode, provider]);
 
+  const handlePointerLeave = useCallback((event: ReactPointerEvent) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Element && nextTarget.closest('[data-scope="menu"]')) {
+      return;
+    }
+
+    setIsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return subscribeToHoverMenuOpen(hoverMenuId, () => setIsOpen(false));
+  }, []);
+
   useEffect(() => {
     if (typeof window === 'undefined') {
       return undefined;
@@ -207,6 +222,11 @@ export const ModeSelect = ({
         className={`selector-button selector-button-mode-trigger${isChevronFlashing ? ' is-flashing' : ''}`}
         style={flashingButtonStyle}
         title={getModeText(currentMode.id, 'tooltip') || `${t('chat.currentMode', { mode: getModeText(currentMode.id, 'label') })}`}
+        onPointerEnter={() => {
+          announceHoverMenuOpen(hoverMenuId);
+          setIsOpen(true);
+        }}
+        onPointerLeave={handlePointerLeave}
       >
         <span
           className={`codicon ${currentMode.icon} selector-button-mode-icon`}
@@ -221,7 +241,10 @@ export const ModeSelect = ({
 
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
-          <Menu.Content className={cn(menuContentClassName, "selector-dropdown--mode")}>
+          <Menu.Content
+            className={cn(menuContentClassName, "selector-dropdown--mode")}
+            onPointerLeave={handlePointerLeave}
+          >
             {modeOptions.map((mode) => (
               <Menu.Item
                 key={mode.id}

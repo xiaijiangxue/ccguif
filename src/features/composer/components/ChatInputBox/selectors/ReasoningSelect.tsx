@@ -1,10 +1,11 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@ark-ui/react/menu';
 import { Portal } from '@ark-ui/react/portal';
 import Check from "lucide-react/dist/esm/icons/check";
 import { REASONING_LEVELS, type ReasoningEffort } from '../types';
 import { cn } from '@/lib/utils';
+import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ReasoningSelectProps {
   value: ReasoningEffort | null;
@@ -27,6 +28,7 @@ export const ReasoningSelect = ({
   defaultLabel,
   disabled,
 }: ReasoningSelectProps) => {
+  const hoverMenuId = 'reasoning-select';
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -68,6 +70,19 @@ export const ReasoningSelect = ({
     setIsOpen(false);
   }, [onChange]);
 
+  const handlePointerLeave = useCallback((event: ReactPointerEvent) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Element && nextTarget.closest('[data-scope="menu"]')) {
+      return;
+    }
+
+    setIsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return subscribeToHoverMenuOpen(hoverMenuId, () => setIsOpen(false));
+  }, []);
+
   const menuContentClassName = cn(
     "selector-menu-surface z-[10001] min-w-[200px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
@@ -99,6 +114,11 @@ export const ReasoningSelect = ({
         disabled={disabled}
         aria-label={triggerLabel}
         title={t('reasoning.title', { defaultValue: 'Select reasoning depth' })}
+        onPointerEnter={() => {
+          announceHoverMenuOpen(hoverMenuId);
+          setIsOpen(true);
+        }}
+        onPointerLeave={handlePointerLeave}
       >
         <span className={`codicon ${triggerIcon}`} />
         {!currentLevel && (
@@ -110,7 +130,7 @@ export const ReasoningSelect = ({
 
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
-          <Menu.Content className={menuContentClassName}>
+          <Menu.Content className={menuContentClassName} onPointerLeave={handlePointerLeave}>
             {showDefaultOption && (
               <Menu.Item
                 className={menuItemClassName}

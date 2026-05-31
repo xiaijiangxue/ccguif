@@ -1,15 +1,17 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@ark-ui/react/menu';
 import { Portal } from '@ark-ui/react/portal';
 import type { ShortcutAction } from '../types';
 import { cn } from '@/lib/utils';
+import { announceHoverMenuOpen, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ShortcutActionsSelectProps {
   actions?: ShortcutAction[];
 }
 
 export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) => {
+  const hoverMenuId = 'shortcut-actions-select';
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -18,6 +20,19 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
   const closeMenuAndFocusTrigger = useCallback(() => {
     setIsOpen(false);
     buttonRef.current?.focus();
+  }, []);
+
+  const handlePointerLeave = useCallback((event: ReactPointerEvent) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Element && nextTarget.closest('[data-scope="menu"]')) {
+      return;
+    }
+
+    setIsOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return subscribeToHoverMenuOpen(hoverMenuId, () => setIsOpen(false));
   }, []);
 
   if (!hasActions) {
@@ -54,13 +69,18 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
         className="selector-button selector-shortcut-button"
         title={t('chat.shortcutActionsEntry')}
         aria-label={t('chat.shortcutActionsEntry')}
+        onPointerEnter={() => {
+          announceHoverMenuOpen(hoverMenuId);
+          setIsOpen(true);
+        }}
+        onPointerLeave={handlePointerLeave}
       >
         <span className="codicon codicon-zap" />
       </Menu.Trigger>
 
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
-          <Menu.Content className={menuContentClassName}>
+          <Menu.Content className={menuContentClassName} onPointerLeave={handlePointerLeave}>
             {actions?.map((action) => (
               <Menu.Item
               key={action.key}
