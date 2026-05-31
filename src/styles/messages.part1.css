@@ -2028,3 +2028,13 @@
 .tool-group-body .tool-inline {
   margin: 0;
 }
+
+/* 工具后接消息时增加间距，形成语义分层 */
+.message-tool-block-shell + .message:not(.message-tool-block-shell) {
+  margin-top: 12px;
+}
+
+/* 消息末尾的工具块减少下边距 */
+.message-tool-block-shell:last-child {
+  margin-bottom: 4px;
+}

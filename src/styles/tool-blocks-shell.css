@@ -10,18 +10,20 @@
 
 .task-container {
   background: var(--bg-primary, var(--surface-card));
-  border: 1px solid var(--border-primary, var(--border-subtle));
+  border: 1px solid color-mix(in srgb, var(--border-primary, var(--border-subtle)) 70%, transparent);
   border-radius: 8px;
   margin: 8px 0;
   overflow: hidden;
+  box-shadow: 0 1px 3px color-mix(in srgb, #000 6%, transparent);
 }
 
-/* 折叠态（无详情体）先隐藏外边框，便于观察更轻量的视觉效果 */
+/* 折叠态（无详情体）— 轻微底色 + 圆角，提供容器感 */
 .task-container.task-container-collapsed,
 .task-container:not(:has(.task-details)) {
+  background: color-mix(in srgb, var(--surface-card) 60%, var(--surface-messages));
   border-color: transparent;
-  border-bottom-color: var(--border-primary, var(--border-subtle));
-  border-radius: 0;
+  border-bottom-color: color-mix(in srgb, var(--border-subtle) 50%, transparent);
+  border-radius: 6px;
 }
 
 .task-header {
@@ -155,6 +157,25 @@
   color: var(--text-primary);
   font-size: 14px;
   margin-right: 4px;
+  transition: color 0.15s ease;
+}
+
+/* 工具图标状态颜色 — 替代重复的绿点噪音 */
+.tool-title-icon.completed {
+  color: var(--color-success, var(--status-success));
+}
+
+.tool-title-icon.error {
+  color: var(--color-error, var(--status-error));
+}
+
+.tool-title-icon.pending {
+  color: var(--color-warning, var(--status-warning));
+}
+
+/* 隐藏连续同组工具中非末尾项的状态点 */
+.tool-status-indicator.hidden {
+  opacity: 0;
 }
 
 .tool-title-icon-file-change {

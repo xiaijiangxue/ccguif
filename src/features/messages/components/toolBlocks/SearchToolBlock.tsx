@@ -3,7 +3,7 @@
  * Search Tool Block Component - for displaying grep, glob and other search operations
  * 使用 task-container 样式 + codicon 图标（匹配参考项目）
  */
-import { memo, useMemo } from 'react';
+import { memo, useMemo, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import type { ConversationItem } from '../../../../types';
@@ -118,6 +118,57 @@ function formatSearchDetailValue(value: string): string {
   }
 }
 
+/* ---- 搜索结果行级解析 ---- */
+
+const FILE_HEADER_RE = /^(.+\.\w+):\s*$/;
+const MATCH_LINE_RE = /^(.+?)(?::(\d+))(?::(\d+))?:(.*)$/;
+const EMPTY_RESULT_RE = /no matches?\s+found|0 results?|empty result/i;
+
+type SearchLineKind = 'file-header' | 'match-line' | 'empty-result' | 'context';
+
+function classifySearchLine(line: string): SearchLineKind {
+  const trimmed = line.trimEnd();
+  if (EMPTY_RESULT_RE.test(trimmed)) return 'empty-result';
+  if (FILE_HEADER_RE.test(trimmed)) return 'file-header';
+  if (MATCH_LINE_RE.test(trimmed)) return 'match-line';
+  return 'context';
+}
+
+function renderStructuredOutput(output: string, pattern?: string): React.ReactNode {
+  if (!output) return null;
+  const lines = output.split('\n');
+  const escapedPattern = pattern?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  return (
+    <div className="search-result-structured">
+      {lines.map((line, i) => {
+        if (!line.trim() && i < lines.length - 1) {
+          return <div key={i} className="search-result-spacer" />;
+        }
+        const kind = classifySearchLine(line);
+        const className = `search-result-line search-result-${kind}`;
+        if (kind === 'empty-result') {
+          return <div key={i} className="search-result-line search-result-empty">{line}</div>;
+        }
+        if (escapedPattern && kind === 'match-line') {
+          const highlightRegex = new RegExp(`(${escapedPattern})`, 'gi');
+          const parts = line.split(highlightRegex);
+          return (
+            <div key={i} className={className}>
+              {parts.map((part, j) =>
+                part.toLowerCase() === pattern!.toLowerCase()
+                  ? <mark key={j} className="search-result-highlight">{part}</mark>
+                  : <Fragment key={j}>{part}</Fragment>
+              )}
+            </div>
+          );
+        }
+        return <div key={i} className={className}>{line}</div>;
+      })}
+    </div>
+  );
+}
+
 export const SearchToolBlock = memo(function SearchToolBlock({
   item,
   isExpanded,
@@ -224,18 +275,8 @@ export const SearchToolBlock = memo(function SearchToolBlock({
           {shouldShowExpandedOutput && (
             <div className="task-field">
               <div className="task-field-label">summary</div>
-              <div className="task-field-content">
-                <pre
-                  style={{
-                    margin: 0,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                    maxHeight: '300px',
-                    overflowY: 'auto',
-                  }}
-                >
-                  {expandedOutput}
-                </pre>
+              <div className="task-field-content search-result-output">
+                {renderStructuredOutput(expandedOutput, pattern)}
               </div>
             </div>
           )}
