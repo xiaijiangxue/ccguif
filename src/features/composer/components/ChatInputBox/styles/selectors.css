@@ -1024,14 +1024,23 @@
 }
 
 .selector-shortcut-trigger {
+  flex: 0 0 96px;
+  width: 96px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   font-weight: 600;
   color: color-mix(in srgb, var(--accent) 74%, #2f6edb 26%);
-  min-width: 44px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .selector-option-shortcut {
   gap: 10px;
+}
+
+.selector-shortcut-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
 }
 
 /* Selector toast notification */

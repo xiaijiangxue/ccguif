@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Menu } from '@ark-ui/react/menu';
 import { Portal } from '@ark-ui/react/portal';
@@ -78,6 +78,22 @@ export const ConfigSelect = ({
   const supportsReviewQuickAction = isCodexProvider || isClaudeProvider;
   const supportsForkQuickAction = isCodexProvider || isClaudeProvider;
   const isPlanModeEnabled = (selectedCollaborationModeId ?? 'code') === 'plan';
+
+  const closeAllMenus = useCallback(() => {
+    setAgentMenuOpen(false);
+    setSpeedMenuOpen(false);
+    setUsageMenuOpen(false);
+    setIsOpen(false);
+  }, []);
+
+  const handleMenuPointerLeave = useCallback((event: ReactPointerEvent) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Element && nextTarget.closest('[data-scope="menu"]')) {
+      return;
+    }
+
+    closeAllMenus();
+  }, [closeAllMenus]);
 
   const handlePlanModeToggle = useCallback(
     (enabled: boolean) => {
@@ -199,10 +215,8 @@ export const ConfigSelect = ({
     if (isOpen) {
       return;
     }
-    setAgentMenuOpen(false);
-    setSpeedMenuOpen(false);
-    setUsageMenuOpen(false);
-  }, [isOpen]);
+    closeAllMenus();
+  }, [closeAllMenus, isOpen]);
 
   useEffect(() => {
     return () => {
@@ -243,10 +257,6 @@ export const ConfigSelect = ({
     "outline-none",
   );
 
-  const menuSeparator = (
-    <Menu.Separator className="mx-0 my-1 h-px bg-[var(--dropdown-border)] opacity-50" />
-  );
-
   return (
     <Menu.Root
       closeOnSelect={false}
@@ -270,7 +280,11 @@ export const ConfigSelect = ({
 
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
-          <Menu.Content className={cn(baseMenuContentClassName, "min-w-[220px]")} aria-label={t('settings.configure', 'Configure')}>
+          <Menu.Content
+            className={cn(baseMenuContentClassName, "min-w-[220px]")}
+            aria-label={t('settings.configure', 'Configure')}
+            onPointerLeave={handleMenuPointerLeave}
+          >
             <Menu.Root
               lazyMount
               onOpenChange={(details) => setAgentMenuOpen(details.open)}
@@ -313,7 +327,10 @@ export const ConfigSelect = ({
 
               <Portal>
                 <Menu.Positioner className="z-[10002] outline-none">
-                  <Menu.Content className={cn(baseMenuContentClassName, "min-w-[320px] max-w-[360px] max-h-[360px] overflow-y-auto overscroll-contain")}>
+                  <Menu.Content
+                    className={cn(baseMenuContentClassName, "min-w-[320px] max-w-[360px] max-h-[360px] overflow-y-auto overscroll-contain")}
+                    onPointerLeave={handleMenuPointerLeave}
+                  >
                     {agentsLoading ? (
                       <div className={cn(menuRowClassName, "cursor-default")}>
                         <span className="codicon codicon-loading codicon-modifier-spin" />
@@ -380,10 +397,8 @@ export const ConfigSelect = ({
                 </Menu.Positioner>
               </Portal>
             </Menu.Root>
-
             {!isCodexProvider && (
               <>
-                {menuSeparator}
                 <Menu.Item
                   className={cn(menuRowClassName, "selector-option-streaming-toggle justify-between")}
                   closeOnSelect={false}
@@ -404,7 +419,6 @@ export const ConfigSelect = ({
                   />
                 </Menu.Item>
 
-                {menuSeparator}
                 <Menu.Item
                   className={cn(menuRowClassName, "selector-option-thinking-toggle justify-between")}
                   closeOnSelect={false}
@@ -429,7 +443,6 @@ export const ConfigSelect = ({
 
             {isCodexProvider && (
               <>
-                {menuSeparator}
                 <Menu.Item
                   className={cn(menuRowClassName, "selector-option-plan-mode justify-between")}
                   closeOnSelect={false}
@@ -455,10 +468,9 @@ export const ConfigSelect = ({
 
             {isCodexProvider && (
               <>
-                {menuSeparator}
-            <Menu.Root
-              lazyMount
-              onOpenChange={(details) => setSpeedMenuOpen(details.open)}
+                <Menu.Root
+                  lazyMount
+                  onOpenChange={(details) => setSpeedMenuOpen(details.open)}
               open={speedMenuOpen}
               positioning={{
                 placement: 'right-start',
@@ -485,7 +497,10 @@ export const ConfigSelect = ({
 
                   <Portal>
                     <Menu.Positioner className="z-[10002] outline-none">
-                      <Menu.Content className={cn(baseMenuContentClassName, "min-w-[180px]")}>
+                      <Menu.Content
+                        className={cn(baseMenuContentClassName, "min-w-[180px]")}
+                        onPointerLeave={handleMenuPointerLeave}
+                      >
                         <Menu.Item
                           className={cn(menuRowClassName, "selector-option-speed-standard")}
                           value="speed:standard"
@@ -511,7 +526,6 @@ export const ConfigSelect = ({
 
             {supportsReviewQuickAction && (
               <>
-                {menuSeparator}
                 {supportsForkQuickAction && (
                   <Menu.Item
                     className={cn(menuRowClassName, "selector-option-fork-quick")}
@@ -535,7 +549,6 @@ export const ConfigSelect = ({
 
             {isCodexProvider && (
               <>
-                {menuSeparator}
                 <Menu.Root
                   lazyMount
                   onOpenChange={(details) => setUsageMenuOpen(details.open)}
@@ -565,7 +578,10 @@ export const ConfigSelect = ({
 
                   <Portal>
                     <Menu.Positioner className="z-[10002] outline-none">
-                      <Menu.Content className={cn(baseMenuContentClassName, "selector-usage-dropdown min-w-[280px]")}>
+                      <Menu.Content
+                        className={cn(baseMenuContentClassName, "selector-usage-dropdown min-w-[280px]")}
+                        onPointerLeave={handleMenuPointerLeave}
+                      >
                         <div className="selector-usage-header">
                           <span>{t('home.usageSnapshot')}</span>
                           <button

@@ -71,8 +71,8 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
                 closeMenuAndFocusTrigger();
               }}
               >
+                <span className="selector-shortcut-label">{action.label}</span>
                 <span className="selector-shortcut-trigger">{action.trigger}</span>
-                <span>{action.label}</span>
               </Menu.Item>
             ))}
           </Menu.Content>
