@@ -2,7 +2,6 @@
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import ChevronsUpDownIcon from "lucide-react/dist/esm/icons/chevrons-up-down";
-import * as React from "react";
 
 type SettingsFontArkSelectProps = {
   id: string;

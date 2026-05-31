@@ -290,7 +290,7 @@ export const ConfigSelect = ({
         placement: 'top-start',
         gutter: 4,
         flip: true,
-        shift: { padding: 8 },
+        shift: 8,
       }}
     >
       <Menu.Trigger
@@ -323,7 +323,7 @@ export const ConfigSelect = ({
                 placement: 'right-start',
                 gutter: 18,
                 flip: true,
-                shift: { padding: 8 },
+                shift: 8,
               }}
             >
               <Menu.TriggerItem
@@ -507,7 +507,7 @@ export const ConfigSelect = ({
                 placement: 'right-start',
                 gutter: 18,
                     flip: true,
-                    shift: { padding: 8 },
+                    shift: 8,
                   }}
                 >
                   <Menu.TriggerItem
@@ -589,7 +589,7 @@ export const ConfigSelect = ({
                     placement: 'right-start',
                     gutter: 18,
                     flip: true,
-                    shift: { padding: 8 },
+                    shift: 8,
                   }}
                 >
                   <Menu.TriggerItem

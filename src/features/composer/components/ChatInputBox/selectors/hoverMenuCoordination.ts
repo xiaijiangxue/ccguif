@@ -42,7 +42,7 @@ export function createHoverMenuCloseController(
   onClose: () => void,
   delayMs = HOVER_MENU_CLOSE_DELAY_MS,
 ) {
-  let timeoutId: ReturnType<typeof window.setTimeout> | null = null;
+  let timeoutId: number | null = null;
 
   return {
     schedule() {

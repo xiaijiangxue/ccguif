@@ -222,7 +222,7 @@ export const ModeSelect = ({
         placement: 'top-start',
         gutter: 4,
         flip: true,
-        shift: { padding: 8 },
+        shift: 8,
       }}
     >
       <Menu.Trigger
