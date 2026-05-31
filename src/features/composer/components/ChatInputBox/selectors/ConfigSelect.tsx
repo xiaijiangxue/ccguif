@@ -60,12 +60,16 @@ export const ConfigSelect = ({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [agentMenuOpen, setAgentMenuOpen] = useState(false);
+  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
   const [usageMenuOpen, setUsageMenuOpen] = useState(false);
   const [agentItems, setAgentItems] = useState<AgentItem[]>([]);
   const [agentsLoading, setAgentsLoading] = useState(false);
   const [usageLoading, setUsageLoading] = useState(false);
   
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const agentTriggerRef = useRef<HTMLDivElement>(null);
+  const speedTriggerRef = useRef<HTMLDivElement>(null);
+  const usageTriggerRef = useRef<HTMLDivElement>(null);
   const agentAbortControllerRef = useRef<AbortController | null>(null);
   const usageLoadingRef = useRef(false);
 
@@ -192,6 +196,15 @@ export const ConfigSelect = ({
   }, [usageMenuOpen, refreshUsageSnapshot]);
 
   useEffect(() => {
+    if (isOpen) {
+      return;
+    }
+    setAgentMenuOpen(false);
+    setSpeedMenuOpen(false);
+    setUsageMenuOpen(false);
+  }, [isOpen]);
+
+  useEffect(() => {
     return () => {
       if (agentAbortControllerRef.current) {
         agentAbortControllerRef.current.abort();
@@ -215,7 +228,7 @@ export const ConfigSelect = ({
   }, [onForkQuickStart]);
 
   const baseMenuContentClassName = cn(
-    "z-[10001] overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-lg",
+    "z-[10001] overflow-hidden rounded-[14px] border border-[color:color-mix(in_srgb,var(--border)_74%,#dce5f2_26%)] bg-[color:color-mix(in_srgb,white_96%,var(--accent)_4%)] p-0 text-popover-foreground shadow-[0_14px_34px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur-[10px]",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -224,14 +237,14 @@ export const ConfigSelect = ({
   );
 
   const menuRowClassName = cn(
-    "selector-option m-0 rounded-md",
+    "selector-option m-0 rounded-[12px]",
     "data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground",
     "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
     "outline-none",
   );
 
   const menuSeparator = (
-    <Menu.Separator className="mx-1 my-1 h-px bg-[var(--dropdown-border)] opacity-50" />
+    <Menu.Separator className="mx-0 my-1 h-px bg-[var(--dropdown-border)] opacity-50" />
   );
 
   return (
@@ -264,12 +277,22 @@ export const ConfigSelect = ({
               open={agentMenuOpen}
               positioning={{
                 placement: 'right-start',
-                gutter: 8,
+                gutter: 18,
                 flip: true,
                 shift: { padding: 8 },
               }}
             >
-              <Menu.TriggerItem className={menuRowClassName}>
+              <Menu.TriggerItem
+                ref={agentTriggerRef}
+                className={cn(menuRowClassName, agentMenuOpen && "is-submenu-active")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setAgentMenuOpen(true);
+                }}
+                onFocus={() => setAgentMenuOpen(true)}
+                onPointerMove={() => setAgentMenuOpen(true)}
+              >
                 <AgentIcon
                   icon={selectedAgent?.icon}
                   seed={selectedAgent?.id || selectedAgent?.name}
@@ -433,16 +456,28 @@ export const ConfigSelect = ({
             {isCodexProvider && (
               <>
                 {menuSeparator}
-                <Menu.Root
-                  lazyMount
-                  positioning={{
-                    placement: 'right-start',
-                    gutter: 8,
+            <Menu.Root
+              lazyMount
+              onOpenChange={(details) => setSpeedMenuOpen(details.open)}
+              open={speedMenuOpen}
+              positioning={{
+                placement: 'right-start',
+                gutter: 18,
                     flip: true,
                     shift: { padding: 8 },
                   }}
                 >
-                  <Menu.TriggerItem className={cn(menuRowClassName, "selector-option-speed")}>
+                  <Menu.TriggerItem
+                    ref={speedTriggerRef}
+                    className={cn(menuRowClassName, "selector-option-speed", speedMenuOpen && "is-submenu-active")}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setSpeedMenuOpen(true);
+                    }}
+                    onFocus={() => setSpeedMenuOpen(true)}
+                    onPointerMove={() => setSpeedMenuOpen(true)}
+                  >
                     <span className="codicon codicon-zap" />
                     <span>{t('composer.speed')}</span>
                     <span className="codicon codicon-chevron-right ml-auto text-[12px]" />
@@ -507,12 +542,22 @@ export const ConfigSelect = ({
                   open={usageMenuOpen}
                   positioning={{
                     placement: 'right-start',
-                    gutter: 8,
+                    gutter: 18,
                     flip: true,
                     shift: { padding: 8 },
                   }}
                 >
-                  <Menu.TriggerItem className={cn(menuRowClassName, "selector-option-live-usage")}>
+                  <Menu.TriggerItem
+                    ref={usageTriggerRef}
+                    className={cn(menuRowClassName, "selector-option-live-usage", usageMenuOpen && "is-submenu-active")}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      setUsageMenuOpen(true);
+                    }}
+                    onFocus={() => setUsageMenuOpen(true)}
+                    onPointerMove={() => setUsageMenuOpen(true)}
+                  >
                     <span className="codicon codicon-pulse" />
                     <span>{t('composer.liveUsage')}</span>
                     <span className="codicon codicon-chevron-right ml-auto text-[12px]" title={t('home.usageSnapshot')} />
