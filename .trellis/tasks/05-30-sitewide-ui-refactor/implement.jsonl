@@ -1,0 +1,7 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "组件设计、props、样式与 i18n 规范 — UI 重构核心参照"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "review 门禁与大文件治理 — 重构验收约束"}
+{"file": ".trellis/spec/frontend/directory-structure.md", "reason": "文件落位规则 — 确保新增/移动文件放对位置"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "降低重复和漂移 — 样式统一重构关键"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "跨层 contract 保护 — UI→CSS→布局壳层"}

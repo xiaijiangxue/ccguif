@@ -25,6 +25,7 @@ export const Dropdown = ({
   selectedIndex: _selectedIndex = 0,
   onClose,
   className,
+  containerRef,
   children,
 }: DropdownProps) => {
   // selectedIndex is passed from parent component, not directly used here
@@ -68,25 +69,34 @@ export const Dropdown = ({
   // of the zoom factor applied to #app.
   const { width: viewportWidth, height: viewportHeight, top: viewportTop, left: viewportLeft, fixedPosDivisor } = getAppViewport();
 
-  // Calculate left position, ensure it doesn't exceed viewport right edge
-  let left = position.left - viewportLeft + offsetX;
-  const edgePadding = 10;
-  const effectiveWidth = Math.min(width, Math.max(280, viewportWidth - edgePadding * 2));
+  // When containerRef is provided, align dropdown to the input box
+  const containerRect = containerRef?.current?.getBoundingClientRect();
+  let left: number;
+  let bottomValue: number;
+  let effectiveWidth: number;
 
-  if (left + effectiveWidth + edgePadding > viewportWidth) {
-    left = viewportWidth - effectiveWidth - edgePadding;
+  if (containerRect) {
+    // Match the input box width and left edge
+    effectiveWidth = containerRect.width;
+    left = containerRect.left - viewportLeft;
+    // Position above the container's top edge
+    const containerTopInApp = containerRect.top - viewportTop;
+    bottomValue = viewportHeight - containerTopInApp + offsetY;
+  } else {
+    // Fallback: position at cursor
+    left = position.left - viewportLeft + offsetX;
+    const edgePadding = 10;
+    effectiveWidth = Math.min(width, Math.max(280, viewportWidth - edgePadding * 2));
+    if (left + effectiveWidth + edgePadding > viewportWidth) {
+      left = viewportWidth - effectiveWidth - edgePadding;
+    }
+    if (left < edgePadding) {
+      left = edgePadding;
+    }
+    const posInApp = position.top - viewportTop;
+    const effectiveTop = Math.max(offsetY, Math.min(posInApp, viewportHeight - offsetY));
+    bottomValue = viewportHeight - effectiveTop + offsetY;
   }
-
-  // Ensure it doesn't exceed viewport left edge
-  if (left < edgePadding) {
-    left = edgePadding;
-  }
-
-  // Display above cursor: use bottom positioning
-  // position.top is relative to viewport; convert to relative to #app bottom
-  const posInApp = position.top - viewportTop;
-  const effectiveTop = Math.max(offsetY, Math.min(posInApp, viewportHeight - offsetY));
-  const bottomValue = viewportHeight - effectiveTop + offsetY;
 
   const style: React.CSSProperties = {
     position: 'fixed',
@@ -124,6 +134,7 @@ export const CompletionDropdown = ({
   onClose,
   onSelect,
   onMouseEnter,
+  containerRef,
 }: CompletionDropdownProps) => {
   const { t } = useTranslation();
   const listRef = useRef<HTMLDivElement>(null);
@@ -172,6 +183,7 @@ export const CompletionDropdown = ({
       className={className}
       selectedIndex={selectedIndex}
       onClose={onClose}
+      containerRef={containerRef}
     >
       <div
         ref={listRef}

@@ -1714,6 +1714,7 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
                 onKeepOriginal: handleKeepOriginalPrompt,
                 onClose: handleCloseEnhancerDialog,
               }}
+              containerRef={containerRef}
               t={t}
             />
           )}

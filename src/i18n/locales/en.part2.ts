@@ -1494,6 +1494,8 @@ const enPart2 = {
     task: {
       createTitle: "Create Task",
       create: "Create",
+      engineLabel: "Engine",
+      modelLabel: "Model",
       titlePlaceholder: "Enter task title",
       descPlaceholder: "Describe the task...",
       notInstalled: "Not installed",

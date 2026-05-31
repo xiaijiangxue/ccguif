@@ -872,6 +872,8 @@ export interface DropdownProps {
   onClose?: () => void;
   /** Optional extra class names */
   className?: string;
+  /** Container ref for width/position matching */
+  containerRef?: React.RefObject<HTMLDivElement | null>;
   /** Children */
   children: React.ReactNode;
 }

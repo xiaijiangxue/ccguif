@@ -1421,6 +1421,8 @@ const zhPart2 = {
     task: {
       createTitle: "创建任务",
       create: "创建",
+      engineLabel: "引擎",
+      modelLabel: "模型",
       titlePlaceholder: "输入任务标题",
       descPlaceholder: "描述任务内容...",
       notInstalled: "未安装",

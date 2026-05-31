@@ -285,6 +285,7 @@ export function ChatInputBoxFooter({
   panelToggleSurface,
   tooltip,
   promptEnhancer,
+  containerRef,
   t,
 }: {
   disabled: boolean;
@@ -364,6 +365,7 @@ export function ChatInputBoxFooter({
     onKeepOriginal: () => void;
     onClose: () => void;
   };
+  containerRef?: React.RefObject<HTMLDivElement | null>;
   t: TFunction;
 }) {
   const footerHostRef = useRef<HTMLDivElement>(null);
@@ -953,6 +955,7 @@ export function ChatInputBoxFooter({
         isVisible={commandCompletion.isOpen}
         position={commandCompletion.position}
         width={450}
+        containerRef={containerRef}
         items={commandCompletion.items}
         selectedIndex={commandCompletion.activeIndex}
         loading={commandCompletion.loading}
