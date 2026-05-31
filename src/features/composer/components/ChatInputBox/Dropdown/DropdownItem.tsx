@@ -42,6 +42,7 @@ export const DropdownItem = ({
       : t('settings.prompt.argumentHintLabel');
   const isPromptItem = item.type === 'prompt' && promptKind === 'prompt';
   const isPromptCreateItem = item.type === 'prompt' && promptKind === 'create';
+  const isCommandItem = item.type === 'command';
   const promptHeatLabel =
     promptUsageCount > 0
       ? t('settings.prompt.usageCount', { count: promptUsageCount })
@@ -117,7 +118,8 @@ export const DropdownItem = ({
 
   return (
     <div
-      className={`dropdown-item ${item.className ?? ''} ${isPromptItem ? 'dropdown-item--prompt' : ''} ${isPromptCreateItem ? 'dropdown-item--prompt-create' : ''} ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
+      aria-selected={isActive}
+      className={`dropdown-item ${item.className ?? ''} ${isPromptItem ? 'dropdown-item--prompt' : ''} ${isPromptCreateItem ? 'dropdown-item--prompt-create' : ''} ${isCommandItem ? 'dropdown-item--command' : ''} ${isActive ? 'active' : ''} ${isDisabled ? 'disabled' : ''}`}
       onClick={isDisabled ? undefined : onClick}
       onMouseEnter={() => {
         // Call the original onMouseEnter (for keyboard navigation highlighting)
@@ -156,12 +158,14 @@ export const DropdownItem = ({
         ) : (
           <>
             <div className="dropdown-item-label">{item.label}</div>
-            {!item.description && scopeLabel && (
-              <div className="dropdown-item-scope">{scopeLabel}</div>
-            )}
-            {item.description && (
-              <div className="dropdown-item-description">{item.description}</div>
-            )}
+            <div className="dropdown-item-trailing">
+              {!item.description && scopeLabel && (
+                <div className="dropdown-item-scope">{scopeLabel}</div>
+              )}
+              {item.description && (
+                <div className="dropdown-item-description">{item.description}</div>
+              )}
+            </div>
           </>
         )}
       </div>

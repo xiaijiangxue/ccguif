@@ -7,6 +7,19 @@
   max-height: 300px;
 }
 
+.completion-dropdown--command {
+  max-height: min(360px, 42vh);
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--popover) 98%, white 2%);
+  box-shadow:
+    0 10px 30px rgba(30, 40, 60, 0.1),
+    0 2px 8px rgba(30, 40, 60, 0.06),
+    0 0 0 1px color-mix(in srgb, #4d8ff0 14%, transparent);
+  backdrop-filter: blur(16px);
+}
+
 .completion-dropdown--prompt {
   max-height: 560px;
   border-radius: 12px;
@@ -14,6 +27,11 @@
 
 .dropdown-list {
   display: block;
+}
+
+.completion-dropdown--command .dropdown-list {
+  display: grid;
+  gap: 4px;
 }
 
 .dropdown-list--prompt-grid {
@@ -40,7 +58,11 @@
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
-  transition: background 0.1s;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease,
+    color 0.12s ease;
 }
 
 .dropdown-item:hover {
@@ -77,6 +99,52 @@
   background: transparent;
 }
 
+.completion-dropdown--command .dropdown-item {
+  position: relative;
+  min-height: 42px;
+  width: calc(100% - 6px);
+  gap: 12px;
+  padding: 0 14px;
+  margin-right: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+}
+
+.completion-dropdown--command .dropdown-item::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #4d8ff0 72%, white 28%);
+  opacity: 0;
+  transform: scaleY(0.65);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.completion-dropdown--command .dropdown-item:hover {
+  background: color-mix(in srgb, #4d8ff0 5%, var(--accent));
+}
+
+.completion-dropdown--command .dropdown-item.active,
+.completion-dropdown--command .dropdown-item.selected {
+  background: color-mix(in srgb, #4d8ff0 14%, white 86%);
+  border-color: color-mix(in srgb, #4d8ff0 28%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  color: var(--text-primary);
+}
+
+.completion-dropdown--command .dropdown-item.active::before,
+.completion-dropdown--command .dropdown-item.selected::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
 .dropdown-item-icon {
   font-size: 16px;
   color: var(--text-secondary);
@@ -101,6 +169,11 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+}
+
+.completion-dropdown--command .dropdown-item-content {
+  gap: 16px;
+  align-items: center;
 }
 
 .dropdown-item--prompt {
@@ -149,6 +222,12 @@
   flex-shrink: 0;
 }
 
+.completion-dropdown--command .dropdown-item-label {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 .dropdown-item--prompt .dropdown-item-label {
   font-size: 13px;
   font-weight: 650;
@@ -168,6 +247,14 @@
   flex: 1;
   direction: rtl;
   text-overflow: ellipsis;
+}
+
+.completion-dropdown--command .dropdown-item-description {
+  margin-left: 0;
+  color: color-mix(in srgb, var(--text-muted) 88%, transparent);
+  font-size: 13px;
+  font-weight: 450;
+  direction: ltr;
 }
 
 .dropdown-item--prompt .dropdown-item-description {
@@ -196,6 +283,18 @@
   white-space: nowrap;
   margin-left: 8px;
   flex: 0 0 auto;
+}
+
+.dropdown-item-trailing {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.completion-dropdown--command .dropdown-item-trailing {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .dropdown-item--prompt .dropdown-item-scope {
@@ -248,6 +347,25 @@
 
 .dropdown-item--prompt .dropdown-item-icon[data-heat-level="3"] {
   color: #2563eb;
+}
+
+.completion-dropdown--command .dropdown-item-icon {
+  width: 24px;
+  height: 24px;
+  color: color-mix(in srgb, var(--foreground) 62%, transparent);
+}
+
+.completion-dropdown--command .dropdown-item-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.completion-dropdown--command .dropdown-empty,
+.completion-dropdown--command .dropdown-loading {
+  padding: 18px 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  text-align: center;
 }
 
 /* Portal tooltip animation */

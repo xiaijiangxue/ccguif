@@ -955,6 +955,7 @@ export function ChatInputBoxFooter({
         isVisible={commandCompletion.isOpen}
         position={commandCompletion.position}
         width={450}
+        className="completion-dropdown--command"
         containerRef={containerRef}
         items={commandCompletion.items}
         selectedIndex={commandCompletion.activeIndex}
