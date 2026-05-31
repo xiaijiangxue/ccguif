@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import Check from "lucide-react/dist/esm/icons/check";
 import type { ModelInfo, ProviderId } from '../types';
 import type { ProviderModelGroup } from '../modelOptions';
 import { EngineIcon } from '../../../../engine/components/EngineIcon';
 import { DropdownContent } from '@/components/ui/dropdown-content';
+import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
 
 interface ModelSelectProps {
   value: string;
@@ -77,25 +78,10 @@ export const ModelSelect = ({
   const [isOpen, setIsOpen] = useState(false);
   const [refreshConfigError, setRefreshConfigError] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const isReadiness = triggerVariant === 'readiness';
-
-  // Click-outside handler for readiness inline dropdown
-  useEffect(() => {
-    if (!isReadiness || !isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isReadiness, isOpen]);
+  const hoverMenuId = isReadiness ? 'model-select-readiness' : 'model-select-default';
+  const hoverSurfaceId = `model-select-surface-${triggerVariant}`;
+  const hoverCloseControllerRef = useRef(createHoverMenuCloseController(() => setIsOpen(false)));
 
   const effectiveModels = useMemo(() => {
     if (models.length > 0) {
@@ -144,6 +130,36 @@ export const ModelSelect = ({
     setIsOpen(!isOpen);
   }, [isOpen]);
 
+  const handleHoverOpen = useCallback(() => {
+    hoverCloseControllerRef.current.cancel();
+    announceHoverMenuOpen(hoverMenuId);
+    setIsOpen(true);
+  }, [hoverMenuId]);
+
+  const isWithinHoverSurface = useCallback((target: EventTarget | null) => {
+    if (!(target instanceof Element)) {
+      return false;
+    }
+    if (buttonRef.current?.contains(target)) {
+      return true;
+    }
+    return target.closest(`[data-dropdown-surface="${hoverSurfaceId}"]`) !== null;
+  }, [hoverSurfaceId]);
+
+  const handleTriggerPointerLeave = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (isWithinHoverSurface(event.relatedTarget)) {
+      return;
+    }
+    hoverCloseControllerRef.current.schedule();
+  }, [isWithinHoverSurface]);
+
+  const handleDropdownPointerLeave = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (isWithinHoverSurface(event.relatedTarget)) {
+      return;
+    }
+    hoverCloseControllerRef.current.schedule();
+  }, [isWithinHoverSurface]);
+
   /**
    * Select model
    */
@@ -179,6 +195,24 @@ export const ModelSelect = ({
     });
   }, [isRefreshingConfig, onRefreshConfig]);
 
+  useEffect(() => {
+    if (!isReadiness) {
+      return;
+    }
+
+    return subscribeToHoverMenuOpen(hoverMenuId, () => {
+      hoverCloseControllerRef.current.cancel();
+      setIsOpen(false);
+    });
+  }, [hoverMenuId, isReadiness]);
+
+  useEffect(() => {
+    const hoverCloseController = hoverCloseControllerRef.current;
+    return () => {
+      hoverCloseController.cleanup();
+    };
+  }, []);
+
   return (
     <div
       className={triggerVariant === 'readiness' ? 'composer-readiness-model-select' : undefined}
@@ -188,6 +222,8 @@ export const ModelSelect = ({
         ref={buttonRef}
         className={triggerVariant === 'readiness' ? 'composer-readiness-target composer-readiness-target-button' : 'selector-button'}
         onClick={handleToggle}
+        onPointerEnter={isReadiness ? handleHoverOpen : undefined}
+        onPointerLeave={isReadiness ? handleTriggerPointerLeave : undefined}
         title={t('chat.currentModel', { model: currentModelLabel })}
         aria-label={t('chat.currentModel', { model: currentModelLabel })}
       >
@@ -217,9 +253,19 @@ export const ModelSelect = ({
 
       {isOpen && (
         isReadiness ? (
-          <div
-            ref={dropdownRef}
-            className="selector-dropdown selector-dropdown--model selector-dropdown--readiness-inline"
+          <DropdownContent
+            anchorEl={buttonRef.current}
+            open={isOpen}
+            onClose={() => setIsOpen(false)}
+            side="top"
+            sideOffset={-10}
+            align="end"
+            minWidth={252}
+            maxHeight="280px"
+            surfaceId={hoverSurfaceId}
+            onPointerEnter={isReadiness ? () => hoverCloseControllerRef.current.cancel() : undefined}
+            onPointerLeave={isReadiness ? handleDropdownPointerLeave : undefined}
+            className="selector-dropdown--model selector-dropdown--readiness-inline selector-dropdown--model-readiness-compact"
           >
             {hasGroupedModels ? (
               <div className="selector-model-groups">
@@ -312,7 +358,7 @@ export const ModelSelect = ({
                 )}
               </>
             )}
-          </div>
+          </DropdownContent>
         ) : (
           <DropdownContent
             anchorEl={buttonRef.current}
@@ -323,6 +369,7 @@ export const ModelSelect = ({
             align="start"
             minWidth={252}
             maxHeight="min(48vh, 380px)"
+            surfaceId={hoverSurfaceId}
             className="selector-dropdown--model"
           >
             {hasGroupedModels ? (

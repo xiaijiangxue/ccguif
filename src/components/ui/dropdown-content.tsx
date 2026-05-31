@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEventHandler, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +44,10 @@ type DropdownContentProps = {
   maxHeight?: number | string;
   /** 额外 CSS 类名 */
   className?: string;
+  /** 便于 hover 菜单跨 portal 命中判定 */
+  surfaceId?: string;
+  onPointerEnter?: PointerEventHandler<HTMLDivElement>;
+  onPointerLeave?: PointerEventHandler<HTMLDivElement>;
   children: ReactNode;
 };
 
@@ -68,6 +72,9 @@ export function DropdownContent({
   maxWidth,
   maxHeight,
   className,
+  surfaceId,
+  onPointerEnter,
+  onPointerLeave,
   children,
 }: DropdownContentProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -179,7 +186,15 @@ export function DropdownContent({
   // 窗口变化时重算位置
   useEffect(() => {
     if (!open) return;
-    const handleResize = () => updatePosition();
+    const handleResize = (event?: Event) => {
+      if (
+        event?.target instanceof Node &&
+        containerRef.current?.contains(event.target)
+      ) {
+        return;
+      }
+      updatePosition();
+    };
     const scrollOptions = { capture: true, passive: true } as const;
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleResize, scrollOptions);
@@ -216,6 +231,7 @@ export function DropdownContent({
       ref={containerRef}
       data-state={open ? "open" : "closed"}
       data-side={effectiveSide}
+      data-dropdown-surface={surfaceId}
       className={cn(
         // shadcn 弹出层基础样式
         "z-50 min-w-[8rem] overflow-y-auto rounded-[14px] border border-[color:color-mix(in_srgb,var(--border)_74%,#dce5f2_26%)] bg-[color:color-mix(in_srgb,white_96%,var(--accent)_4%)] p-1.5 text-popover-foreground shadow-[0_14px_34px_rgba(15,23,42,0.12),0_2px_8px_rgba(15,23,42,0.06)] backdrop-blur-[10px]",
@@ -227,6 +243,8 @@ export function DropdownContent({
         className,
       )}
       style={style}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
     >
       {children}
     </div>,

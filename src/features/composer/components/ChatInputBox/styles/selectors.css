@@ -609,15 +609,19 @@
   overscroll-behavior: contain;
 }
 
+.selector-dropdown--model-readiness-compact {
+  max-height: 280px;
+}
+
 .selector-model-groups {
-  padding: 4px 0;
+  padding: 0;
 }
 
 .selector-model-group-title {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 16px 4px;
+  padding: 8px 12px 4px;
   color: var(--dropdown-title-color, #8A9096);
   font-size: 13px;
   font-weight: 450;
@@ -626,14 +630,13 @@
 }
 
 .selector-model-group-divider {
-  height: 1px;
-  margin: 5px 8px 4px;
-  background: var(--dropdown-divider-color, #E9ECF1);
+  display: none;
 }
 
 .selector-option.selector-option--model-compact {
   min-height: 34px;
-  padding: 5px 10px;
+  width: 100%;
+  padding: 8px 10px;
   gap: 10px;
 }
 

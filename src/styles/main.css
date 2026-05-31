@@ -1663,8 +1663,8 @@ body.editor-horizontal-split-resizing * {
   right: 12px;
   top: 50%;
   height: 1px;
-  background: var(--border-strong);
-  opacity: 0.4;
+  background: transparent;
+  opacity: 0;
   transform: translateY(-0.5px);
   transition: opacity 0.15s ease, background-color 0.15s ease, height 0.15s ease, box-shadow 0.15s ease;
 }
