@@ -38,12 +38,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate Tauri signing key for CI
+      - name: Setup Tauri signing key
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.tauri"
-          npx tauri signer generate --ci -w "$HOME/.tauri/ccgui.key" -f 2>&1
-          echo "CI signing key generated ($(wc -c < "$HOME/.tauri/ccgui.key") bytes)"
+          cp "${{ github.workspace }}/ci/ccgui.key" "$HOME/.tauri/ccgui.key"
+          cp "${{ github.workspace }}/ci/ccgui.key.pub" "$HOME/.tauri/ccgui.key.pub"
+          # Base64-encode and export to env (matches release.yml pattern)
+          KEY_B64=$(base64 -i "$HOME/.tauri/ccgui.key" | tr -d '\n')
+          echo "TAURI_SIGNING_PRIVATE_KEY=$KEY_B64" >> "$GITHUB_ENV"
+          echo "CI signing key ready"
 
       - name: Build Tauri app
         run: |
@@ -93,14 +97,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate Tauri signing key for CI
+      - name: Setup Tauri signing key
         shell: pwsh
         run: |
           $keyDir = "$env:USERPROFILE\.tauri"
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
-          $keyPath = "$keyDir\ccgui.key"
-          npx tauri signer generate --ci -w $keyPath -f 2>&1
-          Write-Host "CI signing key generated"
+          Copy-Item "$env:GITHUB_WORKSPACE\ci\ccgui.key" -Destination "$keyDir\ccgui.key"
+          Copy-Item "$env:GITHUB_WORKSPACE\ci\ccgui.key.pub" -Destination "$keyDir\ccgui.key.pub"
+          $keyContent = Get-Content "$keyDir\ccgui.key" -Raw
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($keyContent)
+          $b64 = [Convert]::ToBase64String($bytes)
+          Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY=$b64"
+          Write-Host "CI signing key setup complete"
 
       - name: Build Windows installer
         shell: pwsh
