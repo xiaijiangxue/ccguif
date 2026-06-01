@@ -49,14 +49,6 @@ jobs:
       - name: Build Tauri app
         run: |
           set -euo pipefail
-          # Tauri reads TAURI_SIGNING_PRIVATE_KEY or falls back to ~/.tauri/ccgui.key
-          npm run tauri -- build --target aarch64-apple-darwin --bundles app
-
-      - name: Build Tauri app
-        run: |
-          set -euo pipefail
-          # TAURI_SIGNING_PRIVATE_KEY expects base64-encoded minisign key content
-          export TAURI_SIGNING_PRIVATE_KEY="$TAURI_SIGNING_PRIVATE_KEY_B64"
           npm run tauri -- build --target aarch64-apple-darwin --bundles app
 
       - name: Create DMG
