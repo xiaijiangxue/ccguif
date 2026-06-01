@@ -38,21 +38,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Tauri signing key
-        run: |
-          set -euo pipefail
-          mkdir -p "$HOME/.tauri"
-          cp "${{ github.workspace }}/ci/ccgui.key" "$HOME/.tauri/ccgui.key"
-          cp "${{ github.workspace }}/ci/ccgui.key.pub" "$HOME/.tauri/ccgui.key.pub"
-          # Base64-encode and export to env (matches release.yml pattern)
-          KEY_B64=$(base64 -i "$HOME/.tauri/ccgui.key" | tr -d '\n')
-          echo "TAURI_SIGNING_PRIVATE_KEY=$KEY_B64" >> "$GITHUB_ENV"
-          echo "CI signing key ready"
-
       - name: Build Tauri app
         run: |
           set -euo pipefail
-          npm run tauri -- build --target aarch64-apple-darwin --bundles app
+          # Create CI config that disables updater signing
+          echo '{"bundle": {"createUpdaterArtifacts": false}}' > /tmp/tauri-ci-config.json
+          npm run tauri -- build --target aarch64-apple-darwin --bundles app --config /tmp/tauri-ci-config.json
 
       - name: Create DMG
         run: |
@@ -97,23 +88,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Tauri signing key
-        shell: pwsh
-        run: |
-          $keyDir = "$env:USERPROFILE\.tauri"
-          New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
-          Copy-Item "$env:GITHUB_WORKSPACE\ci\ccgui.key" -Destination "$keyDir\ccgui.key"
-          Copy-Item "$env:GITHUB_WORKSPACE\ci\ccgui.key.pub" -Destination "$keyDir\ccgui.key.pub"
-          $keyContent = Get-Content "$keyDir\ccgui.key" -Raw
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($keyContent)
-          $b64 = [Convert]::ToBase64String($bytes)
-          Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY=$b64"
-          Write-Host "CI signing key setup complete"
-
       - name: Build Windows installer
         shell: pwsh
         run: |
-          npm run tauri -- build --config src-tauri/tauri.windows.conf.json --bundles nsis
+          '{"bundle": {"createUpdaterArtifacts": false}}' | Out-File -FilePath "$env:TEMP\tauri-ci-config.json" -Encoding ascii
+          npm run tauri -- build --config src-tauri/tauri.windows.conf.json --config "$env:TEMP\tauri-ci-config.json" --bundles nsis
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
