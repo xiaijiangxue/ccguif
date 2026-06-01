@@ -42,14 +42,15 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.tauri"
-          # Generate key with the tauri CLI (no password for CI)
+          # Generate key WITHOUT password - Tauri reads ~/.tauri/ccgui.key by default
           npx tauri signer generate -w "$HOME/.tauri/ccgui.key" -f 2>&1 || true
           ls -la "$HOME/.tauri/"
 
-          # base64 encode the key file content and export to env
-          KEY_B64=$(base64 < "$HOME/.tauri/ccgui.key" | tr -d '\n')
-          echo "TAURI_SIGNING_PRIVATE_KEY_B64=$KEY_B64" >> "$GITHUB_ENV"
-          echo "Keystore ready"
+      - name: Build Tauri app
+        run: |
+          set -euo pipefail
+          # Tauri reads TAURI_SIGNING_PRIVATE_KEY or falls back to ~/.tauri/ccgui.key
+          npm run tauri -- build --target aarch64-apple-darwin --bundles app
 
       - name: Build Tauri app
         run: |
@@ -110,17 +111,11 @@ jobs:
           if (-not (Test-Path $keyPath)) {
             npx tauri signer generate -w $keyPath -f 2>&1
           }
-          # Read key content and base64 encode it
-          $keyContent = Get-Content $keyPath -Raw
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($keyContent)
-          $b64 = [Convert]::ToBase64String($bytes)
-          Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY_B64=$b64"
           Write-Host "CI signing key generated"
 
       - name: Build Windows installer
         shell: pwsh
         run: |
-          $env:TAURI_SIGNING_PRIVATE_KEY = $env:TAURI_SIGNING_PRIVATE_KEY_B64
           npm run tauri -- build --config src-tauri/tauri.windows.conf.json --bundles nsis
 
       - name: Upload Windows artifact
