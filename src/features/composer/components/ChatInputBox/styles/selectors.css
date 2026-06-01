@@ -614,6 +614,14 @@
   margin-left: 94px;
 }
 
+.selector-dropdown--model-single-group {
+  max-height: min(42vh, 320px);
+}
+
+.selector-dropdown--model-single-group .selector-dropdown-title {
+  padding-top: 6px;
+}
+
 .selector-model-groups {
   padding: 0;
 }

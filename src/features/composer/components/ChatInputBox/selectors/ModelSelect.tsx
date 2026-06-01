@@ -120,7 +120,77 @@ export const ModelSelect = ({
   };
   const currentModelLabel = currentModel ? getModelLabel(currentModel) : t('models.selectModel');
   const resolvedProviderLabel = providerLabel ?? t(`providers.${currentProvider}.label`);
-  const hasGroupedModels = Boolean(modelGroups && modelGroups.length > 0);
+  const groupedModelCount = modelGroups?.length ?? 0;
+  const hasGroupedModels = groupedModelCount > 0;
+  const hasMultipleGroupedModels = groupedModelCount > 1;
+
+  const renderGroupedModels = (compact: boolean) => {
+    if (!modelGroups || modelGroups.length === 0) {
+      return null;
+    }
+
+    if (modelGroups.length === 1) {
+      const group = modelGroups[0];
+      if (!group) {
+        return null;
+      }
+
+      return (
+        <>
+          <div className="selector-dropdown-title">{group.providerLabel}</div>
+          {group.models.map((model) => {
+            const isSelected = group.providerId === currentProvider && model.id === value;
+            return (
+              <div
+                key={`${group.providerId}:${model.id}`}
+                className={`selector-option ${compact ? 'selector-option--model-compact' : ''} ${isSelected ? 'selected' : ''}`}
+                onClick={() => handleGroupedSelect(group.providerId, model.id)}
+              >
+                <ModelIcon provider={group.providerId} size={compact ? 18 : 20} />
+                <span className="selector-model-label">{getModelLabel(model)}</span>
+                <div className="selector-model-check-slot">
+                  {isSelected && (
+                    <Check size={18} className="check-mark" aria-hidden />
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </>
+      );
+    }
+
+    return (
+      <div className="selector-model-groups">
+        {modelGroups.map((group, groupIndex) => (
+          <div key={group.providerId} className="selector-model-group">
+            {groupIndex > 0 && <div className="selector-model-group-divider" />}
+            <div className="selector-model-group-title">
+              <span>{group.providerLabel}</span>
+            </div>
+            {group.models.map((model) => {
+              const isSelected = group.providerId === currentProvider && model.id === value;
+              return (
+                <div
+                  key={`${group.providerId}:${model.id}`}
+                  className={`selector-option selector-option--model-compact ${isSelected ? 'selected' : ''}`}
+                  onClick={() => handleGroupedSelect(group.providerId, model.id)}
+                >
+                  <ModelIcon provider={group.providerId} size={18} />
+                  <span className="selector-model-label">{getModelLabel(model)}</span>
+                  <div className="selector-model-check-slot">
+                    {isSelected && (
+                      <Check size={18} className="check-mark" aria-hidden />
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   /**
    * Toggle dropdown
@@ -265,37 +335,10 @@ export const ModelSelect = ({
             surfaceId={hoverSurfaceId}
             onPointerEnter={isReadiness ? () => hoverCloseControllerRef.current.cancel() : undefined}
             onPointerLeave={isReadiness ? handleDropdownPointerLeave : undefined}
-            className="selector-menu-surface selector-dropdown--model selector-dropdown--readiness-inline selector-dropdown--model-readiness-compact"
+            className={`selector-menu-surface selector-dropdown--model selector-dropdown--readiness-inline selector-dropdown--model-readiness-compact${hasMultipleGroupedModels ? '' : ' selector-dropdown--model-single-group'}`}
           >
             {hasGroupedModels ? (
-              <div className="selector-model-groups">
-                {modelGroups!.map((group, groupIndex) => (
-                  <div key={group.providerId} className="selector-model-group">
-                    {groupIndex > 0 && <div className="selector-model-group-divider" />}
-                    <div className="selector-model-group-title">
-                      <span>{group.providerLabel}</span>
-                    </div>
-                    {group.models.map((model) => {
-                      const isSelected = group.providerId === currentProvider && model.id === value;
-                      return (
-                        <div
-                          key={`${group.providerId}:${model.id}`}
-                          className={`selector-option selector-option--model-compact ${isSelected ? 'selected' : ''}`}
-                          onClick={() => handleGroupedSelect(group.providerId, model.id)}
-                        >
-                          <ModelIcon provider={group.providerId} size={18} />
-                          <span className="selector-model-label">{getModelLabel(model)}</span>
-                          <div className="selector-model-check-slot">
-                            {isSelected && (
-                              <Check size={18} className="check-mark" aria-hidden />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+              renderGroupedModels(true)
             ) : (
               <>
                 <div className="selector-dropdown-title">{t('models.selectModel')}</div>
@@ -370,37 +413,10 @@ export const ModelSelect = ({
             minWidth={252}
             maxHeight="min(48vh, 380px)"
             surfaceId={hoverSurfaceId}
-            className="selector-menu-surface selector-dropdown--model"
+            className={`selector-menu-surface selector-dropdown--model${hasMultipleGroupedModels ? '' : ' selector-dropdown--model-single-group'}`}
           >
             {hasGroupedModels ? (
-              <div className="selector-model-groups">
-                {modelGroups!.map((group, groupIndex) => (
-                  <div key={group.providerId} className="selector-model-group">
-                    {groupIndex > 0 && <div className="selector-model-group-divider" />}
-                    <div className="selector-model-group-title">
-                      <span>{group.providerLabel}</span>
-                    </div>
-                    {group.models.map((model) => {
-                      const isSelected = group.providerId === currentProvider && model.id === value;
-                      return (
-                        <div
-                          key={`${group.providerId}:${model.id}`}
-                          className={`selector-option selector-option--model-compact ${isSelected ? 'selected' : ''}`}
-                          onClick={() => handleGroupedSelect(group.providerId, model.id)}
-                        >
-                          <ModelIcon provider={group.providerId} size={18} />
-                          <span className="selector-model-label">{getModelLabel(model)}</span>
-                          <div className="selector-model-check-slot">
-                            {isSelected && (
-                              <Check size={18} className="check-mark" aria-hidden />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+              renderGroupedModels(false)
             ) : (
               <>
                 <div className="selector-dropdown-title">{t('models.selectModel')}</div>
