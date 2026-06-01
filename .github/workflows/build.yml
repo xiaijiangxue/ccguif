@@ -94,8 +94,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Tauri signing key for CI
+        shell: pwsh
+        run: |
+          $keyDir = "$env:USERPROFILE\.tauri"
+          New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
+          $keyPath = "$keyDir\ccgui.key"
+          if (-not (Test-Path $keyPath)) {
+            npx tauri signer generate -p "ci" -w $keyPath -f 2>$null
+          }
+
       - name: Build Windows installer
         shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "ci"
         run: |
           npm run tauri -- build --config src-tauri/tauri.windows.conf.json --bundles nsis
 
