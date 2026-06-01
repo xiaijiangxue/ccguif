@@ -2413,9 +2413,7 @@ export function FileTreePanel({
       </div>
       <div
         ref={fileTreeListRef}
-        className={`file-tree-list${isRootVisibleExpanded && nodes.length > 0 ? " has-root-guide" : ""}${
-          shouldVirtualizeFileTree ? " is-virtualized" : ""
-        }`}
+        className={`file-tree-list${shouldVirtualizeFileTree ? " is-virtualized" : ""}`}
         data-file-tree-row-count={visibleFileTreeRows.length}
       >
         {showLoading ? (
