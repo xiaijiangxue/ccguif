@@ -42,14 +42,24 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.tauri"
-          if [ ! -f "$HOME/.tauri/ccgui.key" ]; then
-            npx tauri signer generate -p "ci" -w "$HOME/.tauri/ccgui.key" -f 2>/dev/null || true
-          fi
+          # Generate key with the tauri CLI (no password for CI)
+          npx tauri signer generate -w "$HOME/.tauri/ccgui.key" -f 2>&1 || true
+          ls -la "$HOME/.tauri/"
+          # Base64 encode the entire key file content
+          KEY_B64=$(python3 -c "
+import base64
+with open('$HOME/.tauri/ccgui.key') as f:
+    print(base64.b64encode(f.read().encode()).decode())
+")
+          echo "TAURI_SIGNING_PRIVATE_KEY_B64=$KEY_B64" >> "$GITHUB_ENV"
+          echo "Keystore ready"
 
       - name: Build Tauri app
-        env:
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "ci"
-        run: npm run tauri -- build --target aarch64-apple-darwin --bundles app
+        run: |
+          set -euo pipefail
+          # TAURI_SIGNING_PRIVATE_KEY expects base64-encoded minisign key content
+          export TAURI_SIGNING_PRIVATE_KEY="$TAURI_SIGNING_PRIVATE_KEY_B64"
+          npm run tauri -- build --target aarch64-apple-darwin --bundles app
 
       - name: Create DMG
         run: |
@@ -101,14 +111,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
           $keyPath = "$keyDir\ccgui.key"
           if (-not (Test-Path $keyPath)) {
-            npx tauri signer generate -p "ci" -w $keyPath -f 2>$null
+            npx tauri signer generate -w $keyPath -f 2>&1
           }
+          # Read key content and base64 encode it
+          $keyContent = Get-Content $keyPath -Raw
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($keyContent)
+          $b64 = [Convert]::ToBase64String($bytes)
+          Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY_B64=$b64"
+          Write-Host "CI signing key generated"
 
       - name: Build Windows installer
         shell: pwsh
-        env:
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "ci"
         run: |
+          $env:TAURI_SIGNING_PRIVATE_KEY = $env:TAURI_SIGNING_PRIVATE_KEY_B64
           npm run tauri -- build --config src-tauri/tauri.windows.conf.json --bundles nsis
 
       - name: Upload Windows artifact
