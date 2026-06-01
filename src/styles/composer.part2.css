@@ -697,8 +697,31 @@
   background: var(--composer-tool-popover-bg, var(--dropdown-bg, var(--surface-panel, var(--surface-control))));
   box-shadow: var(--shadow-popover, 0 10px 24px rgba(0, 0, 0, 0.24));
   color: var(--text-secondary);
-  overflow: hidden;
+  overflow: visible;
   overscroll-behavior: contain;
+  --memory-reference-arrow-size: 11px;
+}
+
+.composer-memory-reference-popover::before {
+  content: "";
+  position: absolute;
+  left: var(--memory-reference-arrow-left, 50%);
+  width: var(--memory-reference-arrow-size);
+  height: var(--memory-reference-arrow-size);
+  transform: translateX(-50%) rotate(45deg);
+  background: var(--composer-tool-popover-bg, var(--dropdown-bg, var(--surface-panel, var(--surface-control))));
+  border: 1px solid var(--composer-tool-popover-border, var(--border-strong, var(--border-subtle)));
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.composer-memory-reference-popover[data-placement="top"]::before {
+  bottom: calc(var(--memory-reference-arrow-size) / -2);
+}
+
+.composer-memory-reference-popover[data-placement="bottom"]::before {
+  top: calc(var(--memory-reference-arrow-size) / -2);
 }
 
 .composer-memory-reference-popover-head {

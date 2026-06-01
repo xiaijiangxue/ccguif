@@ -7,6 +7,7 @@ import { AVAILABLE_PROVIDERS } from '../types';
 import type { ProviderId } from '../types';
 import { EngineIcon } from '../../../../engine/components/EngineIcon';
 import { cn } from '@/lib/utils';
+import { SelectorMenuArrow } from './SelectorMenuArrow';
 
 interface ProviderSelectProps {
   value: string;
@@ -113,7 +114,7 @@ export const ProviderSelect = ({
   }, [onChange, providers, showToastMessage, t]);
 
   const menuContentClassName = cn(
-    "selector-menu-surface z-[10001] min-w-[180px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
+    "selector-menu-surface selector-menu-surface--anchored z-[10001] min-w-[180px] overflow-visible rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -133,7 +134,7 @@ export const ProviderSelect = ({
         onOpenChange={(details) => setIsOpen(details.open)}
         open={isOpen}
         positioning={{
-          placement: 'top-start',
+          placement: 'top',
           gutter: 4,
           flip: true,
           shift: 8,
@@ -155,6 +156,7 @@ export const ProviderSelect = ({
         <Portal>
           <Menu.Positioner className="z-[10001] outline-none">
             <Menu.Content className={menuContentClassName}>
+              <SelectorMenuArrow />
               {visibleProviders.map((provider) => (
                 <Menu.Item
                   key={provider.id}

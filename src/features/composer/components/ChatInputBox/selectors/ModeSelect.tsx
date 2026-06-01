@@ -10,6 +10,7 @@ import {
   MODE_SELECT_FLASH_EVENT,
 } from './modeSelectFlash';
 import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { SelectorMenuArrow } from './SelectorMenuArrow';
 
 interface ModeSelectProps {
   value: PermissionMode;
@@ -200,7 +201,7 @@ export const ModeSelect = ({
   }, [flashCycle, isChevronFlashing]);
 
   const menuContentClassName = cn(
-    "selector-menu-surface z-[10001] min-w-[240px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
+    "selector-menu-surface selector-menu-surface--anchored z-[10001] min-w-[240px] overflow-visible rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -219,7 +220,7 @@ export const ModeSelect = ({
       onOpenChange={(details) => setIsOpen(details.open)}
       open={isOpen}
       positioning={{
-        placement: 'top-start',
+        placement: 'top',
         gutter: 4,
         flip: true,
         shift: 8,
@@ -255,6 +256,7 @@ export const ModeSelect = ({
             onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handlePointerLeave}
           >
+            <SelectorMenuArrow />
             {modeOptions.map((mode) => (
               <Menu.Item
                 key={mode.id}

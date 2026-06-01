@@ -21,6 +21,7 @@ const NOOP_REASONING = (_effort: ReasoningEffort | null) => {};
 const MEMORY_REFERENCE_POPOVER_WIDTH = 312;
 const MEMORY_REFERENCE_POPOVER_GAP = 6;
 const MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN = 12;
+const MEMORY_REFERENCE_POPOVER_ARROW_EDGE_GAP = 18;
 
 function clampMemoryReferencePopoverPosition(value: number, min: number, max: number) {
   if (max < min) {
@@ -100,6 +101,8 @@ export const ButtonArea = ({
 
   const [isToolDockOpen, setIsToolDockOpen] = useState(false);
   const [isMemoryReferencePopoverOpen, setIsMemoryReferencePopoverOpen] = useState(false);
+  const [memoryReferencePopoverPlacement, setMemoryReferencePopoverPlacement] =
+    useState<'top' | 'bottom'>('top');
   const toolDockId = useId();
   const memoryReferencePopoverId = useId();
   const memoryReferenceRootRef = useRef<HTMLDivElement>(null);
@@ -189,7 +192,7 @@ export const ButtonArea = ({
     const measuredWidth = popoverRect?.width || popoverWidth;
     const measuredHeight = popoverRect?.height || 140;
     const left = clampMemoryReferencePopoverPosition(
-      triggerRect.right - measuredWidth,
+      triggerRect.left + (triggerRect.width / 2) - (measuredWidth / 2),
       MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN,
       window.innerWidth - measuredWidth - MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN,
     );
@@ -197,14 +200,19 @@ export const ButtonArea = ({
       triggerRect.top - measuredHeight - MEMORY_REFERENCE_POPOVER_GAP;
     const fallbackTop =
       triggerRect.bottom + MEMORY_REFERENCE_POPOVER_GAP;
-    const top =
-      preferredTop >= MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN
-        ? preferredTop
-        : clampMemoryReferencePopoverPosition(
-            fallbackTop,
-            MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN,
-            window.innerHeight - measuredHeight - MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN,
-          );
+    const isPlacedAbove = preferredTop >= MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN;
+    const top = isPlacedAbove
+      ? preferredTop
+      : clampMemoryReferencePopoverPosition(
+          fallbackTop,
+          MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN,
+          window.innerHeight - measuredHeight - MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN,
+        );
+    const arrowLeft = clampMemoryReferencePopoverPosition(
+      triggerRect.left + (triggerRect.width / 2) - left,
+      MEMORY_REFERENCE_POPOVER_ARROW_EDGE_GAP,
+      measuredWidth - MEMORY_REFERENCE_POPOVER_ARROW_EDGE_GAP,
+    );
 
     setMemoryReferencePopoverStyle({
       left,
@@ -212,7 +220,9 @@ export const ButtonArea = ({
       width: popoverWidth,
       maxWidth: `calc(100vw - ${MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN * 2}px)`,
       maxHeight: `calc(100vh - ${MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN * 2}px)`,
+      ['--memory-reference-arrow-left' as '--memory-reference-arrow-left']: `${arrowLeft}px`,
     });
+    setMemoryReferencePopoverPlacement(isPlacedAbove ? 'top' : 'bottom');
   }, [isMemoryReferencePopoverOpen]);
 
   useLayoutEffect(() => {
@@ -312,6 +322,7 @@ export const ButtonArea = ({
             className="composer-memory-reference-popover"
             role="dialog"
             aria-label={t('composer.memoryReferenceDialogTitle')}
+            data-placement={memoryReferencePopoverPlacement}
             style={memoryReferencePopoverStyle ?? undefined}
           >
             <div className="composer-memory-reference-popover-head">

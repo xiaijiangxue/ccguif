@@ -5,6 +5,7 @@ import { Portal } from '@ark-ui/react/portal';
 import type { ShortcutAction } from '../types';
 import { cn } from '@/lib/utils';
 import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { SelectorMenuArrow } from './SelectorMenuArrow';
 
 interface ShortcutActionsSelectProps {
   actions?: ShortcutAction[];
@@ -48,7 +49,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
   }
 
   const menuContentClassName = cn(
-    "selector-menu-surface selector-shortcut-menu-surface z-[10001] min-w-[220px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
+    "selector-menu-surface selector-menu-surface--anchored selector-shortcut-menu-surface z-[10001] min-w-[220px] overflow-visible rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -66,7 +67,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
       onOpenChange={(details) => setIsOpen(details.open)}
       open={isOpen}
       positioning={{
-        placement: 'top-start',
+        placement: 'top',
         gutter: 4,
         flip: true,
         shift: 8,
@@ -94,6 +95,7 @@ export const ShortcutActionsSelect = ({ actions }: ShortcutActionsSelectProps) =
             onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handlePointerLeave}
           >
+            <SelectorMenuArrow />
             {actions?.map((action) => (
               <Menu.Item
               key={action.key}

@@ -10,6 +10,7 @@ import type { AccountRateLimitsInfo, CodexSpeedMode, ProviderId, SelectedAgent }
 import { formatRelativeTime } from '../../../../../utils/time';
 import { cn } from '@/lib/utils';
 import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { SelectorMenuArrow } from './SelectorMenuArrow';
 
 interface ConfigSelectProps {
   currentProvider: string;
@@ -287,7 +288,7 @@ export const ConfigSelect = ({
       onOpenChange={(details) => setIsOpen(details.open)}
       open={isOpen}
       positioning={{
-        placement: 'top-start',
+        placement: 'top',
         gutter: 4,
         flip: true,
         shift: 8,
@@ -310,11 +311,12 @@ export const ConfigSelect = ({
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
           <Menu.Content
-            className={cn(baseMenuContentClassName, "min-w-[220px]")}
+            className={cn(baseMenuContentClassName, "selector-menu-surface--anchored overflow-visible min-w-[220px]")}
             aria-label={t('settings.configure', 'Configure')}
             onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handleMenuPointerLeave}
           >
+            <SelectorMenuArrow />
             <Menu.Root
               lazyMount
               onOpenChange={(details) => setAgentMenuOpen(details.open)}

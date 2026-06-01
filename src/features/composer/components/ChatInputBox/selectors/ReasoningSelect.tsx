@@ -6,6 +6,7 @@ import Check from "lucide-react/dist/esm/icons/check";
 import { REASONING_LEVELS, type ReasoningEffort } from '../types';
 import { cn } from '@/lib/utils';
 import { announceHoverMenuOpen, createHoverMenuCloseController, subscribeToHoverMenuOpen } from './hoverMenuCoordination';
+import { SelectorMenuArrow } from './SelectorMenuArrow';
 
 interface ReasoningSelectProps {
   value: ReasoningEffort | null;
@@ -92,7 +93,7 @@ export const ReasoningSelect = ({
   }, []);
 
   const menuContentClassName = cn(
-    "selector-menu-surface z-[10001] min-w-[200px] overflow-hidden rounded-[14px] p-1.5 text-popover-foreground",
+    "selector-menu-surface selector-menu-surface--anchored z-[10001] min-w-[200px] overflow-visible rounded-[14px] p-1.5 text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -110,7 +111,7 @@ export const ReasoningSelect = ({
       onOpenChange={(details) => setIsOpen(details.open)}
       open={isOpen}
       positioning={{
-        placement: 'top-start',
+        placement: 'top',
         gutter: 4,
         flip: true,
         shift: 8,
@@ -144,6 +145,7 @@ export const ReasoningSelect = ({
             onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handlePointerLeave}
           >
+            <SelectorMenuArrow />
             {showDefaultOption && (
               <Menu.Item
                 className={menuItemClassName}

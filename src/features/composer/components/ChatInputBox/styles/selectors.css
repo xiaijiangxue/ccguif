@@ -689,6 +689,25 @@
   backdrop-filter: blur(10px);
 }
 
+.selector-menu-surface--anchored {
+  position: relative;
+  overflow: visible;
+}
+
+.selector-menu-arrow {
+  position: absolute;
+  display: block;
+  width: 11px;
+  height: 11px;
+  transform: rotate(45deg);
+  border: 1px solid color-mix(in srgb, var(--border) 74%, #dce5f2 26%);
+  border-radius: 2px;
+  background: color-mix(in srgb, white 96%, var(--accent) 4%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .selector-option {
   display: flex;
   align-items: center;
@@ -1322,6 +1341,13 @@
   border-color: color-mix(in srgb, rgba(255, 255, 255, 0.14) 78%, transparent);
   background: color-mix(in srgb, rgba(24, 28, 38, 0.96) 92%, var(--accent) 8%);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34), 0 3px 14px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="dark"] .selector-menu-arrow,
+:root[data-theme="dim"] .selector-menu-arrow {
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.14) 78%, transparent);
+  background: color-mix(in srgb, rgba(24, 28, 38, 0.96) 92%, var(--accent) 8%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 :root[data-theme="dark"] .selector-option,
