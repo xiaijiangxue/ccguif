@@ -59,6 +59,16 @@ export const Dropdown = ({
     };
   }, [isVisible]);
 
+  // After render, measure actual height and adjust position if it overflows viewport
+  useLayoutEffect(() => {
+    if (!isVisible || !dropdownRef.current) return;
+    const rect = dropdownRef.current.getBoundingClientRect();
+    if (rect.top < 0) {
+      dropdownRef.current.style.bottom = 'auto';
+      dropdownRef.current.style.top = '8px';
+    }
+  }, [isVisible]);
+
   if (!isVisible || !position) {
     return null;
   }
@@ -135,16 +145,6 @@ export const Dropdown = ({
     width: effectiveWidth / fixedPosDivisor,
     zIndex: 1001,
   };
-
-  // After render, measure actual height and adjust position if it overflows viewport
-  useLayoutEffect(() => {
-    if (!dropdownRef.current) return;
-    const rect = dropdownRef.current.getBoundingClientRect();
-    if (rect.top < 0) {
-      dropdownRef.current.style.bottom = 'auto';
-      dropdownRef.current.style.top = '8px';
-    }
-  });
 
   return (
     <div
