@@ -4,6 +4,11 @@ import {
   getClientStoreSync,
   writeClientStoreValue,
 } from "../../../services/clientStorage";
+import { appendClientErrorLog } from "../../../services/tauri";
+import {
+  buildClientErrorLogEntry,
+  shouldPersistClientErrorLogEntry,
+} from "../utils/clientErrorLog";
 
 const MAX_DEBUG_ENTRIES = 200;
 const THREAD_SESSION_LOG_KEY = "diagnostics.threadSessionLog";
@@ -99,6 +104,12 @@ export function useDebugLog() {
         );
         threadSessionLogCacheRef.current = nextLogs;
         writeClientStoreValue("app", THREAD_SESSION_LOG_KEY, nextLogs);
+      }
+
+      if (shouldPersistClientErrorLogEntry(entry)) {
+        void appendClientErrorLog(buildClientErrorLogEntry(entry)).catch(() => {
+          // 错误日志本身是 best-effort 通道，失败不能递归制造新的 DebugEntry。
+        });
       }
 
       if (!shouldLogEntry(entry)) {

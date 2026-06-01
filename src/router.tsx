@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { useWindowLabel } from "./features/layout/hooks/useWindowLabel";
+import { isDetachedFileExplorerWindowLabel } from "./features/files/detachedFileExplorer";
 import { AppShell } from "./app-shell";
 
 const AboutView = lazy(() =>
@@ -35,7 +36,7 @@ export function AppRouter() {
       </Suspense>
     );
   }
-  if (windowLabel === "file-explorer") {
+  if (isDetachedFileExplorerWindowLabel(windowLabel)) {
     return (
       <Suspense fallback={null}>
         <DetachedFileExplorerWindow />

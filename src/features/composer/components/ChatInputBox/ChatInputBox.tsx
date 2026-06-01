@@ -1315,6 +1315,7 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       editableWrapperStyle,
       getHandleProps,
       nudge,
+      collapse,
     } = useResizableChatInputBox({
       containerRef,
       editableWrapperRef,
@@ -1472,6 +1473,7 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
             <ResizeHandles
               getHandleProps={getHandleProps}
               nudge={nudge}
+              collapse={collapse}
               isCollapsed={isInputBoxCollapsed}
               onExpandCollapsed={handleExpandCollapsedInputBox}
             />

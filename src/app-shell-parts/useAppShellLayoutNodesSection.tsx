@@ -347,6 +347,32 @@ export function useAppShellLayoutNodesSection(ctx: any) {
       sidebarToggleProps.rightPanelAvailable &&
       clientUiVisibility.isControlVisible("topTool.rightPanel"),
   };
+  const [browserDockOpen, setBrowserDockOpen] = useState(false);
+  const handleToggleBrowserDock = useCallback(() => {
+    setCenterMode("chat");
+    setBrowserDockOpen((current) => !current);
+  }, [setCenterMode]);
+  const handleCloseBrowserDock = useCallback(() => {
+    setBrowserDockOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const handleExternalToggle = () => {
+      setCenterMode("chat");
+      setBrowserDockOpen((current) => !current);
+    };
+    const handleExternalOpen = () => {
+      setCenterMode("chat");
+      setBrowserDockOpen(true);
+    };
+
+    window.addEventListener("browser-agent:toggle-dock", handleExternalToggle);
+    window.addEventListener("browser-agent:open-dock", handleExternalOpen);
+    return () => {
+      window.removeEventListener("browser-agent:toggle-dock", handleExternalToggle);
+      window.removeEventListener("browser-agent:open-dock", handleExternalOpen);
+    };
+  }, [setCenterMode]);
 
   const {
     sidebarNode,
@@ -366,6 +392,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     gitDiffViewerNode,
     fileViewPanelNode,
     projectMapPanelNode,
+    browserDockNode,
     planPanelNode,
     debugPanelNode,
     debugPanelFullNode,
@@ -448,6 +475,9 @@ export function useAppShellLayoutNodesSection(ctx: any) {
         connectWorkspace,
         sendUserMessageToThread,
       }),
+    onThreadRecoveryFork: async () => {
+      await startFork("/fork");
+    },
     handleExitPlanModeExecute,
     onOpenSettings: () => openSettings(),
     onOpenAgentSettings: () =>
@@ -732,6 +762,8 @@ export function useAppShellLayoutNodesSection(ctx: any) {
         }
         isSoloMode={isSoloMode}
         onToggleSoloMode={toggleSoloMode}
+        isBrowserDockOpen={browserDockOpen}
+        onToggleBrowserDock={handleToggleBrowserDock}
         showClientDocumentationButton={
           !isCompact && clientUiVisibility.isControlVisible("topTool.clientDocumentation")
         }
@@ -750,6 +782,8 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     onOpenDetachedFileExplorer: handleOpenDetachedFileExplorer,
     onToggleRuntimeConsole: handleToggleRuntimeConsole,
     runtimeConsoleVisible: runtimeRunState.runtimeConsoleVisible,
+    browserDockOpen,
+    onCloseBrowserDock: handleCloseBrowserDock,
     centerMode,
     setCenterMode,
     editorSplitCompanion,
@@ -909,6 +943,9 @@ export function useAppShellLayoutNodesSection(ctx: any) {
       }
     },
     onRewind: handleRewindFromMessage,
+    onForkFromMessage: async () => {
+      await startFork("/fork");
+    },
     canStop: canInterrupt,
     isReviewing,
     isProcessing,
@@ -1131,6 +1168,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     openKanbanShortcut: appSettings.openKanbanShortcut,
     cycleOpenSessionPrevShortcut: appSettings.cycleOpenSessionPrevShortcut,
     cycleOpenSessionNextShortcut: appSettings.cycleOpenSessionNextShortcut,
+    closeCurrentSessionShortcut: appSettings.closeCurrentSessionShortcut,
     saveFileShortcut: appSettings.saveFileShortcut,
     findInFileShortcut: appSettings.findInFileShortcut,
     toggleGitDiffListViewShortcut: appSettings.toggleGitDiffListViewShortcut,
@@ -1141,7 +1179,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
 
   return {
     sidebarNode, messagesNode, composerNode, approvalToastsNode, updateToastNode, errorToastsNode, globalRuntimeNoticeDockNode, homeNode, mainHeaderNode,
-    desktopTopbarLeftNode, tabletNavNode, tabBarNode, rightPanelToolbarNode, gitDiffPanelNode, gitDiffViewerNode, fileViewPanelNode, projectMapPanelNode, planPanelNode,
+    desktopTopbarLeftNode, tabletNavNode, tabBarNode, rightPanelToolbarNode, gitDiffPanelNode, gitDiffViewerNode, fileViewPanelNode, projectMapPanelNode, browserDockNode, planPanelNode,
     debugPanelNode, debugPanelFullNode, terminalDockNode, compactEmptyCodexNode, compactEmptySpecNode, compactEmptyGitNode, compactGitBackNode,
     codeAnnotationBridgeProps,
     workspaceAliasPromptNode,

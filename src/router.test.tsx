@@ -52,6 +52,12 @@ describe("AppRouter", () => {
     expect(await screen.findByText("detached-file-explorer-view")).not.toBeNull();
   });
 
+  it("renders the detached file explorer for per-tab file-explorer windows", async () => {
+    windowLabel = "file-explorer-multiple-1";
+    render(<AppRouter />);
+    expect(await screen.findByText("detached-file-explorer-view")).not.toBeNull();
+  });
+
   it("renders the detached Spec Hub for the spec-hub window", async () => {
     windowLabel = "spec-hub";
     render(<AppRouter />);

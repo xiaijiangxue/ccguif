@@ -185,13 +185,21 @@ export function DetachedFileExplorerWindow() {
   }, [session]);
 
   const renderCompactMenubar = () => (
-    <header className="detached-file-explorer-menubar" data-tauri-drag-region="true">
-      <div className="detached-file-explorer-menubar-copy">
-        <span className="detached-file-explorer-menubar-label">
+    <header
+      className="detached-file-explorer-menubar"
+      data-tauri-drag-region="true"
+    >
+      <div className="detached-file-explorer-menubar-copy" data-tauri-drag-region="true">
+        <span className="detached-file-explorer-menubar-label" data-tauri-drag-region="true">
           {t("files.detachedExplorerTitle")}
         </span>
         {session ? (
-          <strong className="detached-file-explorer-menubar-title">{session.workspaceName}</strong>
+          <strong
+            className="detached-file-explorer-menubar-title"
+            data-tauri-drag-region="true"
+          >
+            {session.workspaceName}
+          </strong>
         ) : null}
       </div>
     </header>
@@ -244,6 +252,7 @@ export function DetachedFileExplorerWindow() {
         externalChangeMonitoringEnabled={isFocused && externalChangeAwarenessEnabled}
         externalChangeTransportMode={externalChangeTransportMode}
         fileViewHeaderLayout="single-row"
+        defaultSidebarCollapsed={session.defaultSidebarCollapsed === true}
       />
     </div>
   );

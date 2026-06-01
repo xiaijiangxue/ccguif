@@ -4,9 +4,11 @@ use std::time::Duration;
 use tokio::time::timeout;
 
 use crate::backend::app_server::{
-    build_codex_path_env, check_cli_binary, check_codex_installation, get_cli_debug_info,
+    build_codex_path_env, build_engine_environment_diagnosis, check_cli_binary,
+    check_codex_installation, classify_endpoint_failure, get_cli_debug_info,
     probe_codex_app_server, resolve_codex_launch_context,
 };
+use crate::codex::launch_profile::resolve_global_codex_launch_profile;
 use crate::types::AppSettings;
 
 async fn probe_node_runtime(path_env: Option<&String>) -> (bool, Option<String>, Option<String>) {
@@ -71,16 +73,9 @@ pub(crate) async fn run_codex_doctor_with_settings(
     codex_args: Option<String>,
     settings: &AppSettings,
 ) -> Result<Value, String> {
-    let default_bin = settings.codex_bin.clone();
-    let default_args = settings.codex_args.clone();
-    let resolved = codex_bin
-        .clone()
-        .filter(|value| !value.trim().is_empty())
-        .or(default_bin);
-    let resolved_args = codex_args
-        .clone()
-        .filter(|value| !value.trim().is_empty())
-        .or(default_args);
+    let resolved_profile = resolve_global_codex_launch_profile(codex_bin, codex_args, settings);
+    let resolved = resolved_profile.codex_bin;
+    let resolved_args = resolved_profile.codex_args;
     let path_env = build_codex_path_env(resolved.as_deref());
 
     let debug_info = get_cli_debug_info(resolved.as_deref());
@@ -117,6 +112,20 @@ pub(crate) async fn run_codex_doctor_with_settings(
     } else {
         None
     };
+    let environment_diagnosis =
+        build_engine_environment_diagnosis("codex", resolved.as_deref(), &debug_info);
+    let proxy_diagnosis = debug_info
+        .get("proxyDiagnosis")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let network_diagnosis = if app_server_ok {
+        Value::Null
+    } else {
+        json!({
+            "category": classify_endpoint_failure(details.as_deref()),
+            "proxy": proxy_diagnosis,
+        })
+    };
 
     Ok(json!({
         "ok": version.is_some() && app_server_ok,
@@ -134,6 +143,9 @@ pub(crate) async fn run_codex_doctor_with_settings(
         "proxyEnvSnapshot": debug_info.get("proxyEnvSnapshot").cloned().unwrap_or(Value::Null),
         "appServerProbeStatus": probe_status.as_ref().map(|status| status.status.clone()),
         "fallbackRetried": probe_status.as_ref().map(|status| status.fallback_retried).unwrap_or(false),
+        "environmentDiagnosis": environment_diagnosis,
+        "proxyDiagnosis": proxy_diagnosis,
+        "networkDiagnosis": network_diagnosis,
         "debug": debug_info,
     }))
 }
@@ -162,6 +174,20 @@ pub(crate) async fn run_claude_doctor_with_settings(
     let launch_context = resolve_codex_launch_context(Some(requested_bin.as_str()));
 
     let (node_ok, node_version, node_details) = probe_node_runtime(path_env.as_ref()).await;
+    let environment_diagnosis =
+        build_engine_environment_diagnosis("claude", Some(requested_bin.as_str()), &debug_info);
+    let proxy_diagnosis = debug_info
+        .get("proxyDiagnosis")
+        .cloned()
+        .unwrap_or(Value::Null);
+    let network_diagnosis = if version.is_some() {
+        Value::Null
+    } else {
+        json!({
+            "category": classify_endpoint_failure(cli_error.as_deref()),
+            "proxy": proxy_diagnosis,
+        })
+    };
 
     Ok(json!({
         "ok": version.is_some(),
@@ -179,6 +205,9 @@ pub(crate) async fn run_claude_doctor_with_settings(
         "proxyEnvSnapshot": debug_info.get("proxyEnvSnapshot").cloned().unwrap_or(Value::Null),
         "appServerProbeStatus": Value::Null,
         "fallbackRetried": fallback_retried,
+        "environmentDiagnosis": environment_diagnosis,
+        "proxyDiagnosis": proxy_diagnosis,
+        "networkDiagnosis": network_diagnosis,
         "debug": debug_info,
     }))
 }
@@ -213,6 +242,9 @@ mod tests {
             "proxyEnvSnapshot",
             "appServerProbeStatus",
             "fallbackRetried",
+            "environmentDiagnosis",
+            "proxyDiagnosis",
+            "networkDiagnosis",
             "debug",
         ] {
             assert!(

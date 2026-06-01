@@ -47,6 +47,7 @@ describe("Messages runtime reconnect", () => {
       threadId: string,
       message: { text: string; images?: string[] },
     ) => Promise<RuntimeReconnectRecoveryCallbackResult> | RuntimeReconnectRecoveryCallbackResult;
+    onThreadRecoveryFork?: () => Promise<void> | void;
   }) {
     return render(
       <Messages
@@ -61,6 +62,7 @@ describe("Messages runtime reconnect", () => {
         activeEngine="codex"
         onRecoverThreadRuntime={options?.onRecoverThreadRuntime}
         onRecoverThreadRuntimeAndResend={options?.onRecoverThreadRuntimeAndResend}
+        onThreadRecoveryFork={options?.onThreadRecoveryFork}
         openTargets={[]}
         selectedOpenAppId=""
       />,
@@ -211,8 +213,8 @@ describe("Messages runtime reconnect", () => {
     expect(screen.getByText("messages.runtimeReconnectEnded")).toBeTruthy();
   });
 
-  it("shows only the resend action for stale thread recovery cards", () => {
-    const onRecoverThreadRuntimeAndResend = vi.fn().mockResolvedValue("thread-recovered");
+  it("shows only the fork action for stale thread recovery cards", () => {
+    const onThreadRecoveryFork = vi.fn();
 
     renderMessages([
       {
@@ -229,7 +231,7 @@ describe("Messages runtime reconnect", () => {
       },
     ], {
       threadId: "thread-runtime-stale",
-      onRecoverThreadRuntimeAndResend,
+      onThreadRecoveryFork,
     });
 
     expect(screen.getByRole("group", { name: "messages.threadRecoveryTitle" })).toBeTruthy();
@@ -237,7 +239,7 @@ describe("Messages runtime reconnect", () => {
       screen.queryByRole("button", { name: "messages.threadRecoveryAction" }),
     ).toBeNull();
     expect(
-      screen.getByRole("button", { name: "messages.threadRecoveryForkResendAction" }),
+      screen.getByRole("button", { name: "messages.threadRecoveryForkAction" }),
     ).toBeTruthy();
   });
 
@@ -265,7 +267,7 @@ describe("Messages runtime reconnect", () => {
 
     expect(screen.getByRole("button", { name: "messages.threadRecoveryAction" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "messages.threadRecoveryForkResendAction" }),
+      screen.getByRole("button", { name: "messages.threadRecoveryForkAction" }),
     ).toHaveProperty("disabled", true);
 
     fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryAction" }));
@@ -353,10 +355,10 @@ describe("Messages runtime reconnect", () => {
     });
   });
 
-  it("reacquires runtime before resending from a stale thread recovery card", async () => {
-    vi.mocked(ensureRuntimeReady).mockResolvedValue(undefined);
+  it("routes stale thread recovery fork through the shared fork callback", async () => {
     const onRecoverThreadRuntime = vi.fn().mockResolvedValue("thread-recovered-resend");
     const onRecoverThreadRuntimeAndResend = vi.fn().mockResolvedValue("thread-recovered-resend");
+    const onThreadRecoveryFork = vi.fn().mockResolvedValue(undefined);
 
     renderMessages([
       {
@@ -375,28 +377,24 @@ describe("Messages runtime reconnect", () => {
       threadId: "thread-runtime-stale-resend",
       onRecoverThreadRuntime,
       onRecoverThreadRuntimeAndResend,
+      onThreadRecoveryFork,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkResendAction" }));
+    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkAction" }));
 
     await waitFor(() => {
-      expect(vi.mocked(ensureRuntimeReady)).toHaveBeenCalledWith("ws-runtime");
-      expect(onRecoverThreadRuntimeAndResend).toHaveBeenCalledWith(
-        "ws-runtime",
-        "thread-runtime-stale-resend",
-        { text: "继续", images: undefined },
-      );
+      expect(onThreadRecoveryFork).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText("messages.threadRecoveryRestored")).toBeTruthy();
-    expect(screen.getByText("messages.threadRecoveryRestoredAndResent")).toBeTruthy();
+    expect(vi.mocked(ensureRuntimeReady)).not.toHaveBeenCalled();
+    expect(onRecoverThreadRuntimeAndResend).not.toHaveBeenCalled();
   });
 
-  it("accepts fresh fallback result when stale thread recovery resends the previous prompt", async () => {
-    vi.mocked(ensureRuntimeReady).mockResolvedValue(undefined);
+  it("does not route stale thread fork through fresh fallback resend", async () => {
     const onRecoverThreadRuntimeAndResend = vi.fn().mockResolvedValue({
       kind: "fresh",
       threadId: "thread-fresh-resend",
     });
+    const onThreadRecoveryFork = vi.fn().mockResolvedValue(undefined);
 
     renderMessages([
       {
@@ -414,27 +412,23 @@ describe("Messages runtime reconnect", () => {
     ], {
       threadId: "thread-runtime-stale-fresh-resend",
       onRecoverThreadRuntimeAndResend,
+      onThreadRecoveryFork,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkResendAction" }));
+    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkAction" }));
 
     await waitFor(() => {
-      expect(onRecoverThreadRuntimeAndResend).toHaveBeenCalledWith(
-        "ws-runtime",
-        "thread-runtime-stale-fresh-resend",
-        { text: "继续这句", images: undefined },
-      );
+      expect(onThreadRecoveryFork).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText("messages.threadRecoveryFreshResent")).toBeTruthy();
-    expect(screen.queryByText("messages.threadRecoveryFailed")).toBeNull();
+    expect(onRecoverThreadRuntimeAndResend).not.toHaveBeenCalled();
   });
 
-  it("accepts forked continuation result when stale thread recovery resends the previous prompt", async () => {
-    vi.mocked(ensureRuntimeReady).mockResolvedValue(undefined);
+  it("does not route stale thread fork through forked continuation resend", async () => {
     const onRecoverThreadRuntimeAndResend = vi.fn().mockResolvedValue({
       kind: "forked",
       threadId: "thread-forked-resend",
     });
+    const onThreadRecoveryFork = vi.fn().mockResolvedValue(undefined);
 
     renderMessages([
       {
@@ -452,22 +446,18 @@ describe("Messages runtime reconnect", () => {
     ], {
       threadId: "thread-runtime-stale-forked-resend",
       onRecoverThreadRuntimeAndResend,
+      onThreadRecoveryFork,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkResendAction" }));
+    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkAction" }));
 
     await waitFor(() => {
-      expect(onRecoverThreadRuntimeAndResend).toHaveBeenCalledWith(
-        "ws-runtime",
-        "thread-runtime-stale-forked-resend",
-        { text: "继续这句", images: undefined },
-      );
+      expect(onThreadRecoveryFork).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText("messages.threadRecoveryForkedResent")).toBeTruthy();
-    expect(screen.queryByText("messages.threadRecoveryFailed")).toBeNull();
+    expect(onRecoverThreadRuntimeAndResend).not.toHaveBeenCalled();
   });
 
-  it("allows stale thread resend when only the resend recovery callback is available", async () => {
+  it("disables stale thread fork when the shared fork callback is unavailable", async () => {
     vi.mocked(ensureRuntimeReady).mockResolvedValue(undefined);
     const onRecoverThreadRuntimeAndResend = vi.fn().mockResolvedValue("thread-recovered-resend-only");
 
@@ -489,16 +479,10 @@ describe("Messages runtime reconnect", () => {
       onRecoverThreadRuntimeAndResend,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkResendAction" }));
+    fireEvent.click(screen.getByRole("button", { name: "messages.threadRecoveryForkAction" }));
 
-    await waitFor(() => {
-      expect(vi.mocked(ensureRuntimeReady)).toHaveBeenCalledWith("ws-runtime");
-      expect(onRecoverThreadRuntimeAndResend).toHaveBeenCalledWith(
-        "ws-runtime",
-        "thread-runtime-stale-resend-only",
-        { text: "继续", images: undefined },
-      );
-    });
+    expect(vi.mocked(ensureRuntimeReady)).not.toHaveBeenCalled();
+    expect(onRecoverThreadRuntimeAndResend).not.toHaveBeenCalled();
   });
 
   it("does not turn a normal assistant reply quoting broken pipe into a reconnect card", () => {

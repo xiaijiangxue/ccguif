@@ -2,12 +2,15 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use tauri::State;
+use serde::de::DeserializeOwned;
+use serde_json::json;
+use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
 use crate::engine;
 use crate::local_usage;
+use crate::remote_backend;
 use crate::shared::codex_core;
 use crate::state::AppState;
 use crate::storage::{read_json_file, with_storage_lock, write_string_atomically};
@@ -33,14 +36,62 @@ pub(crate) use session_management_related::{
 };
 pub(crate) use session_management_types::*;
 
+fn normalize_auto_session_metadata(
+    metadata: AutoSessionMetadata,
+) -> Result<AutoSessionMetadata, String> {
+    let session_purpose = metadata.session_purpose.trim();
+    if session_purpose.is_empty() {
+        return Err("sessionPurpose is required".to_string());
+    }
+    if is_invalid_session_path_segment(session_purpose) {
+        return Err("invalid sessionPurpose".to_string());
+    }
+    let owner_feature = metadata.owner_feature.trim();
+    if owner_feature.is_empty() {
+        return Err("ownerFeature is required".to_string());
+    }
+    if is_invalid_session_path_segment(owner_feature) {
+        return Err("invalid ownerFeature".to_string());
+    }
+    Ok(AutoSessionMetadata {
+        session_purpose: session_purpose.to_string(),
+        visibility: metadata.visibility,
+        owner_feature: owner_feature.to_string(),
+        auto_archive: metadata.auto_archive,
+        created_by: metadata.created_by,
+    })
+}
+
+async fn forward_session_management_remote<T: DeserializeOwned>(
+    state: &State<'_, AppState>,
+    app: AppHandle,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<T, String> {
+    let response = remote_backend::call_remote(&*state, app, method, params).await?;
+    serde_json::from_value(response).map_err(|err| err.to_string())
+}
+
+async fn forward_session_management_remote_unit(
+    state: &State<'_, AppState>,
+    app: AppHandle,
+    method: &str,
+    params: serde_json::Value,
+) -> Result<(), String> {
+    let _: serde_json::Value =
+        forward_session_management_remote(state, app, method, params).await?;
+    Ok(())
+}
+
 #[cfg(test)]
 use session_management_catalog_helpers::entry_matches_keyword;
 use session_management_catalog_helpers::{
     build_catalog_count_summary, build_catalog_entry_stable_key, build_claude_source_fact_status,
     build_degraded_source_status, build_source_label, build_success_source_status,
-    decorate_catalog_entry_for_response, entry_matches_engine_and_keyword, entry_matches_query,
-    entry_matches_status, normalize_source_statuses, source_fact_cache_dir,
-    source_status_for_engine, unresolved_catalog_entry_to_diagnostic,
+    decorate_catalog_entry_for_response, entry_is_hidden_automatic_session,
+    entry_matches_engine_and_keyword, entry_matches_query, entry_matches_status,
+    normalize_source_statuses, source_fact_cache_dir, source_status_for_engine,
+    unresolved_catalog_entry_to_diagnostic,
 };
 use session_management_folder_counts::{
     build_catalog_folder_count_summary, filter_catalog_entries_by_folder,
@@ -140,6 +191,23 @@ pub(crate) async fn list_workspace_session_archive_evidence(
 }
 
 #[tauri::command]
+pub(crate) async fn record_auto_session_metadata(
+    workspace_id: String,
+    session_id: String,
+    metadata: AutoSessionMetadata,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    record_auto_session_metadata_core(
+        &state.workspaces,
+        state.storage_path.as_path(),
+        workspace_id,
+        session_id,
+        metadata,
+    )
+    .await
+}
+
+#[tauri::command]
 pub(crate) async fn get_workspace_session_projection_summary(
     workspace_id: String,
     query: Option<WorkspaceSessionCatalogQuery>,
@@ -209,7 +277,18 @@ pub(crate) async fn delete_workspace_sessions(
 pub(crate) async fn list_workspace_session_folders(
     workspace_id: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<WorkspaceSessionFolderTree, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote(
+            &state,
+            app,
+            "list_workspace_session_folders",
+            json!({ "workspaceId": workspace_id }),
+        )
+        .await;
+    }
+
     list_workspace_session_folders_core(
         &state.workspaces,
         state.storage_path.as_path(),
@@ -224,7 +303,18 @@ pub(crate) async fn create_workspace_session_folder(
     name: String,
     parent_id: Option<String>,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<WorkspaceSessionFolderMutation, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote(
+            &state,
+            app,
+            "create_workspace_session_folder",
+            json!({ "workspaceId": workspace_id, "name": name, "parentId": parent_id }),
+        )
+        .await;
+    }
+
     create_workspace_session_folder_core(
         &state.workspaces,
         state.storage_path.as_path(),
@@ -241,7 +331,18 @@ pub(crate) async fn rename_workspace_session_folder(
     folder_id: String,
     name: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<WorkspaceSessionFolderMutation, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote(
+            &state,
+            app,
+            "rename_workspace_session_folder",
+            json!({ "workspaceId": workspace_id, "folderId": folder_id, "name": name }),
+        )
+        .await;
+    }
+
     rename_workspace_session_folder_core(
         &state.workspaces,
         state.storage_path.as_path(),
@@ -258,7 +359,18 @@ pub(crate) async fn move_workspace_session_folder(
     folder_id: String,
     parent_id: Option<String>,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<WorkspaceSessionFolderMutation, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote(
+            &state,
+            app,
+            "move_workspace_session_folder",
+            json!({ "workspaceId": workspace_id, "folderId": folder_id, "parentId": parent_id }),
+        )
+        .await;
+    }
+
     move_workspace_session_folder_core(
         &state.workspaces,
         state.storage_path.as_path(),
@@ -274,7 +386,18 @@ pub(crate) async fn delete_workspace_session_folder(
     workspace_id: String,
     folder_id: String,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<(), String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote_unit(
+            &state,
+            app,
+            "delete_workspace_session_folder",
+            json!({ "workspaceId": workspace_id, "folderId": folder_id }),
+        )
+        .await;
+    }
+
     delete_workspace_session_folder_core(
         &state.workspaces,
         &state.engine_manager,
@@ -291,7 +414,18 @@ pub(crate) async fn assign_workspace_session_folder(
     session_id: String,
     folder_id: Option<String>,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<WorkspaceSessionAssignmentResponse, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote(
+            &state,
+            app,
+            "assign_workspace_session_folder",
+            json!({ "workspaceId": workspace_id, "sessionId": session_id, "folderId": folder_id }),
+        )
+        .await;
+    }
+
     assign_workspace_session_folder_core(
         &state.workspaces,
         &state.engine_manager,
@@ -309,7 +443,18 @@ pub(crate) async fn assign_workspace_session_folders(
     session_ids: Vec<String>,
     folder_id: Option<String>,
     state: State<'_, AppState>,
+    app: AppHandle,
 ) -> Result<WorkspaceSessionBatchMutationResponse, String> {
+    if remote_backend::is_remote_mode(&*state).await {
+        return forward_session_management_remote(
+            &state,
+            app,
+            "assign_workspace_session_folders",
+            json!({ "workspaceId": workspace_id, "sessionIds": session_ids, "folderId": folder_id }),
+        )
+        .await;
+    }
+
     assign_workspace_session_folders_core(
         &state.workspaces,
         &state.engine_manager,
@@ -1103,7 +1248,10 @@ fn normalize_folder_id(folder_id: &str) -> Result<String, String> {
     if normalized.is_empty() {
         return Err("folder_id is required".to_string());
     }
-    if normalized == SESSION_FOLDER_ROOT_ID || is_invalid_session_path_segment(normalized) {
+    if normalized == SESSION_FOLDER_ROOT_ID
+        || normalized == SESSION_FOLDER_SYSTEM_AUTO_ID
+        || is_invalid_session_path_segment(normalized)
+    {
         return Err("invalid folder_id".to_string());
     }
     Ok(normalized.to_string())
@@ -1170,8 +1318,17 @@ fn build_metadata_orphan_entry(
     session_id: &str,
     archived_at: Option<i64>,
     folder_id: Option<String>,
+    auto_session: Option<AutoSessionMetadata>,
 ) -> WorkspaceSessionCatalogEntry {
     let identity = parse_catalog_identity(session_id);
+    let folder_id = if auto_session
+        .as_ref()
+        .is_some_and(|metadata| metadata.visibility == AutoSessionVisibility::SystemAuto)
+    {
+        Some(SESSION_FOLDER_SYSTEM_AUTO_ID.to_string())
+    } else {
+        folder_id
+    };
     WorkspaceSessionCatalogEntry {
         session_id: session_id.to_string(),
         stable_session_key: None,
@@ -1208,6 +1365,7 @@ fn build_metadata_orphan_entry(
         matched_workspace_id: Some(workspace.id.clone()),
         matched_workspace_label: Some(workspace.name.clone()),
         folder_id,
+        auto_session,
         exists_on_disk: false,
         inconsistency_code: Some(SESSION_INCONSISTENCY_MISSING_ON_DISK.to_string()),
         delete_mode: Some(SESSION_DELETE_MODE_METADATA_CLEANUP.to_string()),
@@ -1222,6 +1380,7 @@ fn finalize_existing_catalog_entry(
 ) -> WorkspaceSessionCatalogEntry {
     mark_entry_as_existing_on_disk(&mut entry);
     apply_folder_assignment(&mut entry, metadata_by_workspace_id);
+    apply_auto_session_metadata(&mut entry, metadata_by_workspace_id);
     entry
 }
 
@@ -1241,6 +1400,7 @@ fn append_metadata_orphan_entries(
         .archived_at_by_session_id
         .keys()
         .chain(metadata.folder_id_by_session_id.keys())
+        .chain(metadata.auto_session_by_session_id.keys())
         .cloned()
         .collect::<Vec<_>>();
     metadata_session_ids.sort();
@@ -1254,6 +1414,15 @@ fn append_metadata_orphan_entries(
         if source_status_is_incomplete_for_engine(source_statuses, engine) {
             continue;
         }
+        let auto_session =
+            auto_session_metadata_for_session(metadata, &workspace.id, &session_id, engine)
+                .cloned();
+        if auto_session
+            .as_ref()
+            .is_some_and(|metadata| metadata.visibility == AutoSessionVisibility::Hidden)
+        {
+            continue;
+        }
         let folder_id =
             folder_assignment_for_session(metadata, &workspace.id, &session_id, engine).cloned();
         entries.push(build_metadata_orphan_entry(
@@ -1261,6 +1430,7 @@ fn append_metadata_orphan_entries(
             &session_id,
             archived_at_for_session(metadata, &workspace.id, &session_id),
             folder_id,
+            auto_session,
         ));
     }
 }
@@ -1478,6 +1648,42 @@ fn apply_folder_assignment(
         .cloned();
 }
 
+fn auto_session_metadata_for_entry<'a>(
+    metadata: &'a WorkspaceSessionCatalogMetadata,
+    entry: &WorkspaceSessionCatalogEntry,
+) -> Option<&'a AutoSessionMetadata> {
+    catalog_metadata_lookup_keys_for_entry(entry)
+        .into_iter()
+        .find_map(|key| metadata.auto_session_by_session_id.get(&key))
+}
+
+fn apply_auto_session_metadata(
+    entry: &mut WorkspaceSessionCatalogEntry,
+    metadata_by_workspace_id: &HashMap<String, WorkspaceSessionCatalogMetadata>,
+) {
+    let Some(metadata) = metadata_by_workspace_id.get(&entry.workspace_id) else {
+        return;
+    };
+    let Some(auto_session) = auto_session_metadata_for_entry(metadata, entry).cloned() else {
+        return;
+    };
+    if auto_session.visibility == AutoSessionVisibility::SystemAuto {
+        entry.folder_id = Some(SESSION_FOLDER_SYSTEM_AUTO_ID.to_string());
+    }
+    entry.auto_session = Some(auto_session);
+}
+
+fn auto_session_metadata_for_session<'a>(
+    metadata: &'a WorkspaceSessionCatalogMetadata,
+    workspace_id: &str,
+    session_id: &str,
+    engine: &str,
+) -> Option<&'a AutoSessionMetadata> {
+    catalog_metadata_lookup_keys_for_session(workspace_id, session_id, engine)
+        .into_iter()
+        .find_map(|key| metadata.auto_session_by_session_id.get(&key))
+}
+
 fn apply_strict_attribution_owner(
     mut entry: WorkspaceSessionCatalogEntry,
     workspaces_snapshot: &HashMap<String, WorkspaceEntry>,
@@ -1640,6 +1846,7 @@ fn remove_catalog_metadata_for_session(
     for key in catalog_metadata_lookup_keys_for_session(workspace_id, session_id, engine) {
         metadata.archived_at_by_session_id.remove(&key);
         metadata.folder_id_by_session_id.remove(&key);
+        metadata.auto_session_by_session_id.remove(&key);
     }
 }
 
@@ -1650,6 +1857,7 @@ fn remove_catalog_metadata_for_target(
     for key in &target.metadata_lookup_keys {
         metadata.archived_at_by_session_id.remove(key);
         metadata.folder_id_by_session_id.remove(key);
+        metadata.auto_session_by_session_id.remove(key);
     }
 }
 
@@ -1692,10 +1900,61 @@ pub(crate) async fn list_workspace_session_folders_core(
     let workspace_id = normalize_workspace_id(&workspace_id)?;
     ensure_workspace_exists(workspaces, &workspace_id).await?;
     let mut metadata = read_catalog_metadata(storage_path, &workspace_id)?;
+    if metadata
+        .auto_session_by_session_id
+        .values()
+        .any(|metadata| metadata.visibility == AutoSessionVisibility::SystemAuto)
+    {
+        metadata
+            .folders
+            .push(system_auto_session_folder(&workspace_id));
+    }
     sort_workspace_session_folders(&mut metadata.folders);
     Ok(WorkspaceSessionFolderTree {
         workspace_id,
         folders: metadata.folders,
+    })
+}
+
+fn system_auto_session_folder(workspace_id: &str) -> WorkspaceSessionFolder {
+    WorkspaceSessionFolder {
+        id: SESSION_FOLDER_SYSTEM_AUTO_ID.to_string(),
+        workspace_id: workspace_id.to_string(),
+        parent_id: None,
+        name: "system-auto".to_string(),
+        created_at: 0,
+        updated_at: 0,
+    }
+}
+
+pub(crate) async fn record_auto_session_metadata_core(
+    workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
+    storage_path: &Path,
+    workspace_id: String,
+    session_id: String,
+    metadata: AutoSessionMetadata,
+) -> Result<(), String> {
+    let workspace_id = normalize_workspace_id(&workspace_id)?;
+    ensure_workspace_exists(workspaces, &workspace_id).await?;
+    let session_id = normalize_session_ids(vec![session_id])?
+        .into_iter()
+        .next()
+        .ok_or_else(|| "session_id is required".to_string())?;
+    let metadata = normalize_auto_session_metadata(metadata)?;
+    let engine = parse_catalog_identity(&session_id)
+        .engine_name()
+        .to_string();
+    let stable_key = metadata_stable_key_for_session_id(&workspace_id, &session_id);
+    with_catalog_metadata_mutation(storage_path, &workspace_id, |stored| {
+        stored
+            .auto_session_by_session_id
+            .insert(stable_key, metadata.clone());
+        for key in folder_assignment_keys_for_session(&session_id, &engine) {
+            stored
+                .auto_session_by_session_id
+                .insert(key, metadata.clone());
+        }
+        Ok(())
     })
 }
 
@@ -2100,6 +2359,7 @@ async fn build_global_engine_catalog_entries(
                         matched_workspace_id: Some(workspace.id.clone()),
                         matched_workspace_label: Some(workspace.name.clone()),
                         folder_id: None,
+                        auto_session: None,
                         exists_on_disk: false,
                         inconsistency_code: None,
                         delete_mode: None,
@@ -2175,6 +2435,7 @@ async fn build_global_engine_catalog_entries(
                         matched_workspace_id: Some(workspace.id.clone()),
                         matched_workspace_label: Some(workspace.name.clone()),
                         folder_id: None,
+                        auto_session: None,
                         exists_on_disk: false,
                         inconsistency_code: None,
                         delete_mode: None,
@@ -2248,6 +2509,7 @@ fn build_global_codex_catalog_entry(
         matched_workspace_id: None,
         matched_workspace_label: None,
         folder_id: None,
+        auto_session: None,
         exists_on_disk: false,
         inconsistency_code: None,
         delete_mode: Some(SESSION_DELETE_MODE_UNSUPPORTED.to_string()),

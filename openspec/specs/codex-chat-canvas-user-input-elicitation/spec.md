@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the codex-chat-canvas-user-input-elicitation behavior contract, covering RequestUserInput GUI Rendering.
-
 ## Requirements
 ### Requirement: RequestUserInput GUI Rendering
 
@@ -135,13 +134,23 @@ Defines the codex-chat-canvas-user-input-elicitation behavior contract, covering
 - **THEN** 主按钮 MUST 显示 `Submit` / `提交`
 - **AND** 点击主按钮 MUST 使用标准 `{ answers: Record<string, { answers: string[] }> }` 响应契约提交所有问题答案
 
-#### Scenario: pending question card has an explicit close path
+#### Scenario: pending question card separates collapse from skip settlement
 
 - **WHEN** 待回答卡片可见
-- **THEN** 卡片 header MUST 提供关闭按钮
-- **AND** action 区 SHOULD 提供关闭/取消按钮
-- **AND** 关闭操作 MUST 从本地可见队列移除该卡片
-- **AND** 关闭操作 MUST NOT 构造正常答案提交
+- **THEN** 卡片 header MUST 提供收起按钮
+- **AND** 收起操作 MUST 只隐藏本地卡片
+- **AND** 收起操作 MUST NOT 调用 runtime response channel
+- **AND** action 区 MUST 提供明确的 skip/dismiss settlement 按钮
+- **AND** skip/dismiss settlement 操作 MUST 使用标准响应通道提交空 answers
+- **AND** 成功 settlement 后 MUST 从本地可见队列移除该卡片
+- **AND** skip/dismiss settlement 操作 MUST NOT 构造带用户选择内容的正常答案提交
+
+#### Scenario: stale pending question card skip removes local residue
+
+- **WHEN** 用户跳过待回答卡片
+- **AND** runtime 返回该 request 已 unknown、timeout、stale 或 workspace disconnected
+- **THEN** 客户端 MUST 从本地可见队列移除该卡片
+- **AND** 客户端 MUST NOT 将该 stale settlement 暴露为 fatal submit failure
 
 #### Scenario: live request card is anchored to message timeline
 
@@ -310,3 +319,4 @@ When a user-input request has already been settled by runtime timeout, the front
 - **WHEN** 当前活动会话引擎为 `opencode` 或 `gemini`
 - **THEN** 系统 MUST NOT 因本变更引入新的 `askuserquestion` 交互流程
 - **AND** 既有消息与工具渲染契约 MUST 保持不变
+

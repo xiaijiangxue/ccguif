@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the workspace-session-management behavior contract, covering Session Management SHALL Be A Dedicated Settings Surface.
-
 ## Requirements
 ### Requirement: Session Management SHALL Be A Dedicated Settings Surface
 
@@ -263,4 +262,310 @@ Folder CRUD、session folder assignment、archive/delete assignment cleanup 等 
 - **WHEN** folder metadata mutation 在 validation 阶段失败
 - **THEN** 系统 MUST NOT 写入 partial folder 或 assignment state
 - **AND** 现有 metadata MUST 保持不变
+
+### Requirement: Session Management SHALL Use Stable Engine Owner Session Keys
+
+Session management metadata and mutation results SHALL identify sessions with a stable key that includes engine, owner workspace, and canonical session identity rather than relying only on a bare session id.
+
+#### Scenario: folder assignment does not collide across owners
+- **GIVEN** two workspaces contain sessions with the same bare session id
+- **WHEN** one session is assigned to a folder
+- **THEN** the assignment MUST apply only to the matching engine, owner workspace, and canonical session id
+- **AND** the other workspace session MUST remain unassigned
+
+#### Scenario: archive metadata does not prove existence
+- **GIVEN** archive metadata exists for a Claude session key
+- **WHEN** the engine disk source no longer contains that session
+- **THEN** Session Management MUST treat the metadata as organization state or orphan cleanup evidence
+- **AND** it MUST NOT present the metadata alone as proof that the Claude session exists
+
+#### Scenario: mutation result returns actual owner
+- **WHEN** a project-level mutation targets a Claude session owned by a child workspace
+- **THEN** the mutation result MUST identify the owner workspace used for routing
+- **AND** frontend selection cleanup MUST use the stable session key from the result
+
+#### Scenario: new metadata writes use stable key
+- **WHEN** Session Management writes archive, folder, or custom-title metadata for a Claude session
+- **THEN** it MUST write the metadata under the stable engine-owner-session key
+- **AND** it MAY continue reading legacy bare session id metadata only for backward compatibility
+
+#### Scenario: stable key migration does not create duplicate organization rows
+- **GIVEN** legacy bare session id metadata and new stable-key metadata both refer to the same Claude disk fact
+- **WHEN** Session Management builds the catalog entry
+- **THEN** it MUST merge them into one organized session row
+- **AND** it MUST prefer the stable-key metadata for future mutation results
+
+### Requirement: Session Management SHALL Separate Claude Disk Facts From Metadata Overlay
+
+Session Management SHALL derive Claude existence, timestamps, cwd, transcript path, and parent relationship from Claude disk facts before applying archive, folder, and custom-title metadata.
+
+#### Scenario: Claude transcript produces source facts before overlay
+- **WHEN** a Claude transcript file exists on disk and contains usable session metadata
+- **THEN** the backend MUST produce a Claude source fact entry with canonical session identity and physical evidence
+- **AND** archive, folder, and title metadata MUST be applied after that fact entry is built
+
+#### Scenario: metadata orphan is cleanup candidate
+- **GIVEN** folder or archive metadata references a Claude stable session key
+- **AND** no matching Claude disk fact can be found after an authoritative scan
+- **WHEN** the user views a management surface that exposes inconsistencies
+- **THEN** the row MUST be marked as missing on disk or metadata orphaned
+- **AND** delete or cleanup MUST remove the organization metadata without requiring a physical transcript delete
+
+#### Scenario: incomplete Claude scan does not create orphan proof
+- **WHEN** Claude scanning is partial, degraded, or uncertain
+- **THEN** the absence of a matching disk fact MUST NOT be treated as authoritative orphan proof
+- **AND** Session Management MUST avoid offering destructive cleanup as if the transcript were proven missing
+
+### Requirement: Session Management SHALL Use One Workspace Ownership Resolver
+
+Session Management SHALL use one backend ownership resolver for Claude workspace attribution across Settings, Sidebar projection, and Workspace Home projection.
+
+#### Scenario: child cwd wins over parent cwd prefix
+- **GIVEN** a parent workspace path `/repo`
+- **AND** a child worktree path `/repo/sub`
+- **AND** a Claude transcript reports `cwd=/repo/sub`
+- **WHEN** the backend resolves ownership
+- **THEN** the session MUST be owned by the child worktree
+- **AND** it MUST NOT be owned by the parent merely because the parent path is a prefix
+
+#### Scenario: Claude project directory can fallback when cwd is missing
+- **GIVEN** a Claude transcript lacks usable cwd
+- **AND** its Claude project directory directly maps to a known workspace path
+- **WHEN** the backend resolves ownership
+- **THEN** the resolver MAY attribute the session to that workspace
+- **AND** the attribution evidence MUST indicate that project-directory fallback was used
+
+#### Scenario: ambiguous siblings do not pick arbitrary owner
+- **GIVEN** a Claude transcript can match multiple sibling workspaces with equal confidence
+- **WHEN** the backend resolves ownership
+- **THEN** it MUST return ambiguous or unresolved ownership
+- **AND** it MUST NOT silently choose a sibling or parent as the owner
+
+#### Scenario: conflicting ownership evidence blocks metadata mutation
+- **GIVEN** a Claude transcript has conflicting cwd and Claude project directory ownership evidence
+- **WHEN** a caller attempts to archive, move, delete, or rename that session through Session Management
+- **THEN** the mutation MUST fail with an unresolved-owner error
+- **AND** Session Management MUST NOT write archive, folder, delete, or custom-title metadata into any guessed owner workspace
+
+#### Scenario: project aggregate mutation routes by row owner
+- **GIVEN** a main workspace project aggregate includes a Claude row owned by a child worktree
+- **WHEN** the user archives, unarchives, deletes, moves, or renames that row
+- **THEN** Session Management MUST route the mutation by the row's owner workspace and stable session key
+- **AND** it MUST NOT route by the currently selected main workspace merely because the row appears in the aggregate
+
+### Requirement: Session Management SHALL Reconcile Disk Truth And Metadata Projection
+
+Session Management MUST treat engine disk/session storage as the source of truth for session existence and workspace metadata as a projection for archive and folder organization.
+
+#### Scenario: metadata orphan is explainable
+- **GIVEN** workspace session metadata contains archive or folder state for a session id
+- **AND** the corresponding engine session no longer exists on disk
+- **WHEN** the user views a management surface that can expose inconsistent entries
+- **THEN** the system MUST mark the row with `missing-on-disk` or an equivalent inconsistency code
+- **AND** the system MUST NOT present metadata alone as proof that the session still exists
+
+#### Scenario: active strict list excludes orphaned metadata by default
+- **GIVEN** metadata references a session missing from disk
+- **WHEN** the user views the default `strict + active` project session list
+- **THEN** the system MUST NOT render that orphan as a normal active session
+- **AND** the system SHOULD offer a cleanup path in management contexts
+
+### Requirement: Session Delete SHALL Be Physical And Idempotent
+
+Deleting a managed session MUST remove the physical engine session when it exists and MUST clean associated workspace metadata for success-like outcomes.
+
+#### Scenario: physical delete removes disk session and metadata
+- **WHEN** the user deletes a session that exists on disk
+- **THEN** the backend MUST attempt the engine-specific physical delete
+- **AND** on success MUST remove archive and folder assignment metadata for that session
+- **AND** the response MUST identify the result as physically deleted
+
+#### Scenario: already missing disk session cleans metadata
+- **GIVEN** the user deletes a session whose metadata exists but whose disk session is already missing
+- **WHEN** the backend resolves the target as not found
+- **THEN** the delete MUST settle as idempotent cleanup success
+- **AND** the response MUST expose a code such as `ALREADY_MISSING_CLEANED`
+- **AND** the frontend MUST remove the row instead of keeping it as a retry failure
+
+#### Scenario: invalid session id remains a hard failure
+- **WHEN** the user or caller submits an invalid path-like session id
+- **THEN** the backend MUST reject the request
+- **AND** MUST NOT cleanup metadata for the invalid id
+
+### Requirement: Session Management SHALL Display Parent Child Sessions Without Silent Cascade
+
+Session Management MUST expose parent-child session relationships when known, but deletion MUST remain explicit per selected session unless the backend returns an explicit cascade contract.
+
+#### Scenario: child session renders under parent when both are visible
+- **GIVEN** a catalog page contains a parent session and a child session with `parentSessionId`
+- **WHEN** the frontend renders the session list
+- **THEN** the child SHOULD be visually grouped under the parent
+- **AND** both rows MUST keep independent selection identity
+
+#### Scenario: deleting child does not delete parent
+- **WHEN** the user selects and deletes only a child session
+- **THEN** the backend MUST NOT delete the parent session
+- **AND** parent metadata MUST remain intact
+
+#### Scenario: deleting parent does not silently delete child
+- **WHEN** the user selects and deletes only a parent session
+- **THEN** the backend MUST NOT silently delete visible child sessions
+- **AND** any unsupported cascade MUST be reported explicitly rather than hidden
+
+### Requirement: Session Management SHALL Provide Project Hierarchy Navigation
+
+The Settings session management surface MUST provide a left-side project hierarchy so users can organize sessions by project/worktree and folder.
+
+#### Scenario: project tree changes catalog scope
+- **WHEN** the user selects a project or worktree row in the left hierarchy
+- **THEN** the right session list MUST reload using that workspace scope
+- **AND** selection state from the previous scope MUST be cleared
+
+#### Scenario: folder selection is organization-only
+- **WHEN** the user selects a session folder in the hierarchy
+- **THEN** the UI MAY filter or focus rows assigned to that folder
+- **AND** the backend strict project membership MUST NOT be widened by the folder selection
+
+#### Scenario: hierarchy exposes degraded counts
+- **WHEN** catalog or projection summary is partial/degraded
+- **THEN** the project hierarchy SHOULD show a degraded indicator for the affected scope
+- **AND** the right panel MUST explain that counts may be incomplete
+
+### Requirement: Session Management Query SHALL Be Bounded And Explainable
+
+Session catalog query MUST avoid unbounded first-page work where possible and MUST expose partial/degraded status when completeness cannot be proven.
+
+#### Scenario: first page uses bounded source work
+- **WHEN** the user opens a project session catalog first page without keyword filtering
+- **THEN** the backend SHOULD use bounded engine source reads or capped scans
+- **AND** MUST return a cursor or partial marker when more data may exist
+
+#### Scenario: exhaustive query remains explicit
+- **WHEN** keyword or status filters require exhaustive source scanning
+- **THEN** the system MAY perform exhaustive work
+- **AND** MUST keep loading/error/degraded states visible to the user
+
+### Requirement: Session Management SHALL Provide Read-only Session Curtain
+
+The Settings session management list MUST expose a lightweight read-only session curtain for inspecting session history without entering a send/continue-chat flow.
+
+#### Scenario: row actions remain icon-first
+- **WHEN** a session row is rendered in the dense list
+- **THEN** the detail and curtain actions MUST be icon-only controls with accessible labels
+- **AND** their visible glyphs MUST be large enough to read in the dense row layout
+- **AND** the controls MUST NOT rely on gray button chrome as the primary visible affordance
+
+#### Scenario: curtain opens as independent viewer
+- **WHEN** the user activates the session curtain icon
+- **THEN** the UI MUST open a modal curtain over the settings surface
+- **AND** MUST render available session messages, role labels, reload, and close controls
+- **AND** MUST NOT render a composer or send button in this version
+
+#### Scenario: Codex history uses progressive sources
+- **GIVEN** the selected session is a Codex session
+- **WHEN** the curtain loads history
+- **THEN** the frontend MUST start local Codex history loading and resume-thread history loading without waiting for one to fail first
+- **AND** the first source that returns visible messages MUST populate the curtain
+- **AND** a later source MAY merge additional visible messages without duplicating existing items
+
+#### Scenario: Codex curtain load cannot hang indefinitely
+- **GIVEN** Codex local or resume history is slow
+- **WHEN** no visible messages are available after the configured hard timeout
+- **THEN** the curtain MUST leave the loading state and show a retry/refresh notice
+- **AND** late-arriving history MAY still update the same open curtain if it belongs to the latest load request
+
+### Requirement: Session Management Related Surface MUST Be Engine-Neutral
+
+Session Management related sessions MUST be a project attribution surface, not a Codex-only history view. The system MUST support related entries from any engine that can provide inferred attribution evidence, while keeping strict project sessions separate.
+
+#### Scenario: related surface includes non-Codex inferred sessions
+- **WHEN** a Claude, OpenCode, Gemini, Codex, or equivalent engine session has inferred project attribution but does not satisfy strict membership
+- **THEN** Session Management MUST be able to show that session in the related surface
+- **AND** the row MUST include engine identity and inferred attribution evidence
+
+#### Scenario: strict surface remains unchanged by related entries
+- **WHEN** a session appears only in the related surface
+- **THEN** the system MUST NOT mix that session into strict project sessions
+- **AND** strict counts and default sidebar membership MUST remain based on strict projection truth
+
+#### Scenario: engine filter does not hide supported related engines
+- **WHEN** the user filters related sessions by a supported non-Codex engine
+- **THEN** the frontend MUST request or display that engine's related entries
+- **AND** it MUST NOT clear the surface solely because the engine is not Codex
+
+### Requirement: Session Management Batch Mutations MUST Return Per-Entry Results
+
+Batch archive, unarchive, delete, and folder assignment operations that target multiple sessions MUST return per-entry results for all resolvable entries. A failure in one owner workspace or one entry MUST NOT hide successful results for other entries.
+
+#### Scenario: folder move partially fails across owner workspaces
+- **WHEN** a batch folder assignment contains sessions from multiple owner workspaces
+- **AND** one owner workspace mutation fails while another owner workspace succeeds
+- **THEN** the response MUST include success results for the successful entries
+- **AND** the response MUST include failure results for the failed entries with retryable error information
+- **AND** the request MUST NOT collapse into a single opaque request-level error
+
+#### Scenario: request-level error is reserved for global precondition failure
+- **WHEN** a batch mutation request cannot be parsed, the target workspace does not exist, or the caller lacks a required global precondition
+- **THEN** the backend MAY return a request-level error
+- **AND** no partial success MUST be implied
+
+#### Scenario: frontend keeps failed entries selected
+- **WHEN** a batch mutation returns mixed success and failure results
+- **THEN** the frontend MUST update or remove only successful entries
+- **AND** failed entries MUST remain visible and selected when retry is possible
+
+### Requirement: Session Management Page Size Caps MUST Be Explicit
+
+Session Management MUST make backend page-size caps visible to the frontend when the requested limit exceeds the backend maximum or when a capped scan prevents complete results. The Settings management surface SHOULD request a large bounded window, currently `9999` sessions, rather than relying on user-visible pagination for ordinary management.
+
+#### Scenario: requested page size exceeds backend cap
+- **WHEN** the frontend requests a page size larger than the backend-supported maximum
+- **THEN** the backend response MUST expose the effective limit, next cursor, capped status, or equivalent evidence
+- **AND** the frontend MUST NOT present the current page as the complete result set unless completeness is proven
+
+#### Scenario: management page can continue after capped page
+- **WHEN** a management page response is capped but has more matching sessions
+- **THEN** the response MUST provide a continuation cursor or equivalent next-page signal
+- **AND** the UI MUST allow the user to continue loading or explain why the result is partial
+
+#### Scenario: cap evidence is distinct from source failure
+- **WHEN** results are capped only because the requested page size exceeded backend limits
+- **THEN** the system MUST distinguish that cap from engine source failure
+- **AND** it MUST NOT mark healthy engine sources as failed solely because a page limit was enforced
+
+### Requirement: Successful Deletes MUST Clear Derived Session UI State
+
+Session Management delete success MUST be treated as explicit removal evidence across Settings, Sidebar, workspace thread rows, and session curtain state. Degraded or uncertain source status MUST NOT override a successful delete result for the same session identity.
+
+#### Scenario: deleted session is not revived by degraded fallback
+- **WHEN** a session delete mutation succeeds
+- **AND** the subsequent workspace catalog refresh is degraded, partial, or `uncertain_empty`
+- **THEN** frontend continuity fallback MUST NOT reinsert the deleted session from last-good snapshots or cached summaries
+- **AND** visible sidebar/workspace rows MUST remain without that session
+
+#### Scenario: deleting the open session closes the Settings curtain
+- **WHEN** the Settings session curtain is open or loading a session
+- **AND** a delete mutation succeeds for that same session identity
+- **THEN** the curtain MUST close or otherwise leave loading state
+- **AND** stale async load results for the deleted session MUST NOT reopen or repopulate the curtain
+
+### Requirement: Session Folder Deletion MUST Preserve Sessions By Promoting Assignments
+
+Session Management folder deletion MUST delete only the organization container, never the session records. Deleting a folder MUST remove the target folder subtree. Any session assignment or metadata-only assignment pointing inside the deleted subtree MUST be promoted to the deleted folder's parent folder; when the deleted folder has no valid parent, those assignments MUST be removed so the sessions return to root/unclassified.
+
+#### Scenario: top-level folder contains real sessions
+- **WHEN** a top-level folder or any descendant folder has existing catalog entries assigned to it
+- **THEN** deleting the folder MUST succeed
+- **AND** the folder subtree MUST be removed
+- **AND** sessions assigned inside that subtree MUST return to root/unclassified
+
+#### Scenario: nested folder contains real sessions
+- **WHEN** a nested folder has existing catalog entries assigned to it
+- **THEN** deleting that nested folder MUST succeed
+- **AND** sessions assigned inside the deleted subtree MUST move to the deleted folder's parent folder
+
+#### Scenario: folder subtree contains stale assignment metadata
+- **WHEN** `folderIdBySessionId` contains orphaned keys pointing inside the deleted subtree
+- **THEN** deleting the folder MUST succeed
+- **AND** stale assignment metadata MUST be promoted to the deleted folder's parent folder or removed when there is no valid parent
 

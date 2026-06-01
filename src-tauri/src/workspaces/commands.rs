@@ -1933,10 +1933,12 @@ pub(crate) async fn list_workspace_files(
         return serde_json::from_value(response).map_err(|err| err.to_string());
     }
 
-    workspaces_core::list_workspace_files_core(&state.workspaces, &workspace_id, |root| {
-        list_workspace_files_inner(root, MAX_WORKSPACE_FILE_ENTRIES)
+    let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
+    tokio::task::spawn_blocking(move || {
+        list_workspace_files_inner(&root, MAX_WORKSPACE_FILE_ENTRIES)
     })
     .await
+    .map_err(|err| format!("failed to join workspace file scan task: {err}"))
 }
 
 #[tauri::command]
@@ -1958,19 +1960,12 @@ pub(crate) async fn list_workspace_directory_children(
         return serde_json::from_value(response).map_err(|err| err.to_string());
     }
 
-    workspaces_core::read_workspace_file_core(
-        &state.workspaces,
-        &workspace_id,
-        &path,
-        |root, rel_path| {
-            list_workspace_directory_children_inner(
-                root,
-                rel_path,
-                MAX_WORKSPACE_DIRECTORY_CHILDREN,
-            )
-        },
-    )
+    let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
+    tokio::task::spawn_blocking(move || {
+        list_workspace_directory_children_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
+    })
     .await
+    .map_err(|err| format!("failed to join workspace directory scan task: {err}"))?
 }
 
 #[tauri::command]
@@ -2074,24 +2069,22 @@ pub(crate) async fn open_workspace_in(
             .map_err(|error| format!("Failed to open app ({target_label}): {error}"))?
     } else if let Some(app) = app {
         #[cfg(target_os = "macos")]
-        let mut cmd = {
+        {
             let mut cmd = crate::utils::std_command("open");
             cmd.arg("-a").arg(&app).arg(&path);
             if !args.is_empty() {
                 cmd.arg("--args").args(&args);
             }
-            cmd
-        };
+
+            cmd.status()
+                .map_err(|error| format!("Failed to open app ({target_label}): {error}"))?
+        }
 
         #[cfg(not(target_os = "macos"))]
-        let status = open_workspace_with_non_macos_app(&app, &args, &path, &target_label)?;
-
-        #[cfg(target_os = "macos")]
-        let status = cmd
-            .status()
-            .map_err(|error| format!("Failed to open app ({target_label}): {error}"))?;
-
-        status
+        {
+            open_workspace_with_non_macos_app(&app, &args, &path, &target_label)?;
+            return Ok(());
+        }
     } else {
         return Err("Missing app or command".to_string());
     };
@@ -2240,14 +2233,17 @@ fn open_workspace_with_non_macos_app(
     args: &[String],
     path: &str,
     target_label: &str,
-) -> Result<std::process::ExitStatus, String> {
+) -> Result<(), String> {
     let mut last_not_found_error: Option<std::io::Error> = None;
 
     for candidate in open_app_command_candidates(app) {
         let mut cmd = crate::utils::std_command(&candidate);
         cmd.args(args).arg(path);
-        match cmd.status() {
-            Ok(status) => return Ok(status),
+        cmd.stdin(Stdio::null());
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+        match cmd.spawn() {
+            Ok(_) => return Ok(()),
             Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
                 last_not_found_error = Some(error);
             }

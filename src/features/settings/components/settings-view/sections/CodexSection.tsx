@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Stethoscope from "lucide-react/dist/esm/icons/stethoscope";
 import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
@@ -12,8 +12,15 @@ import type {
   CliInstallProgressEvent,
   CliInstallResult,
   CodexDoctorResult,
+  CodexLaunchProfilePreview,
+  WorkspaceInfo,
+  WorkspaceSettings,
 } from "@/types";
-import { getCliInstallPlan, runCliInstaller } from "@/services/tauri";
+import {
+  getCliInstallPlan,
+  previewCodexLaunchProfile,
+  runCliInstaller,
+} from "@/services/tauri";
 import { subscribeCliInstallerEvents } from "@/services/events";
 import { ComputerUseStatusCard } from "@/features/computer-use/components/ComputerUseStatusCard";
 import { ENABLE_COMPUTER_USE_BRIDGE } from "@/features/computer-use/constants";
@@ -56,6 +63,16 @@ type CodexSectionProps = {
     engine: CliInstallEngine,
     result: CodexDoctorResult | null,
   ) => void;
+  workspaces?: WorkspaceInfo[];
+  activeWorkspace?: WorkspaceInfo | null;
+  onUpdateWorkspaceCodexBin?: (
+    id: string,
+    codexBin: string | null,
+  ) => Promise<void>;
+  onUpdateWorkspaceSettings?: (
+    id: string,
+    settings: Partial<WorkspaceSettings>,
+  ) => Promise<void>;
 };
 
 type InstallerState = {
@@ -77,6 +94,12 @@ type InstallerLogLine = {
   stream: CliInstallProgressEvent["stream"];
   message: string;
   receivedAtMs: number;
+};
+
+type PreviewState = {
+  status: "idle" | "running" | "done";
+  result: CodexLaunchProfilePreview | null;
+  error: string | null;
 };
 
 const MAX_INSTALLER_LOG_LINES = 120;
@@ -103,6 +126,16 @@ function DoctorResultCard({
   const debugEnvVars = state.result.debug?.envVars ?? {};
   const debugExtraSearchPaths = state.result.debug?.extraSearchPaths ?? [];
   const debugProxySnapshot = state.result.debug?.proxyEnvSnapshot ?? null;
+  const configuredProxyEntries = Object.entries(
+    state.result.proxyEnvSnapshot ?? {},
+  ).filter(([, value]) => typeof value === "string" && value.trim().length > 0);
+  const environmentDiagnosis = state.result.environmentDiagnosis;
+  const shouldShowEnvironmentDiagnosis =
+    Boolean(environmentDiagnosis?.category) &&
+    environmentDiagnosis?.category !== "resolved";
+  const networkDiagnosis = state.result.networkDiagnosis;
+  const shouldShowNetworkDiagnosis =
+    Boolean(networkDiagnosis?.category) && networkDiagnosis?.category !== "unknown";
 
   return (
     <div className={`settings-doctor ${state.result.ok ? "ok" : "error"}`}>
@@ -146,11 +179,25 @@ function DoctorResultCard({
             {t("settings.doctorAttempted")}
           </div>
         ) : null}
-        {state.result.proxyEnvSnapshot &&
-        Object.keys(state.result.proxyEnvSnapshot).length > 0 ? (
+        {shouldShowEnvironmentDiagnosis ? (
+          <div>
+            <strong>{t("settings.doctorEnvironmentDiagnosis")}:</strong>{" "}
+            {environmentDiagnosis?.category}
+            {environmentDiagnosis?.message
+              ? ` · ${environmentDiagnosis.message}`
+              : ""}
+          </div>
+        ) : null}
+        {shouldShowNetworkDiagnosis ? (
+          <div>
+            <strong>{t("settings.doctorNetworkDiagnosis")}:</strong>{" "}
+            {networkDiagnosis?.category}
+          </div>
+        ) : null}
+        {configuredProxyEntries.length > 0 ? (
           <div>
             <strong>{t("settings.doctorProxyEnvironment")}:</strong>{" "}
-            {Object.entries(state.result.proxyEnvSnapshot)
+            {configuredProxyEntries
               .map(([key, value]) => `${key}=${value ?? t("settings.notSet")}`)
               .join(" · ")}
           </div>
@@ -277,6 +324,115 @@ function DoctorResultCard({
   );
 }
 
+type LaunchPreviewCardProps = {
+  t: (key: string) => string;
+  state: PreviewState;
+};
+
+function formatArgumentList(
+  t: (key: string) => string,
+  args: string[],
+): string {
+  return args.length > 0 ? args.join(" ") : t("settings.codexLaunchNoArguments");
+}
+
+function formatExecutableSource(t: (key: string) => string, source: string) {
+  if (source === "draft") {
+    return t("settings.codexLaunchExecutableDraft");
+  }
+  if (source === "global") {
+    return t("settings.codexWorkspaceExecutableGlobal");
+  }
+  if (source === "path") {
+    return t("settings.codexWorkspaceExecutablePath");
+  }
+  return t("settings.codexWorkspaceExecutableOverride");
+}
+
+function formatArgumentsSource(t: (key: string) => string, source: string) {
+  switch (source) {
+    case "draft":
+      return t("settings.codexLaunchArgumentsDraft");
+    case "global":
+      return t("settings.codexWorkspaceArgsGlobal");
+    case "parent-workspace":
+      return t("settings.codexWorkspaceArgsParent");
+    case "default":
+      return t("settings.codexWorkspaceArgsDefault");
+    default:
+      return t("settings.codexWorkspaceArgsOverride");
+  }
+}
+
+function LaunchPreviewCard({ t, state }: LaunchPreviewCardProps) {
+  if (state.status === "idle") {
+    return null;
+  }
+  if (state.status === "running") {
+    return (
+      <div className="settings-doctor">
+        <div className="settings-doctor-title">
+          {t("settings.previewingLaunch")}
+        </div>
+      </div>
+    );
+  }
+  if (state.error) {
+    return (
+      <div className="settings-doctor error">
+        <div className="settings-doctor-title">
+          {t("settings.codexLaunchPreviewIssueTitle")}
+        </div>
+        <div className="settings-doctor-body">{state.error}</div>
+      </div>
+    );
+  }
+  if (!state.result) {
+    return null;
+  }
+  return (
+    <div className={`settings-doctor ${state.result.ok ? "ok" : "error"}`}>
+      <div className="settings-doctor-title">
+        {state.result.ok
+          ? t("settings.codexLaunchPreviewTitle")
+          : t("settings.codexLaunchPreviewIssueTitle")}
+      </div>
+      <div className="settings-doctor-body">
+        <div>
+          <strong>{t("settings.codexLaunchResolvedExecutable")}:</strong>{" "}
+          {state.result.resolvedExecutable}
+        </div>
+        <div>
+          <strong>{t("settings.codexLaunchWrapperKind")}:</strong>{" "}
+          {state.result.wrapperKind}
+        </div>
+        <div>
+          <strong>{t("settings.codexLaunchUserArguments")}:</strong>{" "}
+          {formatArgumentList(t, state.result.userArguments)}
+        </div>
+        <div>
+          <strong>{t("settings.codexLaunchInjectedArguments")}:</strong>{" "}
+          {formatArgumentList(t, state.result.injectedArguments)}
+        </div>
+        <div>
+          <strong>{t("settings.codexWorkspaceSourceLabel")}:</strong>{" "}
+          {formatExecutableSource(t, state.result.executableSource)} /{" "}
+          {formatArgumentsSource(t, state.result.argumentsSource)}
+        </div>
+        {state.result.pathEnvUsed ? (
+          <div className="settings-doctor-path">
+            {t("settings.codexLaunchPathEnv")} {state.result.pathEnvUsed}
+          </div>
+        ) : null}
+        {state.result.details ? <div>{state.result.details}</div> : null}
+        {state.result.nextLaunchOnly ? (
+          <div>{t("settings.codexLaunchNextLaunchOnly")}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function resolveInstallerAction(
   doctorResult: CodexDoctorResult | null,
 ): CliInstallAction {
@@ -285,6 +441,11 @@ function resolveInstallerAction(
 
 function normalizeErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeDraftValue(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
 }
 
 function createInstallerRunId(engine: CliInstallEngine): string {
@@ -348,6 +509,10 @@ export function CodexSection({
   handleCommitRemoteHost,
   handleCommitRemoteToken,
   onInstallerDoctorResult,
+  workspaces = [],
+  activeWorkspace = null,
+  onUpdateWorkspaceCodexBin,
+  onUpdateWorkspaceSettings,
 }: CodexSectionProps) {
   const [activeTab, setActiveTab] = useState<
     "codex" | "claude" | "gemini" | "opencode"
@@ -366,6 +531,76 @@ export function CodexSection({
   });
   const [installerNowMs, setInstallerNowMs] = useState(() => Date.now());
   const installPlanRequestSeqRef = useRef(0);
+  const [globalPreviewState, setGlobalPreviewState] = useState<PreviewState>({
+    status: "idle",
+    result: null,
+    error: null,
+  });
+  const [workspacePreviewState, setWorkspacePreviewState] =
+    useState<PreviewState>({
+      status: "idle",
+      result: null,
+      error: null,
+    });
+  const [workspaceSaveState, setWorkspaceSaveState] = useState<{
+    status: "idle" | "saving" | "saved" | "error";
+    message: string | null;
+  }>({ status: "idle", message: null });
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(
+    activeWorkspace?.id ?? null,
+  );
+  const [workspaceCodexPathDraft, setWorkspaceCodexPathDraft] = useState("");
+  const [workspaceCodexArgsDraft, setWorkspaceCodexArgsDraft] = useState("");
+  const selectedWorkspace = useMemo(() => {
+    if (workspaces.length === 0) {
+      return null;
+    }
+    return (
+      workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ??
+      activeWorkspace ??
+      workspaces[0] ??
+      null
+    );
+  }, [activeWorkspace, selectedWorkspaceId, workspaces]);
+  const parentWorkspace = useMemo(() => {
+    if (!selectedWorkspace?.parentId) {
+      return null;
+    }
+    return (
+      workspaces.find(
+        (workspace) => workspace.id === selectedWorkspace.parentId,
+      ) ?? null
+    );
+  }, [selectedWorkspace?.parentId, workspaces]);
+  const nextWorkspaceCodexBin = normalizeDraftValue(workspaceCodexPathDraft);
+  const nextWorkspaceCodexArgs = normalizeDraftValue(workspaceCodexArgsDraft);
+  const nextGlobalCodexBin = normalizeDraftValue(codexPathDraft);
+  const nextGlobalCodexArgs = normalizeDraftValue(codexArgsDraft);
+  const globalCodexBinPreviewDraft =
+    nextGlobalCodexBin !== (appSettings.codexBin ?? null)
+      ? codexPathDraft.trim()
+      : null;
+  const globalCodexArgsPreviewDraft =
+    nextGlobalCodexArgs !== (appSettings.codexArgs ?? null)
+      ? codexArgsDraft.trim()
+      : null;
+  const workspaceLaunchDirty =
+    !!selectedWorkspace &&
+    (nextWorkspaceCodexBin !== (selectedWorkspace.codex_bin ?? null) ||
+      nextWorkspaceCodexArgs !==
+        (selectedWorkspace.settings.codexArgs ?? null));
+  const workspaceExecutableSource = nextWorkspaceCodexBin
+    ? t("settings.codexWorkspaceExecutableOverride")
+    : appSettings.codexBin
+      ? t("settings.codexWorkspaceExecutableGlobal")
+      : t("settings.codexWorkspaceExecutablePath");
+  const workspaceArgumentsSource = nextWorkspaceCodexArgs
+    ? t("settings.codexWorkspaceArgsOverride")
+    : selectedWorkspace?.kind === "worktree" && parentWorkspace?.settings.codexArgs
+      ? t("settings.codexWorkspaceArgsParent")
+      : appSettings.codexArgs
+        ? t("settings.codexWorkspaceArgsGlobal")
+        : t("settings.codexWorkspaceArgsDefault");
 
   useEffect(() => {
     return subscribeCliInstallerEvents((event) => {
@@ -381,6 +616,26 @@ export function CodexSection({
       });
     });
   }, []);
+
+  useEffect(() => {
+    if (workspaces.length === 0) {
+      setSelectedWorkspaceId(null);
+      return;
+    }
+    setSelectedWorkspaceId((current) => {
+      if (current && workspaces.some((workspace) => workspace.id === current)) {
+        return current;
+      }
+      return activeWorkspace?.id ?? workspaces[0]?.id ?? null;
+    });
+  }, [activeWorkspace?.id, workspaces]);
+
+  useEffect(() => {
+    setWorkspaceCodexPathDraft(selectedWorkspace?.codex_bin ?? "");
+    setWorkspaceCodexArgsDraft(selectedWorkspace?.settings.codexArgs ?? "");
+    setWorkspacePreviewState({ status: "idle", result: null, error: null });
+    setWorkspaceSaveState({ status: "idle", message: null });
+  }, [selectedWorkspace?.id, selectedWorkspace?.codex_bin, selectedWorkspace?.settings.codexArgs]);
 
   useEffect(() => {
     if (installerState.status !== "running") {
@@ -487,6 +742,79 @@ export function CodexSection({
         status: "error",
         error: normalizeErrorMessage(error),
       }));
+    }
+  };
+
+  const handlePreviewGlobalLaunch = async () => {
+    setGlobalPreviewState({ status: "running", result: null, error: null });
+    try {
+      const result = await previewCodexLaunchProfile({
+        codexBin: globalCodexBinPreviewDraft,
+        codexArgs: globalCodexArgsPreviewDraft,
+        workspaceId: null,
+        useWorkspaceDraft: false,
+      });
+      setGlobalPreviewState({ status: "done", result, error: null });
+    } catch (error) {
+      setGlobalPreviewState({
+        status: "done",
+        result: null,
+        error: normalizeErrorMessage(error),
+      });
+    }
+  };
+
+  const handlePreviewWorkspaceLaunch = async () => {
+    if (!selectedWorkspace) {
+      return;
+    }
+    setWorkspacePreviewState({ status: "running", result: null, error: null });
+    try {
+      const result = await previewCodexLaunchProfile({
+        codexBin: nextWorkspaceCodexBin,
+        codexArgs: nextWorkspaceCodexArgs,
+        workspaceId: selectedWorkspace.id,
+        useWorkspaceDraft: true,
+      });
+      setWorkspacePreviewState({ status: "done", result, error: null });
+    } catch (error) {
+      setWorkspacePreviewState({
+        status: "done",
+        result: null,
+        error: normalizeErrorMessage(error),
+      });
+    }
+  };
+
+  const handleSaveWorkspaceLaunch = async () => {
+    if (!selectedWorkspace || !onUpdateWorkspaceCodexBin || !onUpdateWorkspaceSettings) {
+      return;
+    }
+    const previousCodexBin = selectedWorkspace.codex_bin ?? null;
+    setWorkspaceSaveState({ status: "saving", message: null });
+    try {
+      if (nextWorkspaceCodexBin !== previousCodexBin) {
+        await onUpdateWorkspaceCodexBin(selectedWorkspace.id, nextWorkspaceCodexBin);
+      }
+      if (nextWorkspaceCodexArgs !== (selectedWorkspace.settings.codexArgs ?? null)) {
+        await onUpdateWorkspaceSettings(selectedWorkspace.id, {
+          codexArgs: nextWorkspaceCodexArgs,
+        });
+      }
+      setWorkspaceSaveState({
+        status: "saved",
+        message: t("settings.codexLaunchNextLaunchOnly"),
+      });
+    } catch (error) {
+      if (nextWorkspaceCodexBin !== previousCodexBin) {
+        await onUpdateWorkspaceCodexBin(selectedWorkspace.id, previousCodexBin).catch(
+          () => undefined,
+        );
+      }
+      setWorkspaceSaveState({
+        status: "error",
+        message: `${t("settings.codexWorkspaceSaveFailed")}: ${normalizeErrorMessage(error)}`,
+      });
     }
   };
 
@@ -600,6 +928,12 @@ export function CodexSection({
 
         <TabsPanel value="codex">
           <div className="settings-field">
+            <div className="settings-field-label">
+              {t("settings.codexLaunchConfigurationTitle")}
+            </div>
+            <div className="settings-help">
+              {t("settings.codexLaunchConfigurationDescription")}
+            </div>
             <label className="settings-field-label" htmlFor="codex-path">
               {t("settings.defaultCodexPath")}
             </label>
@@ -654,7 +988,23 @@ export function CodexSection({
               <code>{t("settings.appServer")}</code>
               {t("settings.codexArgsDescSuffix")}
             </div>
+            <div className="settings-help">
+              {t("settings.codexLaunchNextLaunchOnly")}
+            </div>
             <div className="settings-field-actions">
+              <button
+                type="button"
+                className="ghost settings-button-compact"
+                onClick={() => {
+                  void handlePreviewGlobalLaunch();
+                }}
+                disabled={globalPreviewState.status === "running"}
+              >
+                <Stethoscope aria-hidden />
+                {globalPreviewState.status === "running"
+                  ? t("settings.previewingLaunch")
+                  : t("settings.previewLaunch")}
+              </button>
               {codexDirty ? (
                 <Button
                   type="button"
@@ -700,6 +1050,8 @@ export function CodexSection({
               </Button>
             </div>
 
+            <LaunchPreviewCard t={t} state={globalPreviewState} />
+
             <DoctorResultCard
               t={t}
               state={doctorState}
@@ -707,6 +1059,117 @@ export function CodexSection({
               errorTitleKey="settings.codexIssueDetected"
               showAppServer
             />
+          </div>
+
+          <div className="settings-field">
+            <div className="settings-field-label">
+              {t("settings.codexWorkspaceLaunchConfigurationTitle")}
+            </div>
+            <div className="settings-help">
+              {t("settings.codexWorkspaceLaunchConfigurationDescription")}
+            </div>
+            {workspaces.length > 0 && selectedWorkspace ? (
+              <>
+                <label
+                  className="settings-field-label"
+                  htmlFor="codex-workspace-select"
+                >
+                  {t("settings.codexWorkspaceSelect")}
+                </label>
+                <select
+                  id="codex-workspace-select"
+                  className="settings-select"
+                  value={selectedWorkspace.id}
+                  onChange={(event) => setSelectedWorkspaceId(event.target.value)}
+                >
+                  {workspaces.map((workspace) => (
+                    <option key={workspace.id} value={workspace.id}>
+                      {workspace.name}
+                    </option>
+                  ))}
+                </select>
+
+                <label
+                  className="settings-field-label"
+                  htmlFor="codex-workspace-path"
+                >
+                  {t("settings.codexWorkspacePath")}
+                </label>
+                <input
+                  id="codex-workspace-path"
+                  className="settings-input"
+                  value={workspaceCodexPathDraft}
+                  placeholder={t("settings.codexWorkspaceInheritPath")}
+                  onChange={(event) =>
+                    setWorkspaceCodexPathDraft(event.target.value)
+                  }
+                />
+                <label
+                  className="settings-field-label"
+                  htmlFor="codex-workspace-args"
+                >
+                  {t("settings.codexWorkspaceArgs")}
+                </label>
+                <input
+                  id="codex-workspace-args"
+                  className="settings-input"
+                  value={workspaceCodexArgsDraft}
+                  placeholder={t("settings.codexWorkspaceInheritArgs")}
+                  onChange={(event) =>
+                    setWorkspaceCodexArgsDraft(event.target.value)
+                  }
+                />
+                <div className="settings-help">
+                  {t("settings.codexWorkspaceSourceLabel")}{" "}
+                  {workspaceExecutableSource} / {workspaceArgumentsSource}
+                </div>
+                <div className="settings-field-actions">
+                  <button
+                    type="button"
+                    className="ghost settings-button-compact"
+                    onClick={() => {
+                      void handlePreviewWorkspaceLaunch();
+                    }}
+                    disabled={workspacePreviewState.status === "running"}
+                  >
+                    <Stethoscope aria-hidden />
+                    {workspacePreviewState.status === "running"
+                      ? t("settings.previewingLaunch")
+                      : t("settings.previewLaunch")}
+                  </button>
+                  {workspaceLaunchDirty ? (
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => {
+                        void handleSaveWorkspaceLaunch();
+                      }}
+                      disabled={workspaceSaveState.status === "saving"}
+                    >
+                      {workspaceSaveState.status === "saving"
+                        ? t("settings.saving")
+                        : t("settings.codexWorkspaceSave")}
+                    </button>
+                  ) : null}
+                </div>
+                {workspaceSaveState.message ? (
+                  <div
+                    className={
+                      workspaceSaveState.status === "error"
+                        ? "settings-error"
+                        : "settings-help"
+                    }
+                  >
+                    {workspaceSaveState.message}
+                  </div>
+                ) : null}
+                <LaunchPreviewCard t={t} state={workspacePreviewState} />
+              </>
+            ) : (
+              <div className="settings-empty">
+                {t("settings.codexWorkspaceNoWorkspaces")}
+              </div>
+            )}
           </div>
 
           {ENABLE_COMPUTER_USE_BRIDGE ? <ComputerUseStatusCard /> : null}

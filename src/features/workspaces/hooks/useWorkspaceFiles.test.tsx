@@ -2,10 +2,12 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceInfo } from "../../../types";
-import { getWorkspaceFiles } from "../../../services/tauri";
+import { getWorkspaceDirectoryChildren, getWorkspaceFiles } from "../../../services/tauri";
+import type { WorkspaceFilesResponse } from "../../../services/tauri";
 import { useWorkspaceFiles } from "./useWorkspaceFiles";
 
 vi.mock("../../../services/tauri", () => ({
+  getWorkspaceDirectoryChildren: vi.fn(),
   getWorkspaceFiles: vi.fn(),
 }));
 
@@ -29,11 +31,20 @@ const workspaceB: WorkspaceInfo = {
   },
 };
 
-function flushAsyncWork() {
-  return act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-  });
+const emptySnapshot: WorkspaceFilesResponse = {
+  files: [],
+  directories: [],
+  gitignored_files: [],
+  gitignored_directories: [],
+};
+
+function workspaceSnapshot(
+  overrides: Partial<WorkspaceFilesResponse> = {},
+): WorkspaceFilesResponse {
+  return {
+    ...emptySnapshot,
+    ...overrides,
+  };
 }
 
 function createDeferred<T>() {
@@ -46,11 +57,33 @@ function createDeferred<T>() {
   return { promise, resolve, reject };
 }
 
+function neverResolveWorkspaceFiles() {
+  return new Promise<WorkspaceFilesResponse>(() => {});
+}
+
+function flushAsyncWork() {
+  return act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
+function advanceTimersAndFlush(ms: number) {
+  return act(async () => {
+    vi.advanceTimersByTime(ms);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+}
+
 describe("useWorkspaceFiles", () => {
   beforeEach(() => {
     vi.useFakeTimers({
       toFake: ["setTimeout", "clearTimeout"],
     });
+    vi.mocked(getWorkspaceFiles).mockReturnValue(neverResolveWorkspaceFiles());
   });
 
   afterEach(() => {
@@ -58,16 +91,44 @@ describe("useWorkspaceFiles", () => {
     vi.clearAllMocks();
   });
 
-  it("retries the initial load once after a failure and recovers file state", async () => {
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-    getWorkspaceFilesMock
-      .mockRejectedValueOnce(new Error("network down"))
-      .mockResolvedValueOnce({
-        files: ["src/app.tsx"],
+  it("loads root children without starting a full workspace scan", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockResolvedValueOnce(
+      workspaceSnapshot({
+        files: ["README.md"],
         directories: ["src"],
-        gitignored_files: [],
-        gitignored_directories: [],
-      });
+        directory_entries: [{ path: "src", child_state: "unknown" }],
+      }),
+    );
+    const { result, unmount } = renderHook(() =>
+      useWorkspaceFiles({
+        activeWorkspace: workspaceA,
+        pollingEnabled: false,
+      }),
+    );
+
+    expect(result.current.isLoading).toBe(true);
+
+    await flushAsyncWork();
+
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledWith(workspaceA.id, "");
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.files).toEqual(["README.md"]);
+    expect(result.current.directories).toEqual(["src"]);
+    expect(result.current.directoryMetadata).toEqual([
+      { path: "src", child_state: "unknown" },
+    ]);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it("clears the initial loading state after the root directory resolves", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockResolvedValueOnce(
+      workspaceSnapshot({
+        files: ["README.md"],
+        directories: ["src"],
+      }),
+    );
 
     const { result, unmount } = renderHook(() =>
       useWorkspaceFiles({
@@ -78,33 +139,23 @@ describe("useWorkspaceFiles", () => {
 
     await flushAsyncWork();
 
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(1);
-    expect(result.current.files).toEqual([]);
-    expect(result.current.loadError).toBe("network down");
-
-    await act(async () => {
-      vi.advanceTimersByTime(1_500);
-      await Promise.resolve();
-      await Promise.resolve();
-    });
-
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(2);
-    expect(result.current.files).toEqual(["src/app.tsx"]);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.files).toEqual(["README.md"]);
     expect(result.current.directories).toEqual(["src"]);
-    expect(result.current.loadError).toBeNull();
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
 
     unmount();
   });
 
-  it("starts in a pending loading state for the first connected workspace snapshot", async () => {
-    const firstSnapshot = createDeferred<{
-      files: string[];
-      directories: string[];
-      gitignored_files: string[];
-      gitignored_directories: string[];
-    }>();
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-    getWorkspaceFilesMock.mockReturnValue(firstSnapshot.promise);
+  it("retries the initial root load once after a failure and recovers file state", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren)
+      .mockRejectedValueOnce(new Error("network down"))
+      .mockResolvedValueOnce(
+        workspaceSnapshot({
+          files: ["src/app.tsx"],
+          directories: ["src"],
+        }),
+      );
 
     const { result, unmount } = renderHook(() =>
       useWorkspaceFiles({
@@ -113,39 +164,48 @@ describe("useWorkspaceFiles", () => {
       }),
     );
 
-    expect(result.current.isLoading).toBe(true);
+    await flushAsyncWork();
+
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(1);
     expect(result.current.files).toEqual([]);
-    expect(result.current.directories).toEqual([]);
+    expect(result.current.loadError).toBe("network down");
 
-    await act(async () => {
-      firstSnapshot.resolve({
-        files: ["src/app.tsx"],
-        directories: ["src"],
-        gitignored_files: [],
-        gitignored_directories: [],
-      });
-      await Promise.resolve();
-      await Promise.resolve();
-    });
+    await advanceTimersAndFlush(1_500);
 
-    expect(result.current.isLoading).toBe(false);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
     expect(result.current.files).toEqual(["src/app.tsx"]);
     expect(result.current.directories).toEqual(["src"]);
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(1);
+    expect(result.current.loadError).toBeNull();
 
     unmount();
   });
 
-  it("cleans up a scheduled retry when the active workspace changes", async () => {
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-    getWorkspaceFilesMock
-      .mockRejectedValueOnce(new Error("network down"))
-      .mockResolvedValueOnce({
-        files: ["docs/readme.md"],
-        directories: ["docs"],
-        gitignored_files: [],
-        gitignored_directories: [],
-      });
+  it("falls back to a root-only legacy snapshot when the root query fails before any snapshot exists", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
+      if (requestedWorkspaceId === workspaceA.id) {
+        return Promise.reject(new Error("Directory path cannot be empty."));
+      }
+      if (requestedWorkspaceId === workspaceB.id) {
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["docs/guide.md"],
+            directories: ["docs"],
+          }),
+        );
+      }
+      return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
+    });
+    vi.mocked(getWorkspaceFiles).mockResolvedValueOnce(
+      workspaceSnapshot({
+        files: ["README.md", "src/app.tsx", "src\\windows.ts"],
+        directories: ["src", "src/components", "src\\windows-components"],
+        directory_entries: [
+          { path: "src", child_state: "loaded" },
+          { path: "src/components", child_state: "loaded" },
+          { path: "src\\windows-components", child_state: "loaded" },
+        ],
+      }),
+    );
 
     const { rerender, result, unmount } = renderHook(
       ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
@@ -159,54 +219,53 @@ describe("useWorkspaceFiles", () => {
     );
 
     await flushAsyncWork();
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(1);
-    expect(result.current.loadError).toBe("network down");
+
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledWith(workspaceA.id, "");
+    expect(getWorkspaceFiles).toHaveBeenCalledWith(workspaceA.id);
+    expect(result.current.files).toEqual(["README.md"]);
+    expect(result.current.directories).toEqual(["src"]);
+    expect(result.current.directoryMetadata).toEqual([{ path: "src", child_state: "loaded" }]);
+    expect(result.current.loadError).toBeNull();
+    expect(result.current.isLoading).toBe(false);
 
     rerender({ activeWorkspace: workspaceB });
     await flushAsyncWork();
+    expect(result.current.files).toEqual(["docs/guide.md"]);
 
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(2);
-    expect(result.current.files).toEqual(["docs/readme.md"]);
-    expect(result.current.loadError).toBeNull();
+    rerender({ activeWorkspace: workspaceA });
 
-    await act(async () => {
-      vi.advanceTimersByTime(1_500);
-      await Promise.resolve();
-    });
-
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(2);
+    expect(result.current.files).toEqual(["README.md"]);
+    expect(result.current.directories).toEqual(["src"]);
+    expect(result.current.directoryMetadata).toEqual([{ path: "src", child_state: "loaded" }]);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
 
     unmount();
   });
 
-  it("keeps a pending loading state before a disconnected workspace confirms its first snapshot", async () => {
-    const disconnectedWorkspace: WorkspaceInfo = {
-      ...workspaceA,
-      connected: false,
-    };
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
+  it("keeps the error state when both root query and fallback snapshot fail", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockRejectedValueOnce(
+      new Error("Directory path cannot be empty."),
+    );
+    vi.mocked(getWorkspaceFiles).mockRejectedValueOnce(new Error("full failed"));
 
     const { result, unmount } = renderHook(() =>
       useWorkspaceFiles({
-        activeWorkspace: disconnectedWorkspace,
+        activeWorkspace: workspaceA,
         pollingEnabled: false,
       }),
     );
 
     await flushAsyncWork();
 
-    expect(getWorkspaceFilesMock).not.toHaveBeenCalled();
+    expect(getWorkspaceFiles).toHaveBeenCalledWith(workspaceA.id);
     expect(result.current.files).toEqual([]);
-    expect(result.current.directories).toEqual([]);
-    expect(result.current.isLoading).toBe(true);
-    expect(result.current.loadError).toBeNull();
+    expect(result.current.loadError).toBe("Directory path cannot be empty.");
+    expect(result.current.isLoading).toBe(false);
 
     unmount();
   });
 
-  it("defers the initial full tree load when initial loading is disabled", async () => {
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-
+  it("defers all file loading when initial loading is disabled", async () => {
     const { rerender, result, unmount } = renderHook(
       ({ initialLoadEnabled }: { initialLoadEnabled: boolean }) =>
         useWorkspaceFiles({
@@ -221,33 +280,63 @@ describe("useWorkspaceFiles", () => {
 
     await flushAsyncWork();
 
-    expect(getWorkspaceFilesMock).not.toHaveBeenCalled();
+    expect(getWorkspaceDirectoryChildren).not.toHaveBeenCalled();
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
     expect(result.current.isLoading).toBe(false);
     expect(result.current.files).toEqual([]);
 
-    getWorkspaceFilesMock.mockResolvedValueOnce({
-      files: ["src/app.tsx"],
-      directories: ["src"],
-      gitignored_files: [],
-      gitignored_directories: [],
-    });
+    vi.mocked(getWorkspaceDirectoryChildren).mockResolvedValueOnce(
+      workspaceSnapshot({
+        files: ["src/app.tsx"],
+        directories: ["src"],
+      }),
+    );
     rerender({ initialLoadEnabled: true });
     await flushAsyncWork();
 
-    expect(getWorkspaceFilesMock).toHaveBeenCalledWith(workspaceA.id);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledWith(workspaceA.id, "");
     expect(result.current.files).toEqual(["src/app.tsx"]);
 
     unmount();
   });
 
+  it("keeps polling shallow instead of scheduling repeated full scans", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockResolvedValue(
+      workspaceSnapshot({
+        files: ["src/app.tsx"],
+        directories: ["src"],
+      }),
+    );
+
+    const { result, unmount } = renderHook(() =>
+      useWorkspaceFiles({
+        activeWorkspace: workspaceA,
+        initialLoadEnabled: true,
+        pollingEnabled: true,
+      }),
+    );
+
+    await flushAsyncWork();
+
+    expect(result.current.files).toEqual(["src/app.tsx"]);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(1);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    await advanceTimersAndFlush(30_000);
+
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
   it("does not clear a loaded snapshot when the same workspace briefly disconnects", async () => {
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-    getWorkspaceFilesMock.mockResolvedValue({
-      files: ["src/app.tsx"],
-      directories: ["src"],
-      gitignored_files: [],
-      gitignored_directories: [],
-    });
+    vi.mocked(getWorkspaceDirectoryChildren).mockResolvedValue(
+      workspaceSnapshot({
+        files: ["src/app.tsx"],
+        directories: ["src"],
+      }),
+    );
 
     const { rerender, result, unmount } = renderHook(
       ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
@@ -262,40 +351,35 @@ describe("useWorkspaceFiles", () => {
 
     await flushAsyncWork();
     expect(result.current.files).toEqual(["src/app.tsx"]);
-    expect(result.current.directories).toEqual(["src"]);
     expect(result.current.isLoading).toBe(false);
 
     rerender({ activeWorkspace: { ...workspaceA, connected: false } });
     await flushAsyncWork();
 
     expect(result.current.files).toEqual(["src/app.tsx"]);
-    expect(result.current.directories).toEqual(["src"]);
     expect(result.current.isLoading).toBe(false);
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(1);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(1);
 
     unmount();
   });
 
-  it("ignores stale responses from the previous workspace after a fast switch", async () => {
-    const workspaceAResponse = createDeferred<{
-      files: string[];
-      directories: string[];
-      gitignored_files: string[];
-      gitignored_directories: string[];
-    }>();
-    const workspaceBResponse = createDeferred<{
-      files: string[];
-      directories: string[];
-      gitignored_files: string[];
-      gitignored_directories: string[];
-    }>();
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-    getWorkspaceFilesMock.mockImplementation((requestedWorkspaceId) => {
+  it("does not start full workspace scans while switching workspaces", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
       if (requestedWorkspaceId === workspaceA.id) {
-        return workspaceAResponse.promise;
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["src/app.tsx"],
+            directories: ["src"],
+          }),
+        );
       }
       if (requestedWorkspaceId === workspaceB.id) {
-        return workspaceBResponse.promise;
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["docs/guide.md"],
+            directories: ["docs"],
+          }),
+        );
       }
       return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
     });
@@ -312,37 +396,238 @@ describe("useWorkspaceFiles", () => {
     );
 
     await flushAsyncWork();
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(1);
+    expect(result.current.files).toEqual(["src/app.tsx"]);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
 
     rerender({ activeWorkspace: workspaceB });
     await flushAsyncWork();
-    expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(2);
+    expect(result.current.files).toEqual(["docs/guide.md"]);
+
+    await advanceTimersAndFlush(2_500);
+
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it("renders cached root data immediately when switching back to a workspace", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
+      if (requestedWorkspaceId === workspaceA.id) {
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["src/app.tsx"],
+            directories: ["src"],
+          }),
+        );
+      }
+      if (requestedWorkspaceId === workspaceB.id) {
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["docs/guide.md"],
+            directories: ["docs"],
+          }),
+        );
+      }
+      return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
+    });
+
+    const { rerender, result, unmount } = renderHook(
+      ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
+        useWorkspaceFiles({
+          activeWorkspace,
+          pollingEnabled: false,
+        }),
+      {
+        initialProps: { activeWorkspace: workspaceA },
+      },
+    );
+
+    await flushAsyncWork();
+    expect(result.current.files).toEqual(["src/app.tsx"]);
+
+    rerender({ activeWorkspace: workspaceB });
+    await flushAsyncWork();
+    expect(result.current.files).toEqual(["docs/guide.md"]);
+
+    rerender({ activeWorkspace: workspaceA });
+
+    expect(result.current.files).toEqual(["src/app.tsx"]);
+    expect(result.current.isLoading).toBe(false);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it("reuses an in-flight root request when switching back before it resolves", async () => {
+    const workspaceARoot = createDeferred<WorkspaceFilesResponse>();
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
+      if (requestedWorkspaceId === workspaceA.id) {
+        return workspaceARoot.promise;
+      }
+      if (requestedWorkspaceId === workspaceB.id) {
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["docs/guide.md"],
+            directories: ["docs"],
+          }),
+        );
+      }
+      return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
+    });
+
+    const { rerender, result, unmount } = renderHook(
+      ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
+        useWorkspaceFiles({
+          activeWorkspace,
+          pollingEnabled: false,
+        }),
+      {
+        initialProps: { activeWorkspace: workspaceA },
+      },
+    );
+
+    await flushAsyncWork();
+    rerender({ activeWorkspace: workspaceB });
+    await flushAsyncWork();
+    rerender({ activeWorkspace: workspaceA });
+    await flushAsyncWork();
+
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
+    expect(result.current.isLoading).toBe(true);
 
     await act(async () => {
-      workspaceBResponse.resolve({
-        files: ["docs/guide.md"],
-        directories: ["docs"],
-        gitignored_files: [],
-        gitignored_directories: [],
-      });
+      workspaceARoot.resolve(
+        workspaceSnapshot({
+          files: ["src/app.tsx"],
+          directories: ["src"],
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.files).toEqual(["src/app.tsx"]);
+    expect(result.current.isLoading).toBe(false);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
+
+    unmount();
+  });
+
+  it("caches stale root responses and reuses them on a later workspace switch", async () => {
+    const workspaceARoot = createDeferred<WorkspaceFilesResponse>();
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
+      if (requestedWorkspaceId === workspaceA.id) {
+        return workspaceARoot.promise;
+      }
+      if (requestedWorkspaceId === workspaceB.id) {
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["docs/guide.md"],
+            directories: ["docs"],
+          }),
+        );
+      }
+      return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
+    });
+
+    const { rerender, result, unmount } = renderHook(
+      ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
+        useWorkspaceFiles({
+          activeWorkspace,
+          pollingEnabled: false,
+        }),
+      {
+        initialProps: { activeWorkspace: workspaceA },
+      },
+    );
+
+    await flushAsyncWork();
+    rerender({ activeWorkspace: workspaceB });
+    await flushAsyncWork();
+
+    await act(async () => {
+      workspaceARoot.resolve(
+        workspaceSnapshot({
+          files: ["src/app.tsx"],
+          directories: ["src"],
+        }),
+      );
       await Promise.resolve();
       await Promise.resolve();
     });
 
     expect(result.current.files).toEqual(["docs/guide.md"]);
-    expect(result.current.directories).toEqual(["docs"]);
-    expect(result.current.loadError).toBeNull();
+
+    rerender({ activeWorkspace: workspaceA });
+
+    expect(result.current.files).toEqual(["src/app.tsx"]);
+    expect(result.current.isLoading).toBe(false);
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
+
+    unmount();
+  });
+
+  it("ignores stale root responses from the previous workspace after a fast switch", async () => {
+    const workspaceARoot = createDeferred<WorkspaceFilesResponse>();
+    const workspaceBRoot = createDeferred<WorkspaceFilesResponse>();
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
+      if (requestedWorkspaceId === workspaceA.id) {
+        return workspaceARoot.promise;
+      }
+      if (requestedWorkspaceId === workspaceB.id) {
+        return workspaceBRoot.promise;
+      }
+      return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
+    });
+
+    const { rerender, result, unmount } = renderHook(
+      ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
+        useWorkspaceFiles({
+          activeWorkspace,
+          pollingEnabled: false,
+        }),
+      {
+        initialProps: { activeWorkspace: workspaceA },
+      },
+    );
+
+    await flushAsyncWork();
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(1);
+
+    rerender({ activeWorkspace: workspaceB });
+    await flushAsyncWork();
+    expect(getWorkspaceDirectoryChildren).toHaveBeenCalledTimes(2);
 
     await act(async () => {
-      workspaceAResponse.resolve({
-        files: ["src/app.tsx"],
-        directories: ["src"],
-        gitignored_files: [],
-        gitignored_directories: [],
-      });
+      workspaceBRoot.resolve(
+        workspaceSnapshot({
+          files: ["docs/guide.md"],
+          directories: ["docs"],
+        }),
+      );
       await Promise.resolve();
       await Promise.resolve();
     });
+
+    expect(result.current.files).toEqual(["docs/guide.md"]);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    await act(async () => {
+      workspaceARoot.resolve(
+        workspaceSnapshot({
+          files: ["src/app.tsx"],
+          directories: ["src"],
+        }),
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.files).toEqual(["docs/guide.md"]);
+    expect(getWorkspaceFiles).not.toHaveBeenCalled();
+
+    await advanceTimersAndFlush(2_500);
 
     expect(result.current.files).toEqual(["docs/guide.md"]);
     expect(result.current.directories).toEqual(["docs"]);
@@ -351,23 +636,66 @@ describe("useWorkspaceFiles", () => {
     unmount();
   });
 
-  it("normalizes progressive scan metadata and clears it on workspace switch", async () => {
-    const getWorkspaceFilesMock = vi.mocked(getWorkspaceFiles);
-    getWorkspaceFilesMock.mockResolvedValue({
-      files: [],
-      directories: ["packages/large"],
-      gitignored_files: [],
-      gitignored_directories: [],
-      scan_state: "partial",
-      limit_hit: true,
-      directory_entries: [
-        {
-          path: "packages/large",
-          child_state: "unknown",
-          has_more: true,
-        },
-      ],
+  it("ignores stale root failures from the previous workspace after a fast switch", async () => {
+    const workspaceARoot = createDeferred<WorkspaceFilesResponse>();
+    vi.mocked(getWorkspaceDirectoryChildren).mockImplementation((requestedWorkspaceId) => {
+      if (requestedWorkspaceId === workspaceA.id) {
+        return workspaceARoot.promise;
+      }
+      if (requestedWorkspaceId === workspaceB.id) {
+        return Promise.resolve(
+          workspaceSnapshot({
+            files: ["docs/guide.md"],
+            directories: ["docs"],
+          }),
+        );
+      }
+      return Promise.reject(new Error(`unexpected workspace: ${requestedWorkspaceId}`));
     });
+
+    const { rerender, result, unmount } = renderHook(
+      ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>
+        useWorkspaceFiles({
+          activeWorkspace,
+          pollingEnabled: false,
+        }),
+      {
+        initialProps: { activeWorkspace: workspaceA },
+      },
+    );
+
+    await flushAsyncWork();
+    rerender({ activeWorkspace: workspaceB });
+    await flushAsyncWork();
+
+    await act(async () => {
+      workspaceARoot.reject(new Error("stale failure"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(result.current.files).toEqual(["docs/guide.md"]);
+    expect(result.current.loadError).toBeNull();
+
+    unmount();
+  });
+
+  it("normalizes progressive scan metadata and clears it on workspace switch", async () => {
+    vi.mocked(getWorkspaceDirectoryChildren).mockResolvedValue(
+      workspaceSnapshot({
+        files: [],
+        directories: ["packages/large"],
+        scan_state: "partial",
+        limit_hit: true,
+        directory_entries: [
+          {
+            path: "packages/large",
+            child_state: "unknown",
+            has_more: true,
+          },
+        ],
+      }),
+    );
 
     const { rerender, result, unmount } = renderHook(
       ({ activeWorkspace }: { activeWorkspace: WorkspaceInfo | null }) =>

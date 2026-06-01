@@ -16,7 +16,14 @@ export function useAppSettingsController() {
 
   useThemePreference(appSettings);
   useUserMessageBubbleColor(appSettings.userMsgColor);
-  const { reduceTransparency, setReduceTransparency } =
+  const {
+    reduceTransparency,
+    setReduceTransparency,
+    windowTransparencyEnabled,
+    setWindowTransparencyEnabled,
+    windowOpacity,
+    setWindowOpacity,
+  } =
     useTransparencyPreference();
 
   const {
@@ -40,6 +47,10 @@ export function useAppSettingsController() {
     appSettingsLoading,
     reduceTransparency,
     setReduceTransparency,
+    windowTransparencyEnabled,
+    setWindowTransparencyEnabled,
+    windowOpacity,
+    setWindowOpacity,
     uiScale,
     scaleShortcutTitle,
     scaleShortcutText,

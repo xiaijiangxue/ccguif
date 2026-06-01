@@ -282,7 +282,7 @@ describe("chat canvas smoke", () => {
     expect(inputSlot.compareDocumentPosition(laterMessage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
-  it("dismisses queued request input without submitting a stale answer", () => {
+  it("collapses queued request input without submitting a stale answer", () => {
     const request: RequestUserInputRequest = {
       workspace_id: "ws-close",
       request_id: "req-close-1",
@@ -317,9 +317,9 @@ describe("chat canvas smoke", () => {
     );
 
     expect(screen.getByText("This stale request should disappear")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Close this input request card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse this question card without skipping" }));
 
-    expect(onDismiss).toHaveBeenCalledWith(request);
+    expect(onDismiss).not.toHaveBeenCalled();
     expect(onSubmit).not.toHaveBeenCalled();
 
     rerender(

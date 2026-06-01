@@ -274,12 +274,19 @@ export function useThreadTurnEvents({
       result: "settled" | "rejected",
       payload: Record<string, unknown>,
     ) => {
+      const threadId =
+        typeof payload.threadId === "string" ? payload.threadId : "";
       onDebug?.({
         id: `${Date.now()}-turn-settlement-${result}`,
         timestamp: Date.now(),
         source: "client",
         label: `thread/session:turn-settlement:${result}`,
-        payload,
+        payload: {
+          diagnosticCategory: "foreground-terminal-settlement",
+          engine: threadId ? inferEngineFromThreadId(threadId) : null,
+          settlementResult: result,
+          ...payload,
+        },
       });
     },
     [onDebug],
@@ -395,6 +402,9 @@ export function useThreadTurnEvents({
           activeAliasTurnId,
           rejectedTargets,
           reason: "turn-mismatch",
+          incomingTurnId: turnId || null,
+          currentActiveTurnId: activeTurnId,
+          targetThreadCount: targetSnapshots.length,
         });
         return false;
       }
@@ -438,6 +448,9 @@ export function useThreadTurnEvents({
         settledThreadIds: safeTargets.map((target) => target.threadId),
         rejectedTargets,
         reason: rejectedTargets.length > 0 ? "partial-turn-mismatch" : "matched",
+        incomingTurnId: turnId || null,
+        currentActiveTurnId: activeTurnId,
+        targetThreadCount: targetSnapshots.length,
       });
       return true;
     },

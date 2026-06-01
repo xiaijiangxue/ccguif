@@ -2,7 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "about", "file-explorer", "spec-hub"],
+  "windows": ["main", "about", "file-explorer", "file-explorer-*", "spec-hub"],
   "permissions": [
     "core:default",
     "core:event:allow-emit-to",
@@ -14,7 +14,6 @@
     "process:default",
     "updater:default",
     "window-state:default",
-    "liquid-glass:default",
     "core:window:allow-set-effects",
     "core:window:allow-start-dragging",
     "core:window:allow-minimize",

@@ -71,6 +71,7 @@ import {
 } from "../../code-annotations/utils/codeAnnotations";
 import {
   buildLatestRewindPreview,
+  buildRewindPreviewForMessage,
   extractInlineFileReferenceTokens,
   normalizeInlineFileReferenceTokens,
   normalizeRewindExportPath,
@@ -92,9 +93,7 @@ import {
   mergeUniqueNames,
 } from "../utils/inlineSelections";
 import { useStreamActivityPhase } from "../../threads/hooks/useStreamActivityPhase";
-import {
-  exportRewindFiles,
-} from "../../../services/tauri";
+import { exportRewindFiles } from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
 import { getManualMemoryInjectionMode } from "../../project-memory/utils/manualInjectionMode";
 import type { RewindMode } from "../../threads/utils/rewindMode";
@@ -113,9 +112,19 @@ import type {
   ContextLedgerSourceNavigationTarget,
   ContextLedgerProjection,
 } from "../../context-ledger/types";
+import {
+  BrowserContextPreview,
+  useBrowserContextAttachment,
+} from "../../browser-agent";
+import { resolveBrowserNavigationUrl } from "../utils/browserNavigation";
 
 type RewindExecutionOptions = {
   mode?: RewindMode;
+};
+
+export type ComposerRewindDialogRequest = {
+  requestId: number;
+  userMessageId: string;
 };
 
 function keepArrayWhenEmpty<T>(current: T[]): T[] {
@@ -319,6 +328,8 @@ type ComposerProps = {
     userMessageId: string,
     options?: RewindExecutionOptions,
   ) => void | Promise<void>;
+  rewindDialogRequest?: ComposerRewindDialogRequest | null;
+  onRewindDialogRequestConsumed?: (requestId: number) => void;
   showStatusPanelToggleOverride?: boolean;
   statusPanelExpandedOverride?: boolean;
   onToggleStatusPanelOverride?: () => void;
@@ -363,6 +374,9 @@ const EMPTY_ITEMS: ConversationItem[] = [];
 const COMPOSER_MIN_HEIGHT = 20;
 const COMPOSER_EXPAND_HEIGHT = 80;
 const COMPOSER_INPUT_INTERACTION_IDLE_MS = 320;
+const BROWSER_OPEN_DOCK_EVENT = "browser-agent:open-dock";
+const BROWSER_OPEN_URL_EVENT = "browser-agent:open-url";
+const PENDING_BROWSER_URL_KEY = "ccgui.browserAgent.pendingUrl";
 
 function resolveSelectedNamedItems<T extends { name: string }>(
   selectedNames: string[],
@@ -550,6 +564,8 @@ export const Composer = memo(function Composer({
   isPlanMode = false,
   onOpenDiffPath,
   onRewind,
+  rewindDialogRequest = null,
+  onRewindDialogRequestConsumed,
   showStatusPanelToggleOverride,
   statusPanelExpandedOverride,
   onToggleStatusPanelOverride,
@@ -622,6 +638,7 @@ export const Composer = memo(function Composer({
   const [carryOverContextChipKeys, setCarryOverContextChipKeys] = useState<string[]>([]);
   const [retainedContextChipKeys, setRetainedContextChipKeys] = useState<string[]>([]);
   const [selectedInlineFileReferences, setSelectedInlineFileReferences] = useState<InlineFileReferenceSelection[]>([]);
+  const browserContext = useBrowserContextAttachment(activeWorkspaceId);
   const [contextLedgerExpanded, setContextLedgerExpanded] = useState(false);
   const currentContextLedgerProjectionRef = useRef<ContextLedgerProjection | null>(null);
   const previousContextLedgerSessionKeyRef = useRef("");
@@ -638,6 +655,7 @@ export const Composer = memo(function Composer({
   const [rewindPreviewState, setRewindPreviewState] = useState<ClaudeRewindPreviewState | null>(null);
   const [rewindMode, setRewindMode] = useState<RewindMode>("messages-and-files");
   const rewindInFlightRef = useRef(false);
+  const handledRewindDialogRequestIdRef = useRef<number | null>(null);
   const lastExpandedHeightRef = useRef(Math.max(textareaHeight, COMPOSER_EXPAND_HEIGHT));
   const composerInputInteractionTimerRef = useRef<number | null>(null);
   const [isComposerInputInteractionActive, setIsComposerInputInteractionActive] = useState(false);
@@ -1089,6 +1107,45 @@ export const Composer = memo(function Composer({
     setRewindMode("messages-and-files");
   }, [rewindInFlight]);
 
+  const openRewindDialogForMessage = useCallback(
+    (userMessageId: string) => {
+      if (rewindInFlightRef.current || rewindInFlight) {
+        return;
+      }
+      if (!canRewindSession || !onRewind) {
+        pushErrorToast({
+          title: t("rewind.title"),
+          message: t("rewind.notAvailable"),
+        });
+        return;
+      }
+      const preview = buildRewindPreviewForMessage(
+        items,
+        userMessageId,
+        activeThreadId,
+        selectedEngine,
+      );
+      if (!preview) {
+        pushErrorToast({
+          title: t("rewind.title"),
+          message: t("rewind.noEligibleMessage"),
+        });
+        return;
+      }
+      setRewindMode("messages-and-files");
+      setRewindPreviewState(preview);
+    },
+    [
+      activeThreadId,
+      canRewindSession,
+      items,
+      onRewind,
+      rewindInFlight,
+      selectedEngine,
+      t,
+    ],
+  );
+
   const handleRewind = useCallback(() => {
     if (rewindInFlightRef.current || rewindInFlight) {
       return;
@@ -1122,6 +1179,22 @@ export const Composer = memo(function Composer({
     rewindInFlight,
     selectedEngine,
     t,
+  ]);
+
+  useEffect(() => {
+    if (!rewindDialogRequest) {
+      return;
+    }
+    if (handledRewindDialogRequestIdRef.current === rewindDialogRequest.requestId) {
+      return;
+    }
+    handledRewindDialogRequestIdRef.current = rewindDialogRequest.requestId;
+    openRewindDialogForMessage(rewindDialogRequest.userMessageId);
+    onRewindDialogRequestConsumed?.(rewindDialogRequest.requestId);
+  }, [
+    onRewindDialogRequestConsumed,
+    openRewindDialogForMessage,
+    rewindDialogRequest,
   ]);
 
   const handleConfirmRewind = useCallback(async () => {
@@ -1298,6 +1371,24 @@ export const Composer = memo(function Composer({
       ) {
         return;
       }
+      const browserNavigationUrl =
+        mergedImages.length === 0 ? resolveBrowserNavigationUrl(trimmed) : null;
+      if (browserNavigationUrl && activeWorkspaceId) {
+        window.sessionStorage.setItem(PENDING_BROWSER_URL_KEY, browserNavigationUrl);
+        window.dispatchEvent(new CustomEvent(BROWSER_OPEN_DOCK_EVENT));
+        window.dispatchEvent(
+          new CustomEvent(BROWSER_OPEN_URL_EVENT, {
+            detail: { url: browserNavigationUrl },
+          }),
+        );
+        recordHistory(trimmed);
+        recordInputHistory(trimmed);
+        clearComposerContextSelections();
+        inlineCompletion.clear();
+        resetHistoryNavigation();
+        setComposerText("");
+        return;
+      }
       if (selectedOpenCodeDirectCommand) {
         onSend(`/${selectedOpenCodeDirectCommand}`, []);
         clearComposerContextSelections();
@@ -1335,14 +1426,20 @@ export const Composer = memo(function Composer({
       const selectedNoteCardIds = selectedNoteCards.map((entry) => entry.id);
       const selectedMemoryInjectionMode = getManualMemoryInjectionMode();
       const shouldReferenceMemory = memoryReferenceMode !== "off";
+      const browserContextAttachment = browserContext.attachment;
+      const hasBrowserContextAttachment = Boolean(browserContextAttachment);
       const sendOptions =
-        selectedMemoryIds.length > 0 || selectedNoteCardIds.length > 0 || shouldReferenceMemory
+        selectedMemoryIds.length > 0 ||
+        selectedNoteCardIds.length > 0 ||
+        shouldReferenceMemory ||
+        hasBrowserContextAttachment
           ? {
               ...(shouldReferenceMemory ? { memoryReferenceEnabled: true } : {}),
               ...(selectedMemoryIds.length > 0
                 ? { selectedMemoryIds, selectedMemoryInjectionMode }
                 : {}),
               ...(selectedNoteCardIds.length > 0 ? { selectedNoteCardIds } : {}),
+              ...(browserContextAttachment ? { browserContextAttachment } : {}),
             }
           : undefined;
       const sendResult = onSend(
@@ -1350,6 +1447,9 @@ export const Composer = memo(function Composer({
         mergedImages,
         sendOptions,
       );
+      if (browserContextAttachment) {
+        browserContext.remove();
+      }
       const retainedManualMemories = filterRetainedEntries(
         selectedManualMemories,
         carryOverManualMemoryIds,
@@ -1398,6 +1498,8 @@ export const Composer = memo(function Composer({
     },
     [
       attachedImages,
+      activeWorkspaceId,
+      browserContext,
       disabled,
       applyActiveFileReference,
       opencodeDisconnected,
@@ -2181,6 +2283,25 @@ export const Composer = memo(function Composer({
                     />
                   </div>
                 )}
+              </div>
+            ) : null}
+            {activeWorkspaceId && (browserContext.attachment || browserContext.error) ? (
+              <div className="composer-browser-context">
+                {browserContext.attachment ? (
+                  <BrowserContextPreview
+                    attachment={browserContext.attachment}
+                    busy={browserContext.busy}
+                    onRefresh={() => void browserContext.refresh()}
+                    onRemove={browserContext.remove}
+                  />
+                ) : null}
+                {browserContext.error ? (
+                  <div className="composer-browser-context-error" role="status">
+                    {browserContext.error === "browser_context_no_active_session"
+                      ? t("browserAgent.composer.noSession")
+                      : browserContext.error}
+                  </div>
+                ) : null}
               </div>
             ) : null}
             <ChatInputBoxAdapter

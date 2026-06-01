@@ -181,6 +181,10 @@ export function AppShell() {
     appSettingsLoading,
     reduceTransparency,
     setReduceTransparency,
+    windowTransparencyEnabled,
+    setWindowTransparencyEnabled,
+    windowOpacity,
+    setWindowOpacity,
     scaleShortcutTitle,
     scaleShortcutText,
     queueSaveSettings,
@@ -208,7 +212,10 @@ export function AppShell() {
     handleCopyDebug,
     clearDebugEntries,
   } = useDebugLog();
-  useLiquidGlassEffect({ reduceTransparency, onDebug: addDebugEntry });
+  useLiquidGlassEffect({
+    reduceTransparency,
+    onDebug: addDebugEntry,
+  });
   const [accessMode, setAccessMode] = useState<AccessMode>("full-access");
   const claudeAccessModeRef = useRef<AccessMode>("full-access");
   const [activeTab, setActiveTab] = useState<
@@ -711,6 +718,7 @@ export function AppShell() {
     activeEngine,
     workspaceId: activeWorkspace?.id ?? null,
   });
+  const workspaceFilesInitialLoadEnabled = Boolean(activeWorkspace?.id);
   const workspaceFilesPollingEnabled = !isCompact && !rightPanelCollapsed && filePanelMode === "files";
   const {
     files,
@@ -724,7 +732,7 @@ export function AppShell() {
   } = useWorkspaceFiles({
     activeWorkspace,
     onDebug: addDebugEntry,
-    initialLoadEnabled: workspaceFilesPollingEnabled,
+    initialLoadEnabled: workspaceFilesInitialLoadEnabled,
     pollingEnabled: workspaceFilesPollingEnabled,
   });
   const { branches, checkoutBranch, createBranch } = useGitBranches({
@@ -2169,7 +2177,7 @@ export function AppShell() {
     openTerminal, openWorktreePrompt, perfSnapshotRef, persistComposerSelectionForThread, persistProjectCopiesFolder, pickImages, pinThread,
     pinnedThreadsVersion, planByThread, planPanelHeight, prefillDraft,
     prompts, pushError, pushLoading, queueGitStatusRefresh, queueMessage,
-    queueSaveSettings, rateLimitsByWorkspace, reasoningOptions: effectiveReasoningOptions, reasoningSupported: effectiveReasoningSupported, recentThreads, reduceTransparency, refreshAccountInfo,
+    queueSaveSettings, rateLimitsByWorkspace, reasoningOptions: effectiveReasoningOptions, reasoningSupported: effectiveReasoningSupported, recentThreads, reduceTransparency, windowTransparencyEnabled, windowOpacity, refreshAccountInfo,
     refreshAccountRateLimits, refreshEngines, refreshFiles, refreshGitDiffs, refreshGitLog, refreshGitStatus, refreshThread, refreshWorkspaces, releaseNotesActiveIndex,
     releaseNotesEntries, releaseNotesError, releaseNotesLoading, releaseNotesOpen, reloadSelectedAgent, removeImage, removeImagesForThread, removeThread, removeThreads,
     removeWorkspace, removeWorktree, renamePrompt, renameThread, renameWorkspaceGroup, renameWorktree, renameWorktreeNotice, renameWorktreePrompt,
@@ -2185,7 +2193,7 @@ export function AppShell() {
     setAppMode, setAppSettings, setCenterMode, setCodexCollaborationMode, setCollaborationRuntimeModeByThread, setCollaborationUiModeByThread, setComposerInsert, setDebugOpen,
     setDiffSource, setEditorSplitCompanion, setEditorSplitLayout, setEngineSelectedModelIdByType, setFilePanelMode, setFileReferenceMode, setGitDiffListView, setGitDiffViewStyle, setGitHistoryPanelHeight,
     setGitPanelMode, setGitRootScanDepth, setGlobalSearchFilesByWorkspace, setHighlightedBranchIndex, setHighlightedCommitIndex, setHighlightedPresetIndex, setIsEditorFileMaximized, setIsPanelLocked,
-    setIsPlanPanelDismissed, setIsSearchPaletteOpen, setKanbanViewState, setLiveEditPreviewEnabled, setPrefillDraft, setReduceTransparency, setRightPanelWidth, setSearchContentFilters, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope,
+    setIsPlanPanelDismissed, setIsSearchPaletteOpen, setKanbanViewState, setLiveEditPreviewEnabled, setPrefillDraft, setReduceTransparency, setWindowTransparencyEnabled, setWindowOpacity, setRightPanelWidth, setSearchContentFilters, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope,
     setSelectedCollaborationModeId, setSelectedCommitSha, setSelectedDiffPath, setSelectedEffort: handleSelectComposerEffort, setSelectedKanbanTaskId, setSelectedModelId, setSelectedPullRequest,
     setHomeOpen, setWorkspaceHomeWorkspaceId, settingsHighlightTarget, settingsOpen, settingsSection, loadingProgressDialog, dismissLoadingProgressDialog, shouldLoadDiffs, shouldLoadGitHubPanelData,
     showLoadingProgressDialog, hideLoadingProgressDialog,

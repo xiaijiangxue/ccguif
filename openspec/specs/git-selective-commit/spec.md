@@ -3,35 +3,31 @@
 ## Purpose
 
 TBD - synced from change add-git-selective-commit. Update Purpose after archive.
-
 ## Requirements
 ### Requirement: Git panel MUST expose explicit file inclusion controls for commit
 
 Git 面板 MUST 为每个 changed file row 提供明确的 inclusion control。该 control 只定义“本次 commit 是否包含该文件”，MUST NOT 取代现有 `stage / unstage` 文件动作。
 
-#### Scenario: selecting an unstaged file includes it in the next commit without changing the visible stage action surface
+#### Scenario: moving file inclusion control to trailing area preserves commit scope semantics
 
-- **WHEN** 用户在 `unstaged` 区勾选某个文件
-- **THEN** 系统 MUST 将该文件纳入当前 commit scope
-- **AND** MUST NOT 因此移除或替换该文件原有的 `Stage` action
+- **WHEN** Git History/HUB worktree file row 将 inclusion control 展示在行右侧
+- **THEN** 系统 MUST 继续使用同一套 commit scope selection state
+- **AND** checked / unchecked / partial 状态 MUST 与移动前保持等价
+- **AND** 该 visual placement change MUST NOT 新增或删除任何 stage / unstage / discard command path
 
-#### Scenario: deselecting a staged file excludes it from the next commit without removing its staged state affordance
+#### Scenario: tree folder inclusion controls are removed in favor of file-level controls
 
-- **WHEN** 用户在 `staged` 区取消勾选某个文件
-- **THEN** 系统 MUST 将该文件排除出当前 commit scope
-- **AND** MUST NOT 因此移除或替换该文件原有的 `Unstage` action
+- **WHEN** 用户切换到 Git tree view
+- **THEN** root/folder rows MUST NOT expose file inclusion checkboxes
+- **AND** file rows MUST expose the trailing inclusion checkbox consistently with flat view
+- **AND** section-level bulk controls MAY remain available for section-wide selection
 
-#### Scenario: partially staged file remains represented by two section-scoped rows
+#### Scenario: compact tree labels preserve commit scope path semantics
 
-- **WHEN** 同一路径同时存在 staged changes 与 unstaged changes
-- **THEN** 系统 MUST 保留该路径在 `staged` 与 `unstaged` 两个 section 中的独立 row
-- **AND** MUST NOT 将两者粗暴合并成单一路径级 checkbox
-
-#### Scenario: partially staged file keeps the existing Git index semantics
-
-- **WHEN** 同一路径同时存在 staged changes 与 unstaged changes
-- **THEN** 系统 MUST 继续以当前 Git index 作为该路径的提交事实来源
-- **AND** file-level checkbox MUST NOT 破坏已有 partial staged 语义
+- **WHEN** Git tree 或 Git History/HUB worktree tree 将空目录链展示为 `a.b.c`
+- **THEN** commit scope calculation MUST continue to use the node `descendantPaths`
+- **AND** folder/root inclusion state MUST NOT be derived from the dotted display label
+- **AND** Windows 与 POSIX path input MUST continue to normalize to the same file-level inclusion behavior
 
 ### Requirement: Git panel MUST support bulk inclusion controls by visible grouping
 
@@ -132,3 +128,4 @@ commit scope 的路径匹配、folder descendants 判断与 selection dedupe MUS
 - **WHEN** 用户在 tree 模式下切换某个 folder inclusion control
 - **THEN** 系统 MUST 基于 normalized path 判断 descendant files
 - **AND** 同一组文件在 Windows 风格与 POSIX 风格路径下 MUST 得到相同的 folder scope 结果
+

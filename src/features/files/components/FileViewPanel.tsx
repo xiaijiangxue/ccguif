@@ -5,6 +5,8 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
   type SyntheticEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +17,7 @@ import Pencil from "lucide-react/dist/esm/icons/pencil";
 import Eye from "lucide-react/dist/esm/icons/eye";
 import Code from "lucide-react/dist/esm/icons/code";
 import FileSearch from "lucide-react/dist/esm/icons/file-search";
+import ExternalLink from "lucide-react/dist/esm/icons/external-link";
 import Maximize2 from "lucide-react/dist/esm/icons/maximize-2";
 import Minimize2 from "lucide-react/dist/esm/icons/minimize-2";
 import Rows2 from "lucide-react/dist/esm/icons/rows-2";
@@ -38,6 +41,7 @@ import {
   getGitFileFullDiff,
   readLocalImageDataUrl,
 } from "../../../services/tauri";
+import { pushErrorToast } from "../../../services/toasts";
 import {
   isEditableShortcutTarget,
   matchesShortcutForPlatform,
@@ -90,9 +94,14 @@ import {
   DEFAULT_FILE_RENDER_PRESSURE,
   type FileRenderPressure,
 } from "../types/fileRenderPressure";
+import {
+  buildDetachedFileExplorerSession,
+  openNewDetachedFileExplorerWindow,
+} from "../detachedFileExplorer";
 
 type FileViewPanelProps = {
   workspaceId: string;
+  workspaceName?: string | null;
   workspacePath: string;
   gitRoot?: string | null;
   customSpecRoot?: string | null;
@@ -580,6 +589,7 @@ function codeAnnotationWidgetsExtension({
 
 export function FileViewPanel({
   workspaceId,
+  workspaceName = null,
   workspacePath,
   gitRoot = null,
   customSpecRoot = null,
@@ -813,6 +823,14 @@ export function FileViewPanel({
     [workspacePath, filePath, customSpecRoot],
   );
   const workspaceRelativeFilePath = fileReadTarget.workspaceRelativePath;
+  const resolvedWorkspaceName = useMemo(() => {
+    const explicitName = workspaceName?.trim();
+    if (explicitName) {
+      return explicitName;
+    }
+    const pathSegments = normalizeFsPath(workspacePath).split("/").filter(Boolean);
+    return pathSegments[pathSegments.length - 1] ?? (workspacePath.trim() || workspaceId);
+  }, [workspaceId, workspaceName, workspacePath]);
   const matchedGitStatus = useMemo(() => {
     const fileCandidates = new Set<string>([
       ...resolveWorkspacePathCandidates(workspacePath, workspaceRelativeFilePath),
@@ -1501,7 +1519,7 @@ export function FileViewPanel({
   }, []);
 
   const openTabContextMenu = useCallback(
-    (event: React.MouseEvent) => {
+    (event: ReactMouseEvent) => {
       if (!canCloseAllTabs) {
         return;
       }
@@ -1540,6 +1558,29 @@ export function FileViewPanel({
     closeTabContextMenu();
   }, [closeTabContextMenu, onCloseAllTabs]);
 
+  const handleOpenDetachedTab = useCallback(
+    (event: ReactMouseEvent<HTMLButtonElement>, tabPath: string) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void openNewDetachedFileExplorerWindow(
+        buildDetachedFileExplorerSession({
+          workspaceId,
+          workspaceName: resolvedWorkspaceName,
+          workspacePath,
+          gitRoot,
+          initialFilePath: tabPath,
+          defaultSidebarCollapsed: true,
+        }),
+      ).catch((error) => {
+        pushErrorToast({
+          title: t("files.openDetachedTab"),
+          message: error instanceof Error ? error.message : String(error),
+        });
+      });
+    },
+    [gitRoot, resolvedWorkspaceName, t, workspaceId, workspacePath],
+  );
+
   useEffect(() => {
     if (!tabContextMenu.visible) {
       return;
@@ -1576,7 +1617,7 @@ export function FileViewPanel({
   }, []);
 
   const handleFooterPointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>) => {
+    (event: ReactPointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) {
         return;
       }
@@ -1888,11 +1929,23 @@ export function FileViewPanel({
                 onDoubleClick={() => onToggleEditorFileMaximized?.()}
                 onContextMenu={openTabContextMenu}
                 title={tabPath}
+                data-tauri-drag-region="false"
               >
                 <span className="fvp-tab-main-content">
                   <FileIcon filePath={tabPath} className="fvp-tab-icon" />
                   <span className="fvp-tab-main-label">{tabName}</span>
                 </span>
+              </button>
+              <button
+                type="button"
+                className="fvp-tab-detach"
+                aria-label={t("files.openDetachedTabFor", { name: tabName })}
+                title={t("files.openDetachedTab")}
+                onClick={(event) => handleOpenDetachedTab(event, tabPath)}
+                onContextMenu={openTabContextMenu}
+                data-tauri-drag-region="false"
+              >
+                <ExternalLink size={11} aria-hidden />
               </button>
               {onCloseTab ? (
                 <button
@@ -1901,6 +1954,7 @@ export function FileViewPanel({
                   aria-label={`Close ${tabName}`}
                   onClick={() => onCloseTab(tabPath)}
                   onContextMenu={openTabContextMenu}
+                  data-tauri-drag-region="false"
                 >
                   <X size={11} aria-hidden />
                 </button>
@@ -1920,6 +1974,7 @@ export function FileViewPanel({
         onClick={onSingleRowLeadingAction ?? handleClose}
         aria-label={singleRowLeadingLabel ?? t("files.backToChat")}
         title={singleRowLeadingLabel ?? t("files.backToChat")}
+        data-tauri-drag-region="false"
       >
         {singleRowLeadingDirection === "right" && onSingleRowLeadingAction ? (
           <ArrowRight size={16} aria-hidden />

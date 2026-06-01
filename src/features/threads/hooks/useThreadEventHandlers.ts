@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { Dispatch, MutableRefObject } from "react";
 import type {
   AppServerEvent,
   CollaborationModeBlockedRequest,
   CollaborationModeResolvedRequest,
-  DebugEntry,
   RequestUserInputRequest,
+  TurnReconciliationRuntimeStatus,
+  TurnReconciliationStatusRequest,
+  TurnReconciliationStatusResponse,
 } from "../../../types";
+import { queryTurnReconciliationStatus } from "../../../services/tauri";
 import { useThreadApprovalEvents } from "./useThreadApprovalEvents";
 import { useThreadItemEvents } from "./useThreadItemEvents";
 import { useThreadTurnEvents } from "./useThreadTurnEvents";
@@ -14,7 +16,6 @@ import { useThreadUserInputEvents } from "./useThreadUserInputEvents";
 import { parseFirstPacketTimeoutSeconds, stripBackendErrorPrefix } from "../utils/networkErrors";
 import { captureClaudeMcpRuntimeSnapshotFromRaw } from "../utils/claudeMcpRuntimeSnapshot";
 import { buildThreadDebugCorrelation } from "../utils/threadDebugCorrelation";
-import type { ThreadAction } from "./useThreadsReducer";
 import type {
   ConversationEngine,
   NormalizedThreadEvent,
@@ -32,9 +33,22 @@ import {
   buildCodexLivenessDiagnostic,
 } from "../utils/codexConversationLiveness";
 import {
+  DEFAULT_TURN_SETTLEMENT_POLICY,
+  evaluateTurnSettlement,
+  toDryRunSettlementDecisionLabel,
+  type TurnSettlementTerminalKind,
+} from "../utils/turnSettlementDecision";
+import {
   domainEventFactories,
-  type DomainEventRuntimeController,
 } from "../domain-events";
+import type { ThreadEventHandlersOptions } from "./threadEventHandlerTypes";
+import {
+  FOREGROUND_TERMINAL_EVENT_METHODS,
+  extractTerminalEventResultTextLength,
+  extractTerminalEventThreadId,
+  extractTerminalEventTurnId,
+  normalizeRuntimeEndedCount,
+} from "./threadTerminalEventHelpers";
 import {
   TURN_FIRST_DELTA_WARNING_MS,
   TURN_STALL_WARNING_MS,
@@ -61,105 +75,33 @@ import {
   type ThreadLifecycleSnapshot,
   type TurnDiagnosticState,
 } from "./threadEventDiagnostics";
-
 export {
   CODEX_EXECUTION_ACTIVE_NO_PROGRESS_STALL_MS,
   CODEX_TURN_NO_PROGRESS_STALL_MS,
 } from "./threadEventDiagnostics";
-
-type ThreadEventHandlersOptions = {
-  activeThreadId: string | null;
-  dispatch: Dispatch<ThreadAction>;
-  getCustomName: (workspaceId: string, threadId: string) => string | undefined;
-  resolveCanonicalThreadId?: (threadId: string) => string;
-  resolveCollaborationUiMode?: (
-    threadId: string,
-  ) => "plan" | "code" | null;
-  isAutoTitlePending: (workspaceId: string, threadId: string) => boolean;
-  isThreadHidden: (workspaceId: string, threadId: string) => boolean;
-  markProcessing: (threadId: string, isProcessing: boolean) => void;
-  markReviewing: (threadId: string, isReviewing: boolean) => void;
-  setActiveTurnId: (threadId: string, turnId: string | null) => void;
-  codexCompactionInFlightByThreadRef: MutableRefObject<Record<string, boolean>>;
-  safeMessageActivity: () => void;
-  recordThreadActivity: (
-    workspaceId: string,
-    threadId: string,
-    timestamp?: number,
-  ) => void;
-  pushThreadErrorMessage: (threadId: string, message: string) => void;
-  onDebug?: (entry: DebugEntry) => void;
-  onWorkspaceConnected: (workspaceId: string) => void;
-  applyCollabThreadLinks: (
-    threadId: string,
-    item: Record<string, unknown>,
-  ) => void;
-  approvalAllowlistRef: MutableRefObject<Record<string, string[][]>>;
-  pendingInterruptsRef: MutableRefObject<Set<string>>;
-  interruptedThreadsRef: MutableRefObject<Set<string>>;
-  renameCustomNameKey: (
-    workspaceId: string,
-    oldThreadId: string,
-    newThreadId: string,
-  ) => void;
-  renameAutoTitlePendingKey: (
-    workspaceId: string,
-    oldThreadId: string,
-    newThreadId: string,
-  ) => void;
-  renameThreadTitleMapping: (
-    workspaceId: string,
-    oldThreadId: string,
-    newThreadId: string,
-  ) => Promise<void>;
-  resolveClaudeContinuationThreadId?: (
-    workspaceId: string,
-    threadId: string,
-    turnId?: string | null,
-  ) => string | null;
-  resolvePendingThreadForSession?: (
-    workspaceId: string,
-    engine: "claude" | "gemini" | "opencode",
-  ) => string | null;
-  resolvePendingThreadForTurn?: (
-    workspaceId: string,
-    engine: "claude" | "gemini" | "opencode",
-    turnId: string | null | undefined,
-  ) => string | null;
-  getActiveTurnIdForThread?: (threadId: string) => string | null;
-  renamePendingMemoryCaptureKey: (
-    oldThreadId: string,
-    newThreadId: string,
-  ) => void;
-  onAgentMessageCompletedExternal?: (payload: {
-    workspaceId: string;
-    threadId: string;
-    turnId?: string | null;
-    itemId: string;
-    text: string;
-  }) => void;
-  onTurnCompletedExternal?: (payload: {
-    workspaceId: string;
-    threadId: string;
-    turnId: string;
-  }) => void;
-  onTurnTerminalExternal?: (payload: {
-    workspaceId: string;
-    threadId: string;
-    turnId: string;
-    status: "completed" | "error" | "stalled";
-  }) => void;
-  onCollaborationModeResolved?: (
-    event: CollaborationModeResolvedRequest,
-  ) => void;
-  onExitPlanModeToolCompleted?: (payload: {
-    workspaceId: string;
-    threadId: string;
-    itemId: string;
-  }) => void;
-  domainEventController?: DomainEventRuntimeController | null;
-};
-
+const THREE_EVIDENCE_RECONCILIATION_QUERY_TIMEOUT_MS = 15_000;
+function queryTurnReconciliationStatusWithTimeout(
+  request: TurnReconciliationStatusRequest,
+): Promise<TurnReconciliationStatusResponse> {
+  let timeoutId: number | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(
+        new Error(
+          `three-evidence reconciliation status query timed out after ${THREE_EVIDENCE_RECONCILIATION_QUERY_TIMEOUT_MS}ms`,
+        ),
+      );
+    }, THREE_EVIDENCE_RECONCILIATION_QUERY_TIMEOUT_MS);
+  });
+  return Promise.race([
+    queryTurnReconciliationStatus(request),
+    timeoutPromise,
+  ]).finally(() => {
+    if (timeoutId !== null) {
+      window.clearTimeout(timeoutId);
+    }
+  });
+}
 export function useThreadEventHandlers({
   activeThreadId,
   dispatch,
@@ -201,18 +143,17 @@ export function useThreadEventHandlers({
   const turnFirstDeltaTimerRef = useRef<Map<string, number>>(new Map());
   const turnStallTimerRef = useRef<Map<string, number>>(new Map());
   const codexNoProgressTimerRef = useRef<Map<string, number>>(new Map());
+  const reconciliationQueryInFlightRef = useRef<Set<string>>(new Set());
   const flushDeferredTurnCompletionRef = useRef<
     ((threadId: string, source: DeferredCompletionFlushSource) => void) | null
   >(null);
   const assistantSnapshotIngressLengthRef = useRef<Map<string, number>>(new Map());
   const quarantinedCodexTurnsRef = useRef<Map<string, CodexQuarantinedTurn>>(new Map());
-
   const getThreadLifecycleSnapshot = useCallback((threadId: string) => {
     return (
       threadLifecycleSnapshotRef.current.get(threadId) ?? createThreadLifecycleSnapshot()
     );
   }, []);
-
   const emitTurnDiagnostic = useCallback(
     (
       label: string,
@@ -244,6 +185,370 @@ export function useThreadEventHandlers({
       });
     },
     [onDebug],
+  );
+  const emitForegroundSettlementDiagnostic = useCallback(
+    (label: string, payload: Record<string, unknown>) => {
+      emitTurnDiagnostic(label, {
+        diagnosticCategory: "foreground-terminal-settlement",
+        ...payload,
+      }, { force: true });
+    },
+    [emitTurnDiagnostic],
+  );
+  const buildReconciliationQueryKey = useCallback(
+    (input: {
+      workspaceId: string;
+      engine: ConversationEngine;
+      threadId: string;
+      turnId: string | null;
+      runtimeSessionId: string | null;
+      runtimeLeaseId: string | null;
+    }) => {
+      return [
+        input.workspaceId,
+        input.engine,
+        input.threadId,
+        input.turnId ?? "",
+        input.runtimeSessionId ?? "",
+        input.runtimeLeaseId ?? "",
+      ].join("\u0000");
+    },
+    [],
+  );
+  const terminalKindFromReconciliationStatus = useCallback(
+    (status: TurnReconciliationRuntimeStatus): TurnSettlementTerminalKind | null => {
+      switch (status) {
+        case "completed":
+          return "status-confirmed-completed";
+        case "failed":
+          return "status-confirmed-error";
+        case "stalled":
+          return "stalled";
+        case "runtime-ended":
+          return "runtime-ended";
+        case "running":
+        case "unknown":
+        case "query-failed":
+          return null;
+      }
+    },
+    [],
+  );
+  const emitThreeEvidenceDryRunDiagnostic = useCallback(
+    (input: {
+      workspaceId: string;
+      threadId: string;
+      turnId: string;
+      terminalKind: TurnSettlementTerminalKind | null;
+      sourceMethod: string | null;
+      lifecycle: ThreadLifecycleSnapshot;
+      diagnostic: TurnDiagnosticState | undefined;
+      handled: boolean;
+      fallbackApplied: boolean;
+    }) => {
+      if (activeThreadId !== null && activeThreadId !== input.threadId) {
+        return;
+      }
+      const now = Date.now();
+      const progressFreshWindowMs = input.diagnostic
+        ? getCodexNoProgressTimeoutMs(input.diagnostic)
+        : DEFAULT_TURN_SETTLEMENT_POLICY.progressFreshWindowMs;
+      const lastProgressAgeMs = input.diagnostic
+        ? Math.max(0, now - input.diagnostic.lastProgressAt)
+        : null;
+      const engine = inferThreadEngine(input.threadId);
+      const decision = evaluateTurnSettlement(
+        {
+          workspaceId: input.workspaceId,
+          engine,
+          threadId: input.threadId,
+          turnId: input.turnId || null,
+          runtimeSessionId: null,
+          runtimeLeaseId: null,
+          source: "event",
+          scope: {
+            foreground: true,
+            currentWorkspaceId: input.workspaceId,
+            currentEngine: engine,
+            currentThreadId: input.threadId,
+            currentTurnId: input.lifecycle.activeTurnId,
+            currentRuntimeLeaseId: null,
+          },
+          terminal: {
+            kind: input.terminalKind,
+            sourceMethod: input.sourceMethod,
+            receivedAtMs: input.terminalKind ? now : null,
+          },
+          state: {
+            isProcessing: input.lifecycle.isProcessing,
+            activeTurnId: input.lifecycle.activeTurnId,
+            aliasTurnId: null,
+            blockers: [],
+          },
+          progress: {
+            lastSource: input.diagnostic?.lastProgressSource ?? null,
+            lastAtMs: input.diagnostic?.lastProgressAt ?? null,
+            ageMs: lastProgressAgeMs,
+            sequence: input.diagnostic?.progressSequence ?? 0,
+            fresh:
+              lastProgressAgeMs !== null &&
+              lastProgressAgeMs < progressFreshWindowMs,
+          },
+        },
+        {
+          ...DEFAULT_TURN_SETTLEMENT_POLICY,
+          progressFreshWindowMs,
+        },
+        now,
+      );
+      emitTurnDiagnostic("three-evidence-dry-run", {
+        workspaceId: input.workspaceId,
+        threadId: input.threadId,
+        turnId: input.turnId,
+        diagnosticCategory: "three-evidence-settlement-dry-run",
+        dryRunDecision: toDryRunSettlementDecisionLabel(decision.action),
+        decisionAction: decision.action,
+        decisionReason: decision.reason,
+        scopeMatch: decision.scopeMatch,
+        acceptedEvidence: decision.acceptedEvidence,
+        boundedReason: decision.diagnostics.boundedReason,
+        missingScope: decision.diagnostics.missingScope ?? [],
+        staleEvidence: Boolean(decision.diagnostics.staleEvidence),
+        residue: Boolean(decision.diagnostics.residue),
+        handled: input.handled,
+        fallbackApplied: input.fallbackApplied,
+        isProcessing: input.lifecycle.isProcessing,
+        activeTurnId: input.lifecycle.activeTurnId,
+        lastProgressSource: input.diagnostic?.lastProgressSource ?? null,
+        lastProgressAgeMs,
+        progressSequence: input.diagnostic?.progressSequence ?? null,
+        activeThreadId,
+        ...buildThreadStreamCorrelationDimensions(input.threadId),
+      }, { force: decision.action !== "settle" });
+      if (decision.action !== "request-reconciliation") {
+        emitTurnDiagnostic("three-evidence-reconciliation-query-skipped", {
+          workspaceId: input.workspaceId,
+          threadId: input.threadId,
+          turnId: input.turnId || null,
+          engine,
+          diagnosticCategory: "three-evidence-reconciliation",
+          skipReason: "decision-not-reconciliation",
+          decisionAction: decision.action,
+          decisionReason: decision.reason,
+          scopeMatch: decision.scopeMatch,
+          acceptedEvidence: decision.acceptedEvidence,
+          boundedReason: decision.diagnostics.boundedReason,
+          missingScope: decision.diagnostics.missingScope ?? [],
+          staleEvidence: Boolean(decision.diagnostics.staleEvidence),
+          residue: Boolean(decision.diagnostics.residue),
+          handled: input.handled,
+          fallbackApplied: input.fallbackApplied,
+          isProcessing: input.lifecycle.isProcessing,
+          activeTurnId: input.lifecycle.activeTurnId,
+          lastProgressSource: input.diagnostic?.lastProgressSource ?? null,
+          lastProgressAgeMs,
+          progressSequence: input.diagnostic?.progressSequence ?? null,
+          activeThreadId,
+        }, { force: decision.action !== "settle" });
+        return;
+      }
+
+      const request = {
+        workspaceId: input.workspaceId,
+        engine,
+        threadId: input.threadId,
+        turnId: input.turnId || null,
+        runtimeSessionId: null,
+        runtimeLeaseId: null,
+        requestSource: "three-evidence-reconciliation" as const,
+        requestedAtMs: now,
+      };
+      const queryKey = buildReconciliationQueryKey(request);
+      if (reconciliationQueryInFlightRef.current.has(queryKey)) {
+        emitTurnDiagnostic("three-evidence-reconciliation-query-skipped", {
+          workspaceId: input.workspaceId,
+          threadId: input.threadId,
+          turnId: input.turnId || null,
+          engine,
+          diagnosticCategory: "three-evidence-reconciliation",
+          skipReason: "query-already-in-flight",
+          requestSource: request.requestSource,
+          decisionAction: decision.action,
+          decisionReason: decision.reason,
+          boundedReason: decision.diagnostics.boundedReason,
+          queryKeyHash: queryKey.length,
+          isProcessing: input.lifecycle.isProcessing,
+          activeTurnId: input.lifecycle.activeTurnId,
+          lastProgressAgeMs,
+          activeThreadId,
+        }, { force: true });
+        return;
+      }
+      reconciliationQueryInFlightRef.current.add(queryKey);
+      emitTurnDiagnostic("three-evidence-reconciliation-query-requested", {
+        workspaceId: input.workspaceId,
+        threadId: input.threadId,
+        turnId: input.turnId || null,
+        engine,
+        diagnosticCategory: "three-evidence-reconciliation",
+        requestSource: request.requestSource,
+        lastProgressAgeMs,
+        decisionAction: decision.action,
+        decisionReason: decision.reason,
+        boundedReason: decision.diagnostics.boundedReason,
+        queryKeyHash: queryKey.length,
+        activeThreadId,
+      }, { force: true });
+
+      void queryTurnReconciliationStatusWithTimeout(request)
+        .then((response) => {
+          const latestLifecycle = getThreadLifecycleSnapshot(input.threadId);
+          const latestDiagnostic = turnDiagnosticsRef.current.get(input.threadId);
+          const responseNow = Date.now();
+          const responseLastProgressAgeMs = latestDiagnostic
+            ? Math.max(0, responseNow - latestDiagnostic.lastProgressAt)
+            : lastProgressAgeMs;
+          const responseTerminalKind = terminalKindFromReconciliationStatus(response.status);
+          const responseDecision = evaluateTurnSettlement(
+            {
+              workspaceId: response.workspaceId,
+              engine: response.engine,
+              threadId: response.threadId,
+              turnId: response.turnId,
+              runtimeSessionId: response.runtimeSessionId,
+              runtimeLeaseId: response.runtimeLeaseId,
+              source: "status-query",
+              scope: {
+                foreground: activeThreadId === null || activeThreadId === input.threadId,
+                currentWorkspaceId: input.workspaceId,
+                currentEngine: engine,
+                currentThreadId: input.threadId,
+                currentTurnId: latestLifecycle.activeTurnId,
+                currentRuntimeLeaseId: null,
+              },
+              terminal: {
+                kind: responseTerminalKind,
+                sourceMethod: "three-evidence-reconciliation-status-query",
+                receivedAtMs: responseTerminalKind ? responseNow : null,
+              },
+              state: {
+                isProcessing: latestLifecycle.isProcessing,
+                activeTurnId: latestLifecycle.activeTurnId,
+                aliasTurnId: null,
+                blockers: [],
+              },
+              progress: {
+                lastSource:
+                  latestDiagnostic?.lastProgressSource ??
+                  input.diagnostic?.lastProgressSource ??
+                  null,
+                lastAtMs:
+                  latestDiagnostic?.lastProgressAt ??
+                  input.diagnostic?.lastProgressAt ??
+                  null,
+                ageMs: responseLastProgressAgeMs,
+                sequence:
+                  latestDiagnostic?.progressSequence ??
+                  input.diagnostic?.progressSequence ??
+                  0,
+                fresh:
+                  responseLastProgressAgeMs !== null &&
+                  responseLastProgressAgeMs < progressFreshWindowMs,
+              },
+              reconciliation: {
+                attempted: true,
+                status: response.status,
+                replayRequested: false,
+              },
+            },
+            {
+              ...DEFAULT_TURN_SETTLEMENT_POLICY,
+              progressFreshWindowMs,
+              allowRuntimeEndedDegradedSettlement: true,
+            },
+            responseNow,
+          );
+          const label = responseDecision.scopeMatch.matched
+            ? "three-evidence-reconciliation-query-resolved"
+            : "three-evidence-reconciliation-query-rejected";
+          emitTurnDiagnostic(label, {
+            workspaceId: input.workspaceId,
+            threadId: input.threadId,
+            turnId: input.turnId || null,
+            engine,
+            diagnosticCategory: "three-evidence-reconciliation",
+            status: response.status,
+            statusSource: response.statusSource,
+            observedAtMs: response.observedAtMs,
+            responseWorkspaceId: response.workspaceId,
+            responseThreadId: response.threadId,
+            responseTurnId: response.turnId,
+            decisionAction: responseDecision.action,
+            decisionReason: responseDecision.reason,
+            scopeMatch: responseDecision.scopeMatch,
+            acceptedEvidence: responseDecision.acceptedEvidence,
+            boundedReason: response.boundedReason,
+            helperBoundedReason: responseDecision.diagnostics.boundedReason,
+            lastProgressAgeMs: responseLastProgressAgeMs,
+            isProcessing: latestLifecycle.isProcessing,
+            activeTurnId: latestLifecycle.activeTurnId,
+            activeThreadId,
+          }, { force: true });
+          if (responseDecision.action !== "cleanup-residue") {
+            emitTurnDiagnostic("three-evidence-reconciliation-cleanup-skipped", {
+              workspaceId: input.workspaceId,
+              threadId: input.threadId,
+              turnId: input.turnId || null,
+              engine,
+              diagnosticCategory: "three-evidence-reconciliation",
+              skipReason: responseDecision.scopeMatch.matched
+                ? "decision-not-cleanup-residue"
+                : "scope-mismatch",
+              status: response.status,
+              statusSource: response.statusSource,
+              decisionAction: responseDecision.action,
+              decisionReason: responseDecision.reason,
+              scopeMatch: responseDecision.scopeMatch,
+              acceptedEvidence: responseDecision.acceptedEvidence,
+              boundedReason: response.boundedReason,
+              helperBoundedReason: responseDecision.diagnostics.boundedReason,
+              lastProgressAgeMs: responseLastProgressAgeMs,
+              isProcessing: latestLifecycle.isProcessing,
+              activeTurnId: latestLifecycle.activeTurnId,
+              activeThreadId,
+            }, { force: true });
+          }
+        })
+        .catch((error: unknown) => {
+          const latestLifecycle = getThreadLifecycleSnapshot(input.threadId);
+          emitTurnDiagnostic("three-evidence-reconciliation-query-failed", {
+            workspaceId: input.workspaceId,
+            threadId: input.threadId,
+            turnId: input.turnId || null,
+            engine,
+            diagnosticCategory: "three-evidence-reconciliation",
+            status: "query-failed",
+            boundedReason:
+              error instanceof Error
+                ? error.message
+                : "status query failed with unknown error",
+            lastProgressAgeMs,
+            isProcessing: latestLifecycle.isProcessing,
+            activeTurnId: latestLifecycle.activeTurnId,
+            activeThreadId,
+          }, { force: true });
+        })
+        .finally(() => {
+          reconciliationQueryInFlightRef.current.delete(queryKey);
+        });
+    },
+    [
+      activeThreadId,
+      buildReconciliationQueryKey,
+      emitTurnDiagnostic,
+      getThreadLifecycleSnapshot,
+      terminalKindFromReconciliationStatus,
+    ],
   );
 
   const clearFirstDeltaTimer = useCallback((threadId: string) => {
@@ -316,8 +621,55 @@ export function useThreadEventHandlers({
         quarantine: false,
         ...buildThreadStreamCorrelationDimensions(threadId),
       }, { force: true });
+      emitThreeEvidenceDryRunDiagnostic({
+        workspaceId: diagnostic.workspaceId,
+        threadId,
+        turnId: diagnostic.turnId,
+        terminalKind: null,
+        sourceMethod: "frontend-no-progress-suspected",
+        lifecycle,
+        diagnostic,
+        handled: false,
+        fallbackApplied: false,
+      });
     },
-    [dispatch, emitTurnDiagnostic, getThreadLifecycleSnapshot],
+    [dispatch, emitThreeEvidenceDryRunDiagnostic, emitTurnDiagnostic, getThreadLifecycleSnapshot],
+  );
+
+  const emitCodexNoProgressWatchdogDiagnostic = useCallback(
+    (
+      stage: "scheduled" | "fired" | "skipped",
+      input: {
+        threadId: string;
+        diagnostic: TurnDiagnosticState | null;
+        reason?: string;
+        timeoutMs?: number | null;
+        elapsedSinceProgressMs?: number | null;
+        delayMs?: number | null;
+        lifecycle?: ThreadLifecycleSnapshot | null;
+      },
+    ) => {
+      emitTurnDiagnostic(`codex-no-progress-watchdog-${stage}`, {
+        workspaceId: input.diagnostic?.workspaceId ?? null,
+        threadId: input.threadId,
+        turnId: input.diagnostic?.turnId ?? null,
+        diagnosticCategory: "codex-no-progress-watchdog",
+        stage,
+        reason: input.reason ?? null,
+        timeoutMs: input.timeoutMs ?? null,
+        elapsedSinceProgressMs: input.elapsedSinceProgressMs ?? null,
+        delayMs: input.delayMs ?? null,
+        lastProgressSource: input.diagnostic?.lastProgressSource ?? null,
+        progressSequence: input.diagnostic?.progressSequence ?? null,
+        activeExecutionItemCount:
+          input.diagnostic?.activeExecutionItems.size ?? null,
+        isProcessing: input.lifecycle?.isProcessing ?? null,
+        activeTurnId: input.lifecycle?.activeTurnId ?? null,
+        activeThreadId,
+        ...buildThreadStreamCorrelationDimensions(input.threadId),
+      }, { force: true });
+    },
+    [activeThreadId, emitTurnDiagnostic],
   );
 
   const scheduleCodexNoProgressTimer = useCallback(
@@ -327,6 +679,11 @@ export function useThreadEventHandlers({
       }
       const diagnostic = turnDiagnosticsRef.current.get(threadId);
       if (!diagnostic) {
+        emitCodexNoProgressWatchdogDiagnostic("skipped", {
+          threadId,
+          diagnostic: null,
+          reason: "missing-diagnostic",
+        });
         return;
       }
       clearCodexNoProgressTimer(threadId);
@@ -334,27 +691,98 @@ export function useThreadEventHandlers({
       const timeoutMs = getCodexNoProgressTimeoutMs(diagnostic);
       const elapsedSinceProgressMs = Math.max(0, now - diagnostic.lastProgressAt);
       const delayMs = Math.max(0, timeoutMs - elapsedSinceProgressMs);
+      emitCodexNoProgressWatchdogDiagnostic("scheduled", {
+        threadId,
+        diagnostic,
+        timeoutMs,
+        elapsedSinceProgressMs,
+        delayMs,
+      });
       const timerId = window.setTimeout(() => {
         const latestDiagnostic = turnDiagnosticsRef.current.get(threadId);
-        if (
-          !latestDiagnostic ||
-          latestDiagnostic.completedAt !== null ||
-          latestDiagnostic.errorAt !== null ||
-          interruptedThreadsRef.current.has(threadId)
-        ) {
-          return;
-        }
-        const lifecycle = getThreadLifecycleSnapshot(threadId);
-        if (
-          !lifecycle.isProcessing ||
-          (lifecycle.activeTurnId !== null && lifecycle.activeTurnId !== latestDiagnostic.turnId)
-        ) {
+        if (!latestDiagnostic) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: null,
+            reason: "missing-diagnostic",
+          });
           return;
         }
         const now = Date.now();
         const elapsedSinceProgressMs = Math.max(0, now - latestDiagnostic.lastProgressAt);
         const timeoutMs = getCodexNoProgressTimeoutMs(latestDiagnostic);
+        const lifecycle = getThreadLifecycleSnapshot(threadId);
+        emitCodexNoProgressWatchdogDiagnostic("fired", {
+          threadId,
+          diagnostic: latestDiagnostic,
+          timeoutMs,
+          elapsedSinceProgressMs,
+          lifecycle,
+        });
+        if (latestDiagnostic.completedAt !== null) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: latestDiagnostic,
+            reason: "completed",
+            timeoutMs,
+            elapsedSinceProgressMs,
+          });
+          return;
+        }
+        if (latestDiagnostic.errorAt !== null) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: latestDiagnostic,
+            reason: "error",
+            timeoutMs,
+            elapsedSinceProgressMs,
+          });
+          return;
+        }
+        if (interruptedThreadsRef.current.has(threadId)) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: latestDiagnostic,
+            reason: "interrupted",
+            timeoutMs,
+            elapsedSinceProgressMs,
+          });
+          return;
+        }
+        if (!lifecycle.isProcessing) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: latestDiagnostic,
+            reason: "not-processing",
+            timeoutMs,
+            elapsedSinceProgressMs,
+            lifecycle,
+          });
+          return;
+        }
+        if (
+          lifecycle.activeTurnId !== null &&
+          lifecycle.activeTurnId !== latestDiagnostic.turnId
+        ) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: latestDiagnostic,
+            reason: "active-turn-mismatch",
+            timeoutMs,
+            elapsedSinceProgressMs,
+            lifecycle,
+          });
+          return;
+        }
         if (elapsedSinceProgressMs < timeoutMs) {
+          emitCodexNoProgressWatchdogDiagnostic("skipped", {
+            threadId,
+            diagnostic: latestDiagnostic,
+            reason: "progress-still-fresh",
+            timeoutMs,
+            elapsedSinceProgressMs,
+            lifecycle,
+          });
           return;
         }
         markCodexNoProgressSuspected(
@@ -367,6 +795,7 @@ export function useThreadEventHandlers({
     },
     [
       clearCodexNoProgressTimer,
+      emitCodexNoProgressWatchdogDiagnostic,
       getThreadLifecycleSnapshot,
       interruptedThreadsRef,
       markCodexNoProgressSuspected,
@@ -863,6 +1292,7 @@ export function useThreadEventHandlers({
     const codexNoProgressTimers = codexNoProgressTimerRef.current;
     const assistantSnapshotIngressLength = assistantSnapshotIngressLengthRef.current;
     const quarantinedCodexTurns = quarantinedCodexTurnsRef.current;
+    const reconciliationQueryInFlight = reconciliationQueryInFlightRef.current;
     return () => {
       firstDeltaTimers.forEach((timerId) => {
         window.clearTimeout(timerId);
@@ -878,6 +1308,7 @@ export function useThreadEventHandlers({
       codexNoProgressTimers.clear();
       assistantSnapshotIngressLength.clear();
       quarantinedCodexTurns.clear();
+      reconciliationQueryInFlight.clear();
     };
   }, []);
 
@@ -1609,6 +2040,10 @@ export function useThreadEventHandlers({
         });
       }
       const lifecycle = getThreadLifecycleSnapshot(threadId);
+      const suspectedDurationMs =
+        diagnostic.noProgressSuspectedAt === null
+          ? null
+          : Math.max(0, now - diagnostic.noProgressSuspectedAt);
       emitTurnDiagnostic(finalState, {
         workspaceId: diagnostic.workspaceId,
         threadId,
@@ -1634,6 +2069,12 @@ export function useThreadEventHandlers({
         deltaCount: diagnostic.deltaCount,
         itemEventCount: diagnostic.itemEventCount,
         stalledAfterFirstDelta: diagnostic.stallReported,
+        lastProgressSource: diagnostic.lastProgressSource,
+        lastProgressAgeMs: Math.max(0, now - diagnostic.lastProgressAt),
+        progressSequence: diagnostic.progressSequence,
+        wasNoProgressSuspected: diagnostic.noProgressSuspectedAt !== null,
+        noProgressSuspectedSource: diagnostic.noProgressSuspectedSource,
+        suspectedDurationMs,
         isProcessing: lifecycle.isProcessing,
         activeTurnId: lifecycle.activeTurnId,
         firstPacketTimeoutSeconds,
@@ -1750,6 +2191,44 @@ export function useThreadEventHandlers({
           }, { force: true });
         }
       }
+      const postSettlementLifecycle = getThreadLifecycleSnapshot(threadId);
+      emitThreeEvidenceDryRunDiagnostic({
+        workspaceId,
+        threadId,
+        turnId: normalizedTurnId,
+        terminalKind: "completed",
+        sourceMethod: "turn/completed",
+        lifecycle: postSettlementLifecycle,
+        diagnostic: diagnostic ?? undefined,
+        handled,
+        fallbackApplied,
+      });
+      if (
+        postSettlementLifecycle.isProcessing ||
+        (
+          normalizedTurnId &&
+          postSettlementLifecycle.activeTurnId === normalizedTurnId
+        )
+      ) {
+        const now = Date.now();
+        emitForegroundSettlementDiagnostic("terminal-settlement-busy-residue", {
+          workspaceId,
+          threadId,
+          turnId: normalizedTurnId,
+          handled,
+          fallbackApplied,
+          isProcessing: postSettlementLifecycle.isProcessing,
+          activeTurnId: postSettlementLifecycle.activeTurnId,
+          lastProgressSource: diagnostic?.lastProgressSource ?? null,
+          lastProgressAgeMs: diagnostic ? Math.max(0, now - diagnostic.lastProgressAt) : null,
+          progressSequence: diagnostic?.progressSequence ?? null,
+          wasNoProgressSuspected: Boolean(
+            diagnostic && diagnostic.noProgressSuspectedAt !== null,
+          ),
+          reason: "terminal-event-handled-but-foreground-state-remains-busy",
+          ...buildThreadStreamCorrelationDimensions(threadId),
+        });
+      }
       if (diagnostic && diagnostic.turnId !== normalizedTurnId) {
         return handled || fallbackApplied;
       }
@@ -1767,7 +2246,9 @@ export function useThreadEventHandlers({
     },
     [
       dispatch,
+      emitThreeEvidenceDryRunDiagnostic,
       emitTurnDiagnostic,
+      emitForegroundSettlementDiagnostic,
       emitTurnDomainEvent,
       finalizeTurnDiagnostic,
       getThreadLifecycleSnapshot,
@@ -2054,6 +2535,46 @@ export function useThreadEventHandlers({
         });
       }
 
+      if (FOREGROUND_TERMINAL_EVENT_METHODS.has(method)) {
+        const threadId = extractTerminalEventThreadId(params);
+        const turnId = extractTerminalEventTurnId(params);
+        const lifecycle = threadId ? getThreadLifecycleSnapshot(threadId) : null;
+        emitForegroundSettlementDiagnostic("terminal-event-received", {
+          workspaceId: event.workspace_id,
+          threadId: threadId || null,
+          turnId: turnId || null,
+          eventType: method,
+          resultTextLength:
+            method === "turn/completed"
+              ? extractTerminalEventResultTextLength(params)
+              : null,
+          affectedThreadCount:
+            method === "runtime/ended"
+              ? normalizeRuntimeEndedCount(
+                  params.affectedThreadIds ?? params.affected_thread_ids,
+                )
+              : null,
+          affectedTurnCount:
+            method === "runtime/ended"
+              ? normalizeRuntimeEndedCount(
+                  params.affectedTurnIds ?? params.affected_turn_ids,
+                )
+              : null,
+          pendingRequestCount:
+            method === "runtime/ended"
+              ? Number(params.pendingRequestCount ?? params.pending_request_count ?? 0)
+              : null,
+          hadActiveLease:
+            method === "runtime/ended"
+              ? Boolean(params.hadActiveLease ?? params.had_active_lease ?? false)
+              : null,
+          isProcessing: lifecycle?.isProcessing ?? null,
+          activeTurnId: lifecycle?.activeTurnId ?? null,
+          reason: "terminal-event-reached-frontend-handler",
+          ...(threadId ? buildThreadStreamCorrelationDimensions(threadId) : {}),
+        });
+      }
+
       if (method === "codex/stderr") {
         const rawMessage = String(params.message ?? "").trim();
         if (onDebug && isReasoningRawDebugEnabled() && rawMessage) {
@@ -2193,6 +2714,7 @@ export function useThreadEventHandlers({
       });
     },
     [
+      emitForegroundSettlementDiagnostic,
       getThreadLifecycleSnapshot,
       onDebug,
       noteCodexTurnProgressEvidence,

@@ -9,15 +9,17 @@ import {
 } from "../detachedFileExplorer";
 
 export function useDetachedFileExplorerSession() {
-  const [session, setSession] = useState<DetachedFileExplorerSession | null>(() =>
-    readDetachedFileExplorerSessionSnapshot(),
-  );
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+  const [session, setSession] = useState<DetachedFileExplorerSession | null>(null);
 
   useEffect(() => {
     let unlisten: (() => void) | null = null;
 
     try {
       const currentWindow = getCurrentWindow();
+      const currentWindowLabel = currentWindow.label ?? null;
+      setWindowLabel(currentWindowLabel);
+      setSession(readDetachedFileExplorerSessionSnapshot(currentWindowLabel));
       currentWindow
         .listen<DetachedFileExplorerSession>(
           DETACHED_FILE_EXPLORER_SESSION_EVENT,
@@ -26,7 +28,8 @@ export function useDetachedFileExplorerSession() {
             if (!nextSession) {
               return;
             }
-            writeDetachedFileExplorerSessionSnapshot(nextSession);
+            const nextWindowLabel = nextSession.windowLabel ?? currentWindowLabel;
+            writeDetachedFileExplorerSessionSnapshot(nextSession, nextWindowLabel);
             setSession(nextSession);
           },
         )
@@ -36,12 +39,20 @@ export function useDetachedFileExplorerSession() {
         .catch(() => {});
     } catch {
       // Non-Tauri test environments fall back to the persisted snapshot only.
+      setSession(readDetachedFileExplorerSessionSnapshot());
     }
 
     return () => {
       unlisten?.();
     };
   }, []);
+
+  useEffect(() => {
+    if (session || !windowLabel) {
+      return;
+    }
+    setSession(readDetachedFileExplorerSessionSnapshot(windowLabel));
+  }, [session, windowLabel]);
 
   return session;
 }

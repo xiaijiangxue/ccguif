@@ -175,6 +175,9 @@ fn normalize_workspace_relative_path(
 }
 
 fn normalize_workspace_relative_directory_path(path: &str) -> Result<String, String> {
+    if path.is_empty() {
+        return Ok(String::new());
+    }
     normalize_workspace_relative_path(
         path,
         "Directory path cannot be empty.",
@@ -745,7 +748,12 @@ pub(crate) fn list_workspace_directory_children_inner(
         return Err("Path is not a directory.".to_string());
     }
 
-    let repo = git2::Repository::open(&canonical_root).ok();
+    let include_gitignore_markers = !normalized_path.is_empty();
+    let repo = if include_gitignore_markers {
+        git2::Repository::open(&canonical_root).ok()
+    } else {
+        None
+    };
     let mut files = Vec::new();
     let mut directories = Vec::new();
     let mut gitignored_files = Vec::new();
@@ -775,6 +783,10 @@ pub(crate) fn list_workspace_directory_children_inner(
     sort_and_truncate_named_entries(&mut sorted_entries, max_scanned_entries);
 
     for (_, entry) in sorted_entries {
+        if scan_started_at.elapsed() >= WORKSPACE_SCAN_TIME_BUDGET {
+            limit_hit = true;
+            break;
+        }
         let path = entry.path();
         let rel_path = match path.strip_prefix(&canonical_root) {
             Ok(value) => value,
@@ -789,10 +801,13 @@ pub(crate) fn list_workspace_directory_children_inner(
             Ok(value) => value,
             Err(_) => continue,
         };
-        let is_ignored = repo
-            .as_ref()
-            .and_then(|r| r.status_should_ignore(rel_path).ok())
-            .unwrap_or(false);
+        let is_ignored = if include_gitignore_markers {
+            repo.as_ref()
+                .and_then(|r| r.status_should_ignore(rel_path).ok())
+                .unwrap_or(false)
+        } else {
+            false
+        };
 
         if file_type.is_dir() {
             if should_always_skip(&name) {
@@ -1176,7 +1191,10 @@ fn resolve_allowed_external_absolute_path(
 
 #[cfg(test)]
 mod tests {
-    use super::{read_workspace_file_inner, write_external_spec_file_inner};
+    use super::{
+        list_workspace_directory_children_inner, normalize_workspace_relative_directory_path,
+        read_workspace_file_inner, write_external_spec_file_inner, WorkspaceDirectoryChildState,
+    };
     use std::fs;
     use std::path::{Path, PathBuf};
     use uuid::Uuid;
@@ -1209,6 +1227,63 @@ mod tests {
             .expect("read windows-style relative path");
 
         assert_eq!(result.content, "hello");
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn directory_path_accepts_root_sentinel_without_weakening_file_paths() {
+        assert_eq!(
+            normalize_workspace_relative_directory_path("").expect("root path"),
+            ""
+        );
+        assert!(normalize_workspace_relative_directory_path("   ").is_err());
+        assert!(normalize_workspace_relative_directory_path("/").is_err());
+        assert!(read_workspace_file_inner(&temp_dir("ccgui-file-path"), "").is_err());
+        assert!(normalize_workspace_relative_directory_path("../outside").is_err());
+        assert!(normalize_workspace_relative_directory_path(".git/config").is_err());
+    }
+
+    #[test]
+    fn list_workspace_directory_children_accepts_empty_path_as_root() {
+        let root = temp_dir("ccgui-root-children");
+        fs::create_dir_all(root.join("src")).expect("create src dir");
+        fs::write(root.join("README.md"), "# test\n").expect("write readme");
+        fs::write(root.join("src").join("main.ts"), "main\n").expect("write nested file");
+
+        let response =
+            list_workspace_directory_children_inner(&root, "", 10).expect("list root children");
+
+        assert_eq!(response.files, vec!["README.md".to_string()]);
+        assert_eq!(response.directories, vec!["src".to_string()]);
+        assert!(!response.files.contains(&"src/main.ts".to_string()));
+        assert!(response
+            .directory_entries
+            .iter()
+            .any(|entry| entry.path == "src"
+                && entry.child_state == WorkspaceDirectoryChildState::Unknown));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn list_workspace_directory_children_defers_root_gitignore_markers() {
+        let root = temp_dir("ccgui-root-gitignore");
+        fs::create_dir_all(root.join("src")).expect("create src dir");
+        fs::write(root.join(".gitignore"), "src/ignored.ts\n").expect("write gitignore");
+        fs::write(root.join("src").join("ignored.ts"), "ignored\n").expect("write ignored file");
+        git2::Repository::init(&root).expect("init git repo");
+
+        let root_response =
+            list_workspace_directory_children_inner(&root, "", 10).expect("list root children");
+        assert!(root_response.gitignored_files.is_empty());
+        assert!(root_response.gitignored_directories.is_empty());
+
+        let src_response =
+            list_workspace_directory_children_inner(&root, "src", 10).expect("list src children");
+        assert_eq!(
+            src_response.gitignored_files,
+            vec!["src/ignored.ts".to_string()]
+        );
+
         let _ = fs::remove_dir_all(root);
     }
 

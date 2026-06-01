@@ -96,9 +96,9 @@ describe("RequestUserInputMessage", () => {
     expect(screen.getByRole("button", { name: "approval.submit" })).toBeTruthy();
   });
 
-  it("dismisses active request without submitting", () => {
+  it("collapses active request locally without settling the runtime prompt", () => {
     const onSubmit = vi.fn();
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn().mockResolvedValue(undefined);
     render(
       <RequestUserInputMessage
         requests={[baseRequest]}
@@ -109,14 +109,86 @@ describe("RequestUserInputMessage", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Close this input request card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse this question card without skipping" }));
 
-    expect(onDismiss).toHaveBeenCalledWith(baseRequest);
-    expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.queryByText("Provide input")).toBeNull();
+    expect(screen.getByRole("group", { name: "Collapsed question card" })).toBeTruthy();
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    expect(screen.getByText("Provide input")).toBeTruthy();
   });
 
-  it("allows local close even when no runtime dismiss handler is provided", () => {
+  it("settles active request through skip handler without normal answer submit", async () => {
+    const onSubmit = vi.fn();
+    const onDismiss = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RequestUserInputMessage
+        requests={[baseRequest]}
+        activeThreadId="thread-1"
+        activeWorkspaceId="ws-1"
+        onSubmit={onSubmit}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip this question and continue" }));
+
+    await waitFor(() => {
+      expect(onDismiss).toHaveBeenCalledWith(baseRequest);
+      expect(screen.queryByText("Provide input")).toBeNull();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("settles collapsed request through skip handler", async () => {
+    const onSubmit = vi.fn();
+    const onDismiss = vi.fn().mockResolvedValue(undefined);
+    render(
+      <RequestUserInputMessage
+        requests={[baseRequest]}
+        activeThreadId="thread-1"
+        activeWorkspaceId="ws-1"
+        onSubmit={onSubmit}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse this question card without skipping" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip this question and continue" }));
+
+    await waitFor(() => {
+      expect(onDismiss).toHaveBeenCalledWith(baseRequest);
+      expect(screen.queryByRole("group", { name: "Collapsed question card" })).toBeNull();
+    });
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("keeps request visible when skip settlement fails", async () => {
+    const onSubmit = vi.fn();
+    const onDismiss = vi.fn().mockRejectedValue(new Error("fail"));
+    render(
+      <RequestUserInputMessage
+        requests={[baseRequest]}
+        activeThreadId="thread-1"
+        activeWorkspaceId="ws-1"
+        onSubmit={onSubmit}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Skip this question and continue" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Submit failed. Please retry.")).toBeTruthy();
+    });
+    expect(onDismiss).toHaveBeenCalledWith(baseRequest);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText("Provide input")).toBeTruthy();
+  });
+
+  it("allows local collapse even when no runtime dismiss handler is provided", () => {
     const onSubmit = vi.fn();
     render(
       <RequestUserInputMessage
@@ -127,13 +199,13 @@ describe("RequestUserInputMessage", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Close this input request card" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse this question card without skipping" }));
 
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.queryByText("Provide input")).toBeNull();
   });
 
-  it("auto-dismisses unanswered stale request after local timeout", () => {
+  it("auto-dismisses unanswered stale request after local timeout", async () => {
     vi.useFakeTimers();
     const onSubmit = vi.fn();
     const onDismiss = vi.fn();
@@ -149,8 +221,9 @@ describe("RequestUserInputMessage", () => {
 
     expect(screen.getByText("5:00")).toBeTruthy();
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(300_000);
+      await Promise.resolve();
     });
 
     expect(onDismiss).toHaveBeenCalledWith(baseRequest);
@@ -158,7 +231,32 @@ describe("RequestUserInputMessage", () => {
     expect(screen.queryByText("Provide input")).toBeNull();
   });
 
-  it("does not repeat stale timeout dismiss after parent rerender keeps the same request", () => {
+  it("keeps timed-out request visible when auto-dismiss settlement fails", async () => {
+    vi.useFakeTimers();
+    const onSubmit = vi.fn();
+    const onDismiss = vi.fn().mockRejectedValue(new Error("fail"));
+    render(
+      <RequestUserInputMessage
+        requests={[baseRequest]}
+        activeThreadId="thread-1"
+        activeWorkspaceId="ws-1"
+        onSubmit={onSubmit}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(300_000);
+      await Promise.resolve();
+    });
+
+    expect(onDismiss).toHaveBeenCalledWith(baseRequest);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText("Submit failed. Please retry.")).toBeTruthy();
+    expect(screen.getByText("Provide input")).toBeTruthy();
+  });
+
+  it("does not repeat stale timeout dismiss after parent rerender keeps the same request", async () => {
     vi.useFakeTimers();
     const onDismiss = vi.fn();
     const { rerender } = render(
@@ -171,8 +269,9 @@ describe("RequestUserInputMessage", () => {
       />,
     );
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(300_000);
+      await Promise.resolve();
     });
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -187,8 +286,9 @@ describe("RequestUserInputMessage", () => {
       />,
     );
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
     });
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -483,6 +583,56 @@ describe("RequestUserInputMessage", () => {
         },
       });
     });
+  });
+
+  it("preserves previous answers when skipping a later question", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    const onDismiss = vi.fn().mockResolvedValue(undefined);
+    const request: RequestUserInputRequest = {
+      ...baseRequest,
+      params: {
+        ...baseRequest.params,
+        questions: [
+          {
+            id: "q-1",
+            header: "Project",
+            question: "Choose project type",
+            options: [{ label: "Docs", description: "" }],
+          },
+          {
+            id: "q-2",
+            header: "Output",
+            question: "Choose output",
+            options: [{ label: "Report", description: "" }],
+          },
+        ],
+      },
+    };
+
+    render(
+      <RequestUserInputMessage
+        requests={[request]}
+        activeThreadId="thread-1"
+        activeWorkspaceId="ws-1"
+        onSubmit={onSubmit}
+        onDismiss={onDismiss}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Docs" }));
+    fireEvent.click(screen.getByRole("button", { name: "askUserQuestion.next" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip this question and continue" }));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith(request, {
+        answers: {
+          "q-1": { answers: ["Docs"] },
+          "q-2": { answers: [] },
+        },
+        skippedQuestionIds: ["q-2"],
+      });
+    });
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 
   it("allows deselecting a selected option by clicking it again", () => {

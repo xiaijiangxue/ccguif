@@ -10,6 +10,7 @@ export type ShortcutSettingKey =
   | "newWorktreeAgentShortcut"
   | "newCloneAgentShortcut"
   | "archiveThreadShortcut"
+  | "closeCurrentSessionShortcut"
   | "openChatShortcut"
   | "openKanbanShortcut"
   | "cycleOpenSessionPrevShortcut"
@@ -46,6 +47,7 @@ export type ShortcutDraftKey =
   | "newWorktreeAgent"
   | "newCloneAgent"
   | "archiveThread"
+  | "closeCurrentSession"
   | "openChat"
   | "openKanban"
   | "cycleOpenSessionPrev"
@@ -227,6 +229,16 @@ export const shortcutActions: ShortcutActionMetadata[] = [
     category: "file",
     labelKey: "settings.archiveActiveThread",
     defaultShortcut: "cmd+ctrl+a",
+    scope: "global",
+    triggerSurface: "dom",
+  },
+  {
+    id: "close-current-session",
+    setting: "closeCurrentSessionShortcut",
+    draftKey: "closeCurrentSession",
+    category: "navigation",
+    labelKey: "settings.closeCurrentSession",
+    defaultShortcut: "cmd+w",
     scope: "global",
     triggerSurface: "dom",
   },
@@ -508,6 +520,7 @@ export const shortcutDraftKeyBySetting: Record<
   newWorktreeAgentShortcut: "newWorktreeAgent",
   newCloneAgentShortcut: "newCloneAgent",
   archiveThreadShortcut: "archiveThread",
+  closeCurrentSessionShortcut: "closeCurrentSession",
   openChatShortcut: "openChat",
   openKanbanShortcut: "openKanban",
   cycleOpenSessionPrevShortcut: "cycleOpenSessionPrev",

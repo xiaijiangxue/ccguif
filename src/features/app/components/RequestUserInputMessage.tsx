@@ -22,7 +22,7 @@ type RequestUserInputMessageProps = {
     request: RequestUserInputRequest,
     response: RequestUserInputResponse,
   ) => Promise<void> | void;
-  onDismiss?: (request: RequestUserInputRequest) => void;
+  onDismiss?: (request: RequestUserInputRequest) => Promise<void> | void;
 };
 
 type RequestDraftState = {
@@ -53,14 +53,17 @@ export function RequestUserInputMessage({
   onDismiss,
 }: RequestUserInputMessageProps) {
   const { t } = useTranslation();
-  const [locallyDismissedRequestKeys, setLocallyDismissedRequestKeys] = useState<Set<string>>(
+  const [locallyCollapsedRequestKeys, setLocallyCollapsedRequestKeys] = useState<Set<string>>(
     () => new Set(),
   );
-  const activeRequests = useMemo(
+  const [locallySettledRequestKeys, setLocallySettledRequestKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const scopedRequests = useMemo(
     () =>
       requests.filter((request) => {
         const requestKey = getRequestDraftKey(request);
-        if (locallyDismissedRequestKeys.has(requestKey)) {
+        if (locallySettledRequestKeys.has(requestKey)) {
           return false;
         }
         if (!activeThreadId) {
@@ -74,10 +77,24 @@ export function RequestUserInputMessage({
         }
         return true;
       }),
-    [requests, activeThreadId, activeWorkspaceId, locallyDismissedRequestKeys],
+    [requests, activeThreadId, activeWorkspaceId, locallySettledRequestKeys],
+  );
+  const activeRequests = useMemo(
+    () =>
+      scopedRequests.filter(
+        (request) => !locallyCollapsedRequestKeys.has(getRequestDraftKey(request)),
+      ),
+    [scopedRequests, locallyCollapsedRequestKeys],
+  );
+  const collapsedRequest = useMemo(
+    () =>
+      scopedRequests.find((request) =>
+        locallyCollapsedRequestKeys.has(getRequestDraftKey(request)),
+      ) ?? null,
+    [scopedRequests, locallyCollapsedRequestKeys],
   );
   useEffect(() => {
-    setLocallyDismissedRequestKeys((current) => {
+    const pruneRequestKeys = (current: Set<string>) => {
       if (current.size === 0) {
         return current;
       }
@@ -92,10 +109,13 @@ export function RequestUserInputMessage({
         }
       });
       return changed ? next : current;
-    });
+    };
+    setLocallyCollapsedRequestKeys(pruneRequestKeys);
+    setLocallySettledRequestKeys(pruneRequestKeys);
   }, [requests]);
   const activeRequest = activeRequests[0];
   const activeRequestKey = activeRequest ? getRequestDraftKey(activeRequest) : null;
+  const collapsedRequestKey = collapsedRequest ? getRequestDraftKey(collapsedRequest) : null;
   const [draftByRequest, setDraftByRequest] = useState<
     Record<string, RequestDraftState>
   >({});
@@ -178,6 +198,9 @@ export function RequestUserInputMessage({
   const activeRemainingSeconds = activeRequestKey
     ? remainingSecondsByRequest[activeRequestKey] ?? REQUEST_STALE_TIMEOUT_SECONDS
     : REQUEST_STALE_TIMEOUT_SECONDS;
+  const collapsedRemainingSeconds = collapsedRequestKey
+    ? remainingSecondsByRequest[collapsedRequestKey] ?? REQUEST_STALE_TIMEOUT_SECONDS
+    : REQUEST_STALE_TIMEOUT_SECONDS;
 
   useEffect(() => {
     if (
@@ -192,31 +215,46 @@ export function RequestUserInputMessage({
       return;
     }
     timeoutDismissedRequestKeysRef.current.add(activeRequestKey);
-    setDraftByRequest((current) => {
-      if (!current[activeRequestKey]) {
-        return current;
-      }
-      const next = { ...current };
-      delete next[activeRequestKey];
-      return next;
-    });
-    setRemainingSecondsByRequest((current) => {
-      if (typeof current[activeRequestKey] !== "number") {
-        return current;
-      }
-      const next = { ...current };
-      delete next[activeRequestKey];
-      return next;
-    });
-    setLocallyDismissedRequestKeys((current) => {
-      if (current.has(activeRequestKey)) {
-        return current;
-      }
-      const next = new Set(current);
-      next.add(activeRequestKey);
-      return next;
-    });
-    onDismiss(activeRequest);
+    void Promise.resolve(onDismiss(activeRequest))
+      .then(() => {
+        setLocallyCollapsedRequestKeys((current) => {
+          if (!current.has(activeRequestKey)) {
+            return current;
+          }
+          const next = new Set(current);
+          next.delete(activeRequestKey);
+          return next;
+        });
+        setLocallySettledRequestKeys((current) => {
+          if (current.has(activeRequestKey)) {
+            return current;
+          }
+          const next = new Set(current);
+          next.add(activeRequestKey);
+          return next;
+        });
+        timeoutDismissedRequestKeysRef.current.delete(activeRequestKey);
+        setDraftByRequest((current) => {
+          if (!current[activeRequestKey]) {
+            return current;
+          }
+          const next = { ...current };
+          delete next[activeRequestKey];
+          return next;
+        });
+        setRemainingSecondsByRequest((current) => {
+          if (typeof current[activeRequestKey] !== "number") {
+            return current;
+          }
+          const next = { ...current };
+          delete next[activeRequestKey];
+          return next;
+        });
+      })
+      .catch(() => {
+        timeoutDismissedRequestKeysRef.current.delete(activeRequestKey);
+        setSubmitError(t("approval.submitFailed"));
+      });
   }, [
     activeRemainingSeconds,
     activeRequest,
@@ -224,15 +262,16 @@ export function RequestUserInputMessage({
     isSubmitting,
     onDismiss,
     submitError,
+    t,
   ]);
 
-  if (!activeRequest) {
+  if (!activeRequest && !collapsedRequest) {
     return null;
   }
 
-  const { questions } = activeRequest.params;
+  const { questions } = activeRequest?.params ?? collapsedRequest?.params ?? { questions: [] };
   const totalRequests = activeRequests.length;
-  const requestKey = getRequestDraftKey(activeRequest);
+  const requestKey = activeRequest ? getRequestDraftKey(activeRequest) : "";
   const requestAnchorId = `request-user-input-${encodeURIComponent(requestKey)}`;
   const requestDraft = draftByRequest[requestKey];
   const selections = requestDraft?.selections ?? {};
@@ -276,6 +315,29 @@ export function RequestUserInputMessage({
       answers[question.id] = { answers: answerList };
     });
     return answers;
+  };
+
+  const hasAnswerForQuestion = (
+    answers: RequestUserInputResponse["answers"],
+    questionId: string,
+  ) => {
+    const values = answers[questionId]?.answers ?? [];
+    return values.some((value) => String(value ?? "").trim().length > 0);
+  };
+
+  const buildSkippedQuestionIds = () => {
+    return questions
+      .slice(safeActiveQuestionIndex)
+      .map((question) => question.id)
+      .filter((questionId) => questionId.trim().length > 0);
+  };
+
+  const shouldPreservePartialAnswersOnSkip = (
+    answers: RequestUserInputResponse["answers"],
+  ) => {
+    return questions
+      .slice(0, safeActiveQuestionIndex)
+      .some((question) => hasAnswerForQuestion(answers, question.id));
   };
 
   const handleOptionToggle = (
@@ -392,10 +454,48 @@ export function RequestUserInputMessage({
     }
   };
 
-  const handleDismiss = () => {
-    setSubmitError(null);
-    timeoutDismissedRequestKeysRef.current.delete(requestKey);
-    setLocallyDismissedRequestKeys((current) => {
+  function clearRequestDraft(targetRequestKey: string) {
+    timeoutDismissedRequestKeysRef.current.delete(targetRequestKey);
+    setDraftByRequest((current) => {
+      if (!current[targetRequestKey]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[targetRequestKey];
+      return next;
+    });
+    setRemainingSecondsByRequest((current) => {
+      if (typeof current[targetRequestKey] !== "number") {
+        return current;
+      }
+      const next = { ...current };
+      delete next[targetRequestKey];
+      return next;
+    });
+  }
+
+  function settleRequestLocally(targetRequestKey: string) {
+    setLocallyCollapsedRequestKeys((current) => {
+      if (!current.has(targetRequestKey)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.delete(targetRequestKey);
+      return next;
+    });
+    setLocallySettledRequestKeys((current) => {
+      if (current.has(targetRequestKey)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(targetRequestKey);
+      return next;
+    });
+    clearRequestDraft(targetRequestKey);
+  }
+
+  const collapseActiveRequestLocally = () => {
+    setLocallyCollapsedRequestKeys((current) => {
       if (current.has(requestKey)) {
         return current;
       }
@@ -403,24 +503,120 @@ export function RequestUserInputMessage({
       next.add(requestKey);
       return next;
     });
-    setDraftByRequest((current) => {
-      if (!current[requestKey]) {
-        return current;
-      }
-      const next = { ...current };
-      delete next[requestKey];
-      return next;
-    });
-    setRemainingSecondsByRequest((current) => {
-      if (typeof current[requestKey] !== "number") {
-        return current;
-      }
-      const next = { ...current };
-      delete next[requestKey];
-      return next;
-    });
-    onDismiss?.(activeRequest);
   };
+
+  const expandRequestLocally = (targetRequestKey: string) => {
+    setLocallyCollapsedRequestKeys((current) => {
+      if (!current.has(targetRequestKey)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.delete(targetRequestKey);
+      return next;
+    });
+  };
+
+  const handleClose = () => {
+    setSubmitError(null);
+    collapseActiveRequestLocally();
+  };
+
+  const settleSkippedRequest = async (
+    targetRequest: RequestUserInputRequest,
+    targetRequestKey: string,
+  ) => {
+    if (!onDismiss) {
+      settleRequestLocally(targetRequestKey);
+      return;
+    }
+    await onDismiss(targetRequest);
+    settleRequestLocally(targetRequestKey);
+  };
+
+  const handleSkip = async (
+    targetRequest: RequestUserInputRequest,
+    targetRequestKey: string,
+  ) => {
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      const answers = buildAnswers();
+      if (
+        targetRequest === activeRequest &&
+        shouldPreservePartialAnswersOnSkip(answers)
+      ) {
+        await onSubmit(targetRequest, {
+          answers,
+          skippedQuestionIds: buildSkippedQuestionIds(),
+        });
+        settleRequestLocally(targetRequestKey);
+        return;
+      }
+      await settleSkippedRequest(targetRequest, targetRequestKey);
+    } catch {
+      setSubmitError(t("approval.submitFailed"));
+      expandRequestLocally(targetRequestKey);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!activeRequest && collapsedRequest && collapsedRequestKey) {
+    return (
+      <div className="message request-user-input-message">
+        <div
+          className="request-user-input-collapsed"
+          role="group"
+          aria-label={t("approval.collapsedUserInputRequest")}
+          data-request-user-input-id={String(collapsedRequest.request_id)}
+          data-request-user-input-key={collapsedRequestKey}
+          data-workspace-id={collapsedRequest.workspace_id}
+          data-thread-id={collapsedRequest.params.thread_id}
+        >
+          <div className="request-user-input-collapsed-main">
+            <span className="request-user-input-collapsed-title">
+              {t("approval.inputRequested")}
+            </span>
+            <span
+              className="request-user-input-collapsed-timer"
+              aria-hidden="true"
+            >
+              {formatRequestCountdown(collapsedRemainingSeconds)}
+            </span>
+          </div>
+          {submitError ? (
+            <div className="request-user-input-collapsed-error">
+              {submitError}
+            </div>
+          ) : null}
+          <div className="request-user-input-collapsed-actions">
+            <button
+              type="button"
+              className="request-user-input-collapsed-expand"
+              onClick={() => expandRequestLocally(collapsedRequestKey)}
+              disabled={isSubmitting}
+            >
+              {t("approval.expandUserInputRequest")}
+            </button>
+            <button
+              type="button"
+              className="request-user-input-dismiss"
+              onClick={() => void handleSkip(collapsedRequest, collapsedRequestKey)}
+              disabled={isSubmitting}
+              aria-label={t("approval.skipUserInputRequest")}
+              title={t("approval.skipUserInputRequest")}
+            >
+              {t("approval.skipAndContinue")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeRequest) {
+    return null;
+  }
 
   return (
     <div className="message request-user-input-message">
@@ -455,7 +651,8 @@ export function RequestUserInputMessage({
         onOptionToggle={handleOptionToggle}
         onNotesChange={handleNotesChange}
         onToggleSecret={handleToggleSecretVisible}
-        onDismiss={handleDismiss}
+        onClose={handleClose}
+        onDismiss={() => void handleSkip(activeRequest, requestKey)}
         onSubmit={() => void handleSubmit()}
       />
     </div>

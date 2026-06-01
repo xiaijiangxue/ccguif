@@ -141,6 +141,10 @@ function isEditableTarget(target: EventTarget | null) {
 
 export { buildDiffTree, compactDiffTree };
 
+function isFileMutationDisabled(file: { isDiffOnlyFallback?: boolean; mutationDisabled?: boolean }) {
+  return Boolean(file.isDiffOnlyFallback || file.mutationDisabled);
+}
+
 type DiffTreeSectionProps = DiffSectionProps & {
   collapsedFolders: Set<string>;
   onToggleFolder: (key: string) => void;
@@ -203,9 +207,16 @@ function DiffTreeSection({
     () => new Set(normalizedPartialPaths),
     [normalizedPartialPaths],
   );
-  const filePaths = useMemo(() => files.map((file) => file.path), [files]);
+  const actionFilePaths = useMemo(
+    () =>
+      files
+        .filter((file) => !isFileMutationDisabled(file))
+        .map((file) => file.path),
+    [files],
+  );
   const toggleableFilePaths = useMemo(
     () => files
+      .filter((file) => !isFileMutationDisabled(file))
       .map((file) => file.path)
       .filter((path) => !isCommitPathLocked?.(path)),
     [files, isCommitPathLocked],
@@ -227,7 +238,7 @@ function DiffTreeSection({
   }, [excludedPathSet, files, includedPathSet, partialPathSet]);
   const showSectionActions =
     toggleableFilePaths.length > 0 ||
-    filePaths.length > 0;
+    actionFilePaths.length > 0;
   const hasTreeNodes = tree.folders.size > 0 || tree.files.length > 0;
   const hasRootFolderName = rootFolderName.trim().length > 0;
   const rootFolderKey = `${section}:__repo_root__/`;
@@ -418,7 +429,10 @@ function DiffTreeSection({
                       excludedPathSet,
                       partialPathSet,
                     )}
-                    inclusionDisabled={Boolean(isCommitPathLocked?.(file.path))}
+                    inclusionDisabled={Boolean(
+                      isFileMutationDisabled(file) ||
+                        isCommitPathLocked?.(file.path),
+                    )}
                     indentLevel={depth + 1}
                     showDirectory={false}
                     treeItem
@@ -508,9 +522,11 @@ function DiffTreeSection({
             section={section}
             sectionInclusionState={sectionInclusionState}
             toggleableFilePaths={toggleableFilePaths}
-            filePaths={filePaths}
+            filePaths={actionFilePaths}
             onSetCommitSelection={onSetCommitSelection}
-            onStageAllChanges={onStageAllChanges}
+            onStageAllChanges={
+              actionFilePaths.length === files.length ? onStageAllChanges : undefined
+            }
             onStageFile={onStageFile}
             onUnstageFile={onUnstageFile}
             onDiscardFiles={onDiscardFiles}
@@ -591,7 +607,10 @@ function DiffTreeSection({
                         excludedPathSet,
                         partialPathSet,
                       )}
-                      inclusionDisabled={Boolean(isCommitPathLocked?.(file.path))}
+                      inclusionDisabled={Boolean(
+                        isFileMutationDisabled(file) ||
+                          isCommitPathLocked?.(file.path),
+                      )}
                       indentLevel={1}
                       showDirectory={false}
                       treeItem
@@ -632,7 +651,10 @@ function DiffTreeSection({
                     excludedPathSet,
                     partialPathSet,
                   )}
-                  inclusionDisabled={Boolean(isCommitPathLocked?.(file.path))}
+                  inclusionDisabled={Boolean(
+                    isFileMutationDisabled(file) ||
+                      isCommitPathLocked?.(file.path),
+                  )}
                   indentLevel={1}
                   showDirectory={false}
                   treeItem
@@ -671,7 +693,10 @@ function DiffTreeSection({
                     excludedPathSet,
                     partialPathSet,
                   )}
-                  inclusionDisabled={Boolean(isCommitPathLocked?.(file.path))}
+                  inclusionDisabled={Boolean(
+                    isFileMutationDisabled(file) ||
+                      isCommitPathLocked?.(file.path),
+                  )}
                   indentLevel={0}
                   showDirectory={false}
                   treeItem
@@ -871,6 +896,14 @@ export function GitDiffPanel({
     ],
     [stagedFiles, unstagedFiles],
   );
+  const stagedCommitFiles = useMemo(
+    () => stagedFiles.filter((file) => !isFileMutationDisabled(file)),
+    [stagedFiles],
+  );
+  const unstagedCommitFiles = useMemo(
+    () => unstagedFiles.filter((file) => !isFileMutationDisabled(file)),
+    [unstagedFiles],
+  );
   const {
     selectedCommitPaths,
     selectedCommitCount,
@@ -881,8 +914,8 @@ export function GitDiffPanel({
     isCommitPathLocked,
     setCommitSelection,
   } = useGitCommitSelection({
-    stagedFiles,
-    unstagedFiles,
+    stagedFiles: stagedCommitFiles,
+    unstagedFiles: unstagedCommitFiles,
   });
   const previewDiffEntry = useMemo(
     () => (previewFile ? diffEntries.find((entry) => entry.path === previewFile.path) ?? null : null),
@@ -1385,16 +1418,17 @@ export function GitDiffPanel({
         setLastClickedFile(path);
       }
 
-      const fileCount = targetPaths.length;
-      const plural = fileCount > 1 ? "s" : "";
-      const countSuffix = fileCount > 1 ? ` (${fileCount})` : "";
-
       // Separate files by their section for stage/unstage operations
       const stagedPaths = targetPaths.filter((p) =>
-        stagedFiles.some((f) => f.path === p),
+        stagedFiles.some((f) => f.path === p && !isFileMutationDisabled(f)),
       );
       const unstagedPaths = targetPaths.filter((p) =>
-        unstagedFiles.some((f) => f.path === p),
+        unstagedFiles.some((f) => f.path === p && !isFileMutationDisabled(f)),
+      );
+      const mutationTargetPaths = targetPaths.filter(
+        (p) =>
+          stagedFiles.some((f) => f.path === p && !isFileMutationDisabled(f)) ||
+          unstagedFiles.some((f) => f.path === p && !isFileMutationDisabled(f)),
       );
 
       const items: RendererContextMenuItem[] = [];
@@ -1428,14 +1462,16 @@ export function GitDiffPanel({
       }
 
       // Revert action for all selected files
-      if (onRevertFile) {
+      if (onRevertFile && mutationTargetPaths.length > 0) {
         items.push({
           type: "item",
           id: "discard",
-          label: `Discard change${plural}${countSuffix}`,
+          label: `Discard change${mutationTargetPaths.length > 1 ? "s" : ""}${
+            mutationTargetPaths.length > 1 ? ` (${mutationTargetPaths.length})` : ""
+          }`,
           tone: "danger",
           onSelect: async () => {
-            await discardFiles(targetPaths);
+            await discardFiles(mutationTargetPaths);
           },
         });
       }

@@ -5,6 +5,7 @@ import {
 import type {
   CreateTaskRunInput,
   TaskRunArtifact,
+  TaskRunBrowserEvidenceRef,
   TaskRunRecord,
   TaskRunRecoveryAction,
   TaskRunStatus,
@@ -12,6 +13,7 @@ import type {
   TaskRunTrigger,
 } from "../types";
 import type { EngineType } from "../../../types";
+import type { BrowserContextSendAttachment } from "../../../types";
 import { isEngineCapabilityAvailable } from "../../engine/engineCapabilityMatrix";
 
 export const TASK_RUN_STORE_KEY = "taskCenter.taskRuns";
@@ -110,6 +112,93 @@ function normalizeArtifacts(value: unknown): TaskRunArtifact[] {
     .filter((entry): entry is TaskRunArtifact => Boolean(entry));
 }
 
+function normalizeBrowserEvidence(value: unknown): TaskRunBrowserEvidenceRef | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const input = value as Record<string, unknown>;
+  const attachmentId = normalizeNullableString(input.attachmentId);
+  const browserSessionId = normalizeNullableString(input.browserSessionId);
+  const snapshotId = normalizeNullableString(input.snapshotId);
+  const url = normalizeNullableString(input.url);
+  const capturedAt = normalizeFiniteNumber(input.capturedAt);
+  const state = input.state;
+  if (
+    !attachmentId ||
+    !browserSessionId ||
+    !snapshotId ||
+    !url ||
+    capturedAt == null ||
+    (
+      state !== "available" &&
+      state !== "stale" &&
+      state !== "expired" &&
+      state !== "degraded" &&
+      state !== "deleted" &&
+      state !== "unsupported"
+    )
+  ) {
+    return null;
+  }
+  return {
+    attachmentId,
+    browserSessionId,
+    snapshotId,
+    url,
+    title: normalizeNullableString(input.title),
+    capturedAt,
+    state,
+    summary: normalizeNullableString(input.summary),
+    diagnostics: Array.isArray(input.diagnostics)
+      ? input.diagnostics
+          .map((entry) => normalizeNullableString(entry))
+          .filter((entry): entry is string => Boolean(entry))
+      : [],
+    redactedKinds: Array.isArray(input.redactedKinds)
+      ? input.redactedKinds
+          .map((entry) => normalizeNullableString(entry))
+          .filter((entry): entry is string => Boolean(entry))
+      : [],
+    codeCandidates: Array.isArray(input.codeCandidates)
+      ? input.codeCandidates
+          .map((entry) => {
+            if (!entry || typeof entry !== "object") {
+              return null;
+            }
+            const candidate = entry as Record<string, unknown>;
+            const filePath = normalizeNullableString(candidate.filePath);
+            const reason = candidate.reason;
+            const confidence = candidate.confidence;
+            if (
+              !filePath ||
+              (
+                reason !== "route_match" &&
+                reason !== "visible_text_match" &&
+                reason !== "landmark_match" &&
+                reason !== "manual_hint"
+              ) ||
+              (confidence !== "high" && confidence !== "medium" && confidence !== "low")
+            ) {
+              return null;
+            }
+            const normalizedReason = reason as NonNullable<
+              TaskRunBrowserEvidenceRef["codeCandidates"]
+            >[number]["reason"];
+            const normalizedConfidence = confidence as NonNullable<
+              TaskRunBrowserEvidenceRef["codeCandidates"]
+            >[number]["confidence"];
+            return {
+              filePath,
+              reason: normalizedReason,
+              confidence: normalizedConfidence,
+              matchedText: normalizeNullableString(candidate.matchedText),
+            };
+          })
+          .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+      : [],
+  };
+}
+
 function normalizeRecoveryActions(value: unknown): TaskRunRecoveryAction[] {
   if (!Array.isArray(value)) {
     return [];
@@ -171,6 +260,7 @@ function normalizeRun(raw: unknown): TaskRunRecord | null {
     latestOutputSummary: normalizeNullableString(input.latestOutputSummary),
     blockedReason: normalizeNullableString(input.blockedReason),
     failureReason: normalizeNullableString(input.failureReason),
+    browserEvidence: normalizeBrowserEvidence(input.browserEvidence),
     artifacts: normalizeArtifacts(input.artifacts),
     availableRecoveryActions: normalizeRecoveryActions(input.availableRecoveryActions),
     startedAt: normalizeFiniteNumber(input.startedAt),
@@ -267,11 +357,36 @@ export function createTaskRunRecord(input: CreateTaskRunInput): TaskRunRecord {
     latestOutputSummary: null,
     blockedReason: null,
     failureReason: null,
+    browserEvidence: null,
     artifacts: [],
     availableRecoveryActions: ["open_conversation", "cancel"],
     startedAt: null,
     updatedAt: now,
     finishedAt: null,
+  };
+}
+
+export function buildTaskRunBrowserEvidenceRef(
+  attachment: BrowserContextSendAttachment,
+): TaskRunBrowserEvidenceRef {
+  return {
+    attachmentId: attachment.attachmentId,
+    browserSessionId: attachment.browserSessionId,
+    snapshotId: attachment.snapshotId,
+    url: attachment.url,
+    title: attachment.title,
+    capturedAt: attachment.capturedAt,
+    state: attachment.stale ? "stale" : "available",
+    summary: attachment.summary,
+    diagnostics: attachment.diagnostics?.map((diagnostic) => diagnostic.message) ?? [],
+    redactedKinds: attachment.privacy.redactedKinds,
+    codeCandidates:
+      attachment.codeCandidates?.map((candidate) => ({
+        filePath: candidate.filePath,
+        reason: candidate.reason,
+        confidence: candidate.confidence,
+        matchedText: candidate.matchedText ?? null,
+      })) ?? [],
   };
 }
 
@@ -306,6 +421,8 @@ export function patchTaskRun(
     engine: run.engine,
     trigger: run.trigger,
     artifacts: patch.artifacts ?? run.artifacts,
+    browserEvidence:
+      patch.browserEvidence === undefined ? run.browserEvidence : patch.browserEvidence,
     availableRecoveryActions:
       patch.availableRecoveryActions ?? run.availableRecoveryActions,
     updatedAt: now,

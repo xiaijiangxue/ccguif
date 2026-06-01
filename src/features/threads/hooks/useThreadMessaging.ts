@@ -12,7 +12,9 @@ import type {
   DebugEntry,
   ReviewTarget,
   WorkspaceInfo,
+  BrowserContextSendAttachment,
 } from "../../../types";
+import type { AutoSessionMetadata } from "../../../services/tauri";
 import {
   extractClaudeForkParentSessionId,
   isClaudeForkThreadId,
@@ -100,6 +102,7 @@ import {
   resolveCodexAcceptedTurnFact,
   shouldDeferCodexActivityUntilTurnAccepted,
 } from "../utils/codexConversationLiveness";
+import { formatBrowserContextPrompt } from "../../browser-agent";
 
 type SendMessageOptions = {
   skipPromptExpansion?: boolean;
@@ -121,7 +124,9 @@ type SendMessageOptions = {
     prompt?: string | null;
     icon?: string | null;
   } | null;
+  browserContextAttachment?: BrowserContextSendAttachment | null;
   codexInvalidThreadRetryAttempted?: boolean;
+  autoSession?: AutoSessionMetadata | null;
 };
 
 type SendMessageToThreadFn = (
@@ -297,6 +302,7 @@ type UseThreadMessagingOptions = {
       activate?: boolean;
       engine?: "claude" | "codex" | "gemini" | "opencode";
       folderId?: string | null;
+      autoSession?: AutoSessionMetadata | null;
     },
   ) => Promise<string | null>;
   resolveOpenCodeAgent?: (threadId: string | null) => string | null;
@@ -621,6 +627,9 @@ export function useThreadMessaging({
       } else {
         clearPendingClaudeMcpOutputNotice(workspace.id, threadId);
       }
+      if (options?.browserContextAttachment) {
+        finalText = `${formatBrowserContextPrompt(options.browserContextAttachment)}\n\n${finalText}`;
+      }
       if (injectionResult.injectedCount > 0 && injectionResult.previewText) {
         dispatch({
           type: "upsertItem",
@@ -848,7 +857,12 @@ export function useThreadMessaging({
       const shouldAddOptimisticUserBubble =
         !options?.suppressUserMessageRender &&
         !options?.skipOptimisticUserBubble &&
-        (resolvedEngine === "codex" || wasProcessing || threadKind === "shared");
+        (
+          resolvedEngine === "codex" ||
+          wasProcessing ||
+          threadKind === "shared" ||
+          Boolean(options?.browserContextAttachment)
+        );
       let optimisticUserItem: Extract<ConversationItem, { kind: "message" }> | null = null;
       let optimisticGeneratedImageItem: Extract<
         ConversationItem,
@@ -858,7 +872,11 @@ export function useThreadMessaging({
         const optimisticDisplayText = visibleUserText;
         const optimisticText = finalText;
         const optimisticImages = finalImages;
-        if (optimisticDisplayText || optimisticImages.length > 0) {
+        if (
+          optimisticDisplayText ||
+          optimisticImages.length > 0 ||
+          options?.browserContextAttachment
+        ) {
           optimisticUserItem = {
             id: `optimistic-user-${Date.now()}-${Math.random()
               .toString(36)
@@ -870,6 +888,7 @@ export function useThreadMessaging({
             collaborationMode: userCollaborationMode,
             selectedAgentName,
             selectedAgentIcon,
+            browserContextAttachment: options?.browserContextAttachment ?? null,
           };
           dispatch({
             type: "upsertItem",
@@ -1420,6 +1439,7 @@ export function useThreadMessaging({
               resolvedEngine === "claude"
                 ? extractClaudeForkParentSessionId(threadId)
                 : null,
+            autoSession: options?.autoSession ?? null,
             ...(customSpecRoot && shouldAttachCliSpecRootHint ? { customSpecRoot } : {}),
           });
 
@@ -2146,6 +2166,13 @@ export function useThreadMessaging({
       const reviewExecutionEngine: "claude" | "codex" =
         activeEngine === "claude" ? "claude" : "codex";
       const threadEngine = resolveThreadEngine(workspaceId, threadId);
+      const reviewAutoSession: AutoSessionMetadata = {
+        sessionPurpose: "review-fallback",
+        visibility: "system-auto",
+        ownerFeature: "review",
+        autoArchive: false,
+        createdBy: "system",
+      };
       const threadIdCompatible = isThreadIdCompatibleWithEngine(
         reviewExecutionEngine,
         threadId,
@@ -2167,6 +2194,7 @@ export function useThreadMessaging({
         const reviewThreadId = await startThreadForWorkspace(workspaceId, {
           activate: workspaceId === activeWorkspace?.id,
           engine: reviewExecutionEngine,
+          autoSession: reviewAutoSession,
         });
         if (!reviewThreadId) {
           return false;
@@ -2196,6 +2224,7 @@ export function useThreadMessaging({
         });
         await sendMessageToThread(reviewWorkspace, threadId, reviewCommand, [], {
           skipPromptExpansion: true,
+          autoSession: reviewAutoSession,
         });
         return true;
       }
@@ -2243,6 +2272,7 @@ export function useThreadMessaging({
           const fallbackThreadId = await startThreadForWorkspace(workspaceId, {
             activate: workspaceId === activeWorkspace?.id,
             engine: "codex",
+            autoSession: reviewAutoSession,
           });
           if (fallbackThreadId && fallbackThreadId !== reviewThreadId) {
             onDebug?.({

@@ -89,17 +89,34 @@
   filter: saturate(1) contrast(1.05);
 }
 
+.fvp-tab-detach,
 .fvp-tab-close {
   border: none;
   background: transparent;
   color: inherit;
-  padding: 3px 4px 3px 2px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 20px;
+  height: 22px;
+  padding: 0;
   border-radius: 0;
   opacity: 0.62;
   transition: background 120ms ease, opacity 120ms ease;
+}
+
+.fvp-tab-detach {
+  border: none;
+  background: transparent;
+  color: #38bdf8;
+  opacity: 1;
+  box-shadow: none;
+}
+
+.fvp-tab-detach svg {
+  color: inherit;
+  opacity: 1;
+  stroke: currentColor;
 }
 
 .fvp-tab-close:hover {
@@ -107,8 +124,27 @@
   opacity: 1;
 }
 
+.fvp-tab-detach:hover {
+  background: transparent;
+  color: #67e8f9;
+  opacity: 1;
+}
+
+.fvp-tab.is-active .fvp-tab-detach,
 .fvp-tab.is-active .fvp-tab-close {
   opacity: 0.9;
+}
+
+.fvp-tab.is-active .fvp-tab-detach {
+  opacity: 1;
+}
+
+:root[data-theme="light"] .fvp-tab-detach {
+  color: #2563eb;
+}
+
+:root[data-theme="light"] .fvp-tab-detach:hover {
+  color: #1d4ed8;
 }
 
 .fvp-tab-context-menu {

@@ -19,6 +19,10 @@ pub(crate) fn client_storage_dir() -> Result<PathBuf, String> {
     Ok(app_home_dir()?.join("client"))
 }
 
+pub(crate) fn error_log_dir() -> Result<PathBuf, String> {
+    Ok(app_home_dir()?.join("error-log"))
+}
+
 pub(crate) fn input_history_file_path() -> Result<PathBuf, String> {
     Ok(app_home_dir()?.join("inputHistory.json"))
 }

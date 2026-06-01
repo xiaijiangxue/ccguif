@@ -648,6 +648,25 @@ describe("useQueuedSend", () => {
     expect(options.sendUserMessage).not.toHaveBeenCalled();
   });
 
+  it("sends /goal text through the normal message path", async () => {
+    const options = makeOptions({
+      activeEngine: "codex",
+    });
+    const { result } = renderHook((props) => useQueuedSend(props), {
+      initialProps: options,
+    });
+
+    await act(async () => {
+      await result.current.handleSend("/goal Ship the migration", ["img-1"]);
+    });
+
+    expect(options.sendUserMessage).toHaveBeenCalled();
+    expect(vi.mocked(options.sendUserMessage).mock.calls[0]?.[0]).toBe(
+      "/goal Ship the migration",
+    );
+    expect(vi.mocked(options.sendUserMessage).mock.calls[0]?.[1]).toEqual(["img-1"]);
+  });
+
   it("routes /compact as claude command and strips images", async () => {
     const startCompact = vi.fn().mockResolvedValue(undefined);
     const options = makeOptions({

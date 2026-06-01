@@ -80,9 +80,11 @@ import {
   deleteWorkspaceSessionFolder,
   assignWorkspaceSessionFolder,
   assignWorkspaceSessionFolders,
+  recordAutoSessionMetadata,
   archiveWorkspaceSessions,
   unarchiveWorkspaceSessions,
   deleteWorkspaceSessions,
+  previewCodexLaunchProfile,
   runCodexDoctor,
   runClaudeDoctor,
   getCliInstallPlan,
@@ -99,8 +101,10 @@ import {
   deleteClaudeSession,
   deleteGeminiSession,
   sendConversationCompletionEmail,
+  appendClientErrorLog,
   exportDiagnosticsBundle,
   hydrateClaudeDeferredImage,
+  setMainWindowOpacity,
 } from "./tauri";
 import { resetRuntimeModeStateForTests } from "./tauri/runtimeMode";
 import {
@@ -174,6 +178,23 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("add_workspace", {
       path: "/tmp/project",
       codex_bin: null,
+    });
+  });
+
+  it("maps native window opacity requests to the Tauri command", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({
+      requestedOpacity: 0.72,
+      appliedOpacity: 0.72,
+      applied: true,
+      platform: "macos",
+      reason: null,
+    });
+
+    await setMainWindowOpacity(0.72);
+
+    expect(invokeMock).toHaveBeenCalledWith("set_main_window_opacity", {
+      opacity: 0.72,
     });
   });
 
@@ -298,6 +319,35 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("export_diagnostics_bundle");
   });
 
+  it("invokes global client error log append command", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({
+      filePath: "/Users/demo/.ccgui/error-log/2026-05-29.jsonl",
+    });
+
+    await expect(
+      appendClientErrorLog({
+        schemaVersion: 1,
+        timestamp: "2026-05-29T12:00:00.000Z",
+        source: "error",
+        label: "terminal write error",
+        payload: { workspaceId: "ws-1" },
+      }),
+    ).resolves.toEqual({
+      filePath: "/Users/demo/.ccgui/error-log/2026-05-29.jsonl",
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("append_client_error_log", {
+      entry: {
+        schemaVersion: 1,
+        timestamp: "2026-05-29T12:00:00.000Z",
+        source: "error",
+        label: "terminal write error",
+        payload: { workspaceId: "ws-1" },
+      },
+    });
+  });
+
   it("passes custom skill roots to the skills_list command", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce([]);
@@ -319,6 +369,25 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("codex_doctor", {
       codexBin: "/bin/codex",
       codexArgs: "--profile demo",
+    });
+  });
+
+  it("invokes codex launch profile preview with workspace draft inputs", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({ ok: true });
+
+    await previewCodexLaunchProfile({
+      codexBin: "/bin/codex",
+      codexArgs: "--profile demo",
+      workspaceId: "ws-1",
+      useWorkspaceDraft: true,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("codex_preview_launch_profile", {
+      codexBin: "/bin/codex",
+      codexArgs: "--profile demo",
+      workspaceId: "ws-1",
+      useWorkspaceDraft: true,
     });
   });
 
@@ -1003,6 +1072,29 @@ describe("tauri invoke wrappers", () => {
         workspaceId: "ws-2",
         sessionIds: ["claude:1", "codex-2"],
         folderId: null,
+      },
+    );
+
+    await recordAutoSessionMetadata("ws-2", "codex:auto-1", {
+      sessionPurpose: "prompt-enhancer",
+      visibility: "hidden",
+      ownerFeature: "composer",
+      autoArchive: true,
+      createdBy: "system",
+    });
+    expect(invokeMock).toHaveBeenNthCalledWith(
+      8,
+      "record_auto_session_metadata",
+      {
+        workspaceId: "ws-2",
+        sessionId: "codex:auto-1",
+        metadata: {
+          sessionPurpose: "prompt-enhancer",
+          visibility: "hidden",
+          ownerFeature: "composer",
+          autoArchive: true,
+          createdBy: "system",
+        },
       },
     );
   });
@@ -1788,6 +1880,35 @@ describe("tauri invoke wrappers", () => {
     });
   });
 
+  it("passes skipped question ids with user input responses", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await respondToUserInputRequest(
+      "ws-9",
+      404,
+      {
+        first: { answers: ["Docs"] },
+        second: { answers: [] },
+      },
+      { skippedQuestionIds: ["second"] },
+    );
+
+    expect(invokeMock).toHaveBeenCalledWith("respond_to_server_request", {
+      workspaceId: "ws-9",
+      requestId: 404,
+      result: {
+        answers: {
+          first: { answers: ["Docs"] },
+          second: { answers: [] },
+        },
+        skippedQuestionIds: ["second"],
+      },
+      threadId: null,
+      turnId: null,
+    });
+  });
+
   it("lists thread titles for a workspace", async () => {
     const invokeMock = vi.mocked(invoke);
     invokeMock.mockResolvedValueOnce({ "thread-1": "Fix login flow" });
@@ -2077,6 +2198,7 @@ describe("tauri invoke wrappers", () => {
       agent: null,
       variant: null,
       customSpecRoot: null,
+      autoSession: null,
     });
   });
 
@@ -2108,6 +2230,51 @@ describe("tauri invoke wrappers", () => {
       agent: null,
       variant: null,
       customSpecRoot: "/tmp/external-openspec",
+      autoSession: null,
+    });
+  });
+
+  it("maps automatic session metadata in sync engine send payload", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({
+      engine: "codex",
+      text: "ok",
+    });
+
+    await engineSendMessageSync("ws-auto", {
+      text: "enhance prompt",
+      engine: "codex",
+      autoSession: {
+        sessionPurpose: "prompt-enhancer",
+        visibility: "hidden",
+        ownerFeature: "composer",
+        autoArchive: true,
+        createdBy: "system",
+      },
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("engine_send_message_sync", {
+      workspaceId: "ws-auto",
+      text: "enhance prompt",
+      engine: "codex",
+      model: null,
+      effort: null,
+      disableThinking: false,
+      images: null,
+      continueSession: false,
+      accessMode: null,
+      sessionId: null,
+      forkSessionId: null,
+      agent: null,
+      variant: null,
+      customSpecRoot: null,
+      autoSession: {
+        sessionPurpose: "prompt-enhancer",
+        visibility: "hidden",
+        ownerFeature: "composer",
+        autoArchive: true,
+        createdBy: "system",
+      },
     });
   });
 
@@ -2185,6 +2352,7 @@ describe("tauri invoke wrappers", () => {
       agent: null,
       variant: null,
       customSpecRoot: null,
+      autoSession: null,
     });
   });
 
@@ -2219,6 +2387,7 @@ describe("tauri invoke wrappers", () => {
       agent: null,
       variant: null,
       customSpecRoot: null,
+      autoSession: null,
     });
   });
 
@@ -2249,6 +2418,7 @@ describe("tauri invoke wrappers", () => {
       agent: null,
       variant: null,
       customSpecRoot: null,
+      autoSession: null,
     });
   });
 

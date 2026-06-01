@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DebugEntry, WorkspaceInfo } from "../../../types";
-import { getWorkspaceFiles } from "../../../services/tauri";
+import { getWorkspaceDirectoryChildren, getWorkspaceFiles } from "../../../services/tauri";
 import type {
   WorkspaceDirectoryEntry,
+  WorkspaceFilesResponse,
   WorkspaceFileScanState,
 } from "../../../services/tauri";
 
@@ -10,6 +11,7 @@ const WORKSPACE_FILES_DEBUG_KEY = "ccgui.debug.workspace-files";
 const WORKSPACE_FILES_SLOW_REQUEST_MS = 800;
 const INITIAL_RETRY_DELAY_MS = 1_500;
 const MAX_INITIAL_RETRY_ATTEMPTS = 1;
+const MAX_ROOT_SNAPSHOT_CACHE_ENTRIES = 12;
 
 function isWorkspaceFilesDebugEnabled() {
   if (typeof window === "undefined") {
@@ -25,6 +27,15 @@ function normalizeErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function isRootDirectorySentinelCompatibilityError(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("path cannot be empty") ||
+    normalized.includes("directory path cannot be empty") ||
+    normalized.includes("invalid directory path")
+  );
+}
+
 function normalizeDirectoryEntries(entries: unknown): WorkspaceDirectoryEntry[] {
   if (!Array.isArray(entries)) {
     return [];
@@ -36,6 +47,59 @@ function normalizeDirectoryEntries(entries: unknown): WorkspaceDirectoryEntry[] 
     const candidate = entry as Partial<WorkspaceDirectoryEntry>;
     return typeof candidate.path === "string" && typeof candidate.child_state === "string";
   });
+}
+
+type NormalizedWorkspaceFilesSnapshot = {
+  files: string[];
+  directories: string[];
+  gitignoredFiles: string[];
+  gitignoredDirectories: string[];
+  scanState: WorkspaceFileScanState;
+  limitHit: boolean;
+  directoryMetadata: WorkspaceDirectoryEntry[];
+};
+
+function normalizeWorkspaceFilesSnapshot(
+  response: WorkspaceFilesResponse,
+): NormalizedWorkspaceFilesSnapshot {
+  return {
+    files: Array.isArray(response.files) ? response.files : [],
+    directories: Array.isArray(response.directories) ? response.directories : [],
+    gitignoredFiles: Array.isArray(response.gitignored_files) ? response.gitignored_files : [],
+    gitignoredDirectories: Array.isArray(response.gitignored_directories)
+      ? response.gitignored_directories
+      : [],
+    scanState: response.scan_state === "partial" ? "partial" : "complete",
+    limitHit: Boolean(response.limit_hit),
+    directoryMetadata: normalizeDirectoryEntries(response.directory_entries),
+  };
+}
+
+function isWorkspaceRootChildPath(path: string) {
+  return path.length > 0 && !path.includes("/") && !path.includes("\\");
+}
+
+function toRootOnlyWorkspaceFilesSnapshot(
+  snapshot: NormalizedWorkspaceFilesSnapshot,
+): NormalizedWorkspaceFilesSnapshot {
+  const rootDirectoryMetadataByPath = new Map(
+    snapshot.directoryMetadata
+      .filter((entry) => isWorkspaceRootChildPath(entry.path))
+      .map((entry) => [entry.path, entry]),
+  );
+  const directories = snapshot.directories.filter(isWorkspaceRootChildPath);
+
+  return {
+    files: snapshot.files.filter(isWorkspaceRootChildPath),
+    directories,
+    gitignoredFiles: snapshot.gitignoredFiles.filter(isWorkspaceRootChildPath),
+    gitignoredDirectories: snapshot.gitignoredDirectories.filter(isWorkspaceRootChildPath),
+    scanState: snapshot.scanState,
+    limitHit: snapshot.limitHit,
+    directoryMetadata: directories.map(
+      (path) => rootDirectoryMetadataByPath.get(path) ?? { path, child_state: "unknown" },
+    ),
+  };
 }
 
 type UseWorkspaceFilesOptions = {
@@ -64,7 +128,9 @@ export function useWorkspaceFiles({
   const [loadError, setLoadError] = useState<string | null>(null);
   const hasLoadedWorkspaceId = useRef<string | null>(null);
   const latestWorkspaceIdRef = useRef<string | null>(null);
-  const inFlight = useRef<string | null>(null);
+  const isMountedRef = useRef(false);
+  const inFlightWorkspaceIds = useRef<Set<string>>(new Set());
+  const rootSnapshotCache = useRef<Map<string, NormalizedWorkspaceFilesSnapshot>>(new Map());
   const consecutiveFailures = useRef(0);
   const retryAttemptsByWorkspaceId = useRef<Map<string, number>>(new Map());
   const initialRetryTimer = useRef<number | null>(null);
@@ -101,19 +167,56 @@ export function useWorkspaceFiles({
     [clearInitialRetryTimer],
   );
 
+  const rememberWorkspaceFilesSnapshot = useCallback(
+    (requestWorkspaceId: string, snapshot: NormalizedWorkspaceFilesSnapshot) => {
+      rootSnapshotCache.current.delete(requestWorkspaceId);
+      rootSnapshotCache.current.set(requestWorkspaceId, snapshot);
+      while (rootSnapshotCache.current.size > MAX_ROOT_SNAPSHOT_CACHE_ENTRIES) {
+        const oldestWorkspaceId = rootSnapshotCache.current.keys().next().value;
+        if (!oldestWorkspaceId) {
+          break;
+        }
+        rootSnapshotCache.current.delete(oldestWorkspaceId);
+      }
+    },
+    [],
+  );
+
+  const applyWorkspaceFilesSnapshot = useCallback(
+    (requestWorkspaceId: string, snapshot: NormalizedWorkspaceFilesSnapshot) => {
+      if (!isMountedRef.current || requestWorkspaceId !== latestWorkspaceIdRef.current) {
+        return false;
+      }
+      setFiles(snapshot.files);
+      setDirectories(snapshot.directories);
+      setGitignoredFiles(new Set(snapshot.gitignoredFiles));
+      setGitignoredDirectories(new Set(snapshot.gitignoredDirectories));
+      setScanState(snapshot.scanState);
+      setLimitHit(snapshot.limitHit);
+      setDirectoryMetadata(snapshot.directoryMetadata);
+      setLoadError(null);
+      hasLoadedWorkspaceId.current = requestWorkspaceId;
+      consecutiveFailures.current = 0;
+      retryAttemptsByWorkspaceId.current.delete(requestWorkspaceId);
+      clearInitialRetryTimer();
+      return true;
+    },
+    [clearInitialRetryTimer],
+  );
+
   const refreshFiles = useCallback(async (
     reason: "initial" | "retry" | "poll" | "manual" = "manual",
   ) => {
     if (!workspaceId || !isConnected) {
       return;
     }
-    if (inFlight.current === workspaceId) {
+    if (inFlightWorkspaceIds.current.has(workspaceId)) {
       return;
     }
-    inFlight.current = workspaceId;
+    inFlightWorkspaceIds.current.add(workspaceId);
     const requestWorkspaceId = workspaceId;
     const isFirstLoadForWorkspace = hasLoadedWorkspaceId.current !== workspaceId;
-    if (reason !== "poll" || isFirstLoadForWorkspace) {
+    if (reason === "manual" || (reason !== "poll" && isFirstLoadForWorkspace)) {
       setIsLoading(true);
     }
     const startedAt = Date.now();
@@ -125,17 +228,9 @@ export function useWorkspaceFiles({
       payload: { workspaceId: requestWorkspaceId, reason },
     });
     try {
-      const response = await getWorkspaceFiles(requestWorkspaceId);
+      const response = await getWorkspaceDirectoryChildren(requestWorkspaceId, "");
       const elapsedMs = Date.now() - startedAt;
-      const nextFiles = Array.isArray(response.files) ? response.files : [];
-      const nextDirectories = Array.isArray(response.directories) ? response.directories : [];
-      const ignored = Array.isArray(response.gitignored_files) ? response.gitignored_files : [];
-      const ignoredDirectories = Array.isArray(response.gitignored_directories)
-        ? response.gitignored_directories
-        : [];
-      const nextScanState = response.scan_state === "partial" ? "partial" : "complete";
-      const nextLimitHit = Boolean(response.limit_hit);
-      const nextDirectoryMetadata = normalizeDirectoryEntries(response.directory_entries);
+      const snapshot = normalizeWorkspaceFilesSnapshot(response);
       if (
         import.meta.env.DEV &&
         (elapsedMs >= WORKSPACE_FILES_SLOW_REQUEST_MS ||
@@ -145,13 +240,13 @@ export function useWorkspaceFiles({
           workspaceId: requestWorkspaceId,
           reason,
           ms: elapsedMs,
-          files: nextFiles.length,
-          directories: nextDirectories.length,
-          gitignoredFiles: ignored.length,
-          gitignoredDirectories: ignoredDirectories.length,
-          scanState: nextScanState,
-          limitHit: nextLimitHit,
-          directoryEntries: nextDirectoryMetadata.length,
+          files: snapshot.files.length,
+          directories: snapshot.directories.length,
+          gitignoredFiles: snapshot.gitignoredFiles.length,
+          gitignoredDirectories: snapshot.gitignoredDirectories.length,
+          scanState: snapshot.scanState,
+          limitHit: snapshot.limitHit,
+          directoryEntries: snapshot.directoryMetadata.length,
         });
       }
       onDebug?.({
@@ -163,34 +258,88 @@ export function useWorkspaceFiles({
           workspaceId: requestWorkspaceId,
           reason,
           ms: elapsedMs,
-          files: nextFiles.length,
-          directories: nextDirectories.length,
-          gitignoredFiles: ignored.length,
-          gitignoredDirectories: ignoredDirectories.length,
-          scanState: nextScanState,
-          limitHit: nextLimitHit,
-          directoryEntries: nextDirectoryMetadata.length,
+          files: snapshot.files.length,
+          directories: snapshot.directories.length,
+          gitignoredFiles: snapshot.gitignoredFiles.length,
+          gitignoredDirectories: snapshot.gitignoredDirectories.length,
+          scanState: snapshot.scanState,
+          limitHit: snapshot.limitHit,
+          directoryEntries: snapshot.directoryMetadata.length,
         },
       });
-      if (requestWorkspaceId === latestWorkspaceIdRef.current) {
-        setFiles(nextFiles);
-        setDirectories(nextDirectories);
-        setGitignoredFiles(new Set(ignored));
-        setGitignoredDirectories(new Set(ignoredDirectories));
-        setScanState(nextScanState);
-        setLimitHit(nextLimitHit);
-        setDirectoryMetadata(nextDirectoryMetadata);
-        setLoadError(null);
-        hasLoadedWorkspaceId.current = requestWorkspaceId;
-        consecutiveFailures.current = 0;
-        retryAttemptsByWorkspaceId.current.delete(requestWorkspaceId);
-        clearInitialRetryTimer();
-      }
+      rememberWorkspaceFilesSnapshot(requestWorkspaceId, snapshot);
+      applyWorkspaceFilesSnapshot(requestWorkspaceId, snapshot);
     } catch (error) {
       const elapsedMs = Date.now() - startedAt;
       const message = normalizeErrorMessage(error);
-      consecutiveFailures.current += 1;
-      if (requestWorkspaceId === latestWorkspaceIdRef.current) {
+      const isCurrentWorkspaceResponse =
+        isMountedRef.current && requestWorkspaceId === latestWorkspaceIdRef.current;
+      const canFallbackToFullSnapshot =
+        isCurrentWorkspaceResponse &&
+        reason !== "poll" &&
+        isRootDirectorySentinelCompatibilityError(message) &&
+        hasLoadedWorkspaceId.current !== requestWorkspaceId &&
+        !rootSnapshotCache.current.has(requestWorkspaceId);
+      if (canFallbackToFullSnapshot) {
+        const fallbackStartedAt = Date.now();
+        onDebug?.({
+          id: `${fallbackStartedAt}-client-files-list-fallback`,
+          timestamp: fallbackStartedAt,
+          source: "client",
+          label: "files/list fallback",
+          payload: {
+            workspaceId: requestWorkspaceId,
+            reason,
+            rootError: message,
+          },
+        });
+        try {
+          const fallbackResponse = await getWorkspaceFiles(requestWorkspaceId);
+          const fallbackElapsedMs = Date.now() - fallbackStartedAt;
+          const fallbackSnapshot = normalizeWorkspaceFilesSnapshot(fallbackResponse);
+          const fallbackRootSnapshot = toRootOnlyWorkspaceFilesSnapshot(fallbackSnapshot);
+          rememberWorkspaceFilesSnapshot(requestWorkspaceId, fallbackRootSnapshot);
+          const applied = applyWorkspaceFilesSnapshot(requestWorkspaceId, fallbackRootSnapshot);
+          onDebug?.({
+            id: `${Date.now()}-server-files-list-fallback-response`,
+            timestamp: Date.now(),
+            source: "server",
+            label: "files/list fallback response",
+            payload: {
+              workspaceId: requestWorkspaceId,
+              reason,
+              ms: fallbackElapsedMs,
+              applied,
+              files: fallbackRootSnapshot.files.length,
+              directories: fallbackRootSnapshot.directories.length,
+              fullSnapshotFiles: fallbackSnapshot.files.length,
+              fullSnapshotDirectories: fallbackSnapshot.directories.length,
+              scanState: fallbackRootSnapshot.scanState,
+              limitHit: fallbackRootSnapshot.limitHit,
+              rootError: message,
+            },
+          });
+          return;
+        } catch (fallbackError) {
+          const fallbackMessage = normalizeErrorMessage(fallbackError);
+          onDebug?.({
+            id: `${Date.now()}-client-files-list-fallback-error`,
+            timestamp: Date.now(),
+            source: "error",
+            label: "files/list fallback error",
+            payload: {
+              workspaceId: requestWorkspaceId,
+              reason,
+              rootError: message,
+              fallbackError: fallbackMessage,
+            },
+          });
+        }
+      }
+      if (isCurrentWorkspaceResponse) {
+        consecutiveFailures.current += 1;
+      }
+      if (isCurrentWorkspaceResponse) {
         setLoadError(message);
         if (reason === "initial") {
           scheduleInitialRetry(requestWorkspaceId);
@@ -202,6 +351,7 @@ export function useWorkspaceFiles({
           reason,
           ms: elapsedMs,
           failureCount: consecutiveFailures.current,
+          stale: !isCurrentWorkspaceResponse,
           error: message,
         });
       }
@@ -215,18 +365,20 @@ export function useWorkspaceFiles({
           reason,
           ms: elapsedMs,
           failureCount: consecutiveFailures.current,
+          stale: !isCurrentWorkspaceResponse,
           message,
         },
       });
     } finally {
-      if (inFlight.current === requestWorkspaceId) {
-        inFlight.current = null;
+      inFlightWorkspaceIds.current.delete(requestWorkspaceId);
+      if (isMountedRef.current && requestWorkspaceId === latestWorkspaceIdRef.current) {
         setIsLoading(false);
       }
     }
   }, [
-    clearInitialRetryTimer,
+    applyWorkspaceFilesSnapshot,
     isConnected,
+    rememberWorkspaceFilesSnapshot,
     onDebug,
     scheduleInitialRetry,
     workspaceId,
@@ -237,6 +389,32 @@ export function useWorkspaceFiles({
   }, [refreshFiles]);
 
   useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useLayoutEffect(() => {
+    setLoadError(null);
+    consecutiveFailures.current = 0;
+    retryAttemptsByWorkspaceId.current.clear();
+    clearInitialRetryTimer();
+    const cachedSnapshot = workspaceId
+      ? rootSnapshotCache.current.get(workspaceId)
+      : undefined;
+    if (workspaceId && initialLoadEnabled && cachedSnapshot) {
+      setFiles(cachedSnapshot.files);
+      setDirectories(cachedSnapshot.directories);
+      setGitignoredFiles(new Set(cachedSnapshot.gitignoredFiles));
+      setGitignoredDirectories(new Set(cachedSnapshot.gitignoredDirectories));
+      setScanState(cachedSnapshot.scanState);
+      setLimitHit(cachedSnapshot.limitHit);
+      setDirectoryMetadata(cachedSnapshot.directoryMetadata);
+      hasLoadedWorkspaceId.current = workspaceId;
+      setIsLoading(false);
+      return;
+    }
     setFiles([]);
     setDirectories([]);
     setGitignoredFiles(new Set());
@@ -244,12 +422,7 @@ export function useWorkspaceFiles({
     setScanState("complete");
     setLimitHit(false);
     setDirectoryMetadata([]);
-    setLoadError(null);
     hasLoadedWorkspaceId.current = null;
-    inFlight.current = null;
-    consecutiveFailures.current = 0;
-    retryAttemptsByWorkspaceId.current.clear();
-    clearInitialRetryTimer();
     setIsLoading(Boolean(workspaceId && initialLoadEnabled));
   }, [clearInitialRetryTimer, initialLoadEnabled, workspaceId]);
 
@@ -265,7 +438,11 @@ export function useWorkspaceFiles({
     setIsLoading(true);
   }, [initialLoadEnabled, isConnected, workspaceId]);
 
-  useEffect(() => clearInitialRetryTimer, [clearInitialRetryTimer]);
+  useEffect(() => {
+    return () => {
+      clearInitialRetryTimer();
+    };
+  }, [clearInitialRetryTimer]);
 
   useEffect(() => {
     if (!workspaceId || !isConnected || !initialLoadEnabled) {

@@ -6,6 +6,7 @@ import { useWorkspaceActions } from "./useWorkspaceActions";
 import { ask } from "@tauri-apps/plugin-dialog";
 import {
   ensureRuntimeReady,
+  isWebServiceRuntime,
   openNewWindow,
   pickWorkspacePath,
 } from "../../../services/tauri";
@@ -51,6 +52,7 @@ vi.mock("../../../services/tauri", () => ({
   openNewWindow: vi.fn(async () => undefined),
   pickWorkspacePath: vi.fn(async () => null),
   ensureRuntimeReady: vi.fn(async () => undefined),
+  isWebServiceRuntime: vi.fn(() => false),
 }));
 
 vi.mock("../../../services/toasts", () => ({
@@ -97,6 +99,7 @@ function makeOptions(overrides?: Partial<Parameters<typeof useWorkspaceActions>[
 describe("useWorkspaceActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(isWebServiceRuntime).mockReturnValue(false);
     vi.stubGlobal("alert", vi.fn());
   });
 
@@ -169,6 +172,65 @@ describe("useWorkspaceActions", () => {
       message: "add:new-repo",
     });
     expect(options.hideLoadingProgressDialog).toHaveBeenCalledWith("loading-1");
+  });
+
+  it("uses manual remote path entry in web service runtime", async () => {
+    vi.mocked(isWebServiceRuntime).mockReturnValue(true);
+    vi.stubGlobal("prompt", vi.fn(() => "  /home/user/project  "));
+    const options = makeOptions({
+      addWorkspaceFromPath: vi.fn(async () => ({
+        id: "ws-2",
+        name: "project",
+        path: "/home/user/project",
+        connected: true,
+        settings: { sidebarCollapsed: false },
+      })),
+    });
+    const { result } = renderHook(() => useWorkspaceActions(options));
+
+    await act(async () => {
+      await result.current.handleAddWorkspace();
+    });
+
+    expect(pickWorkspacePath).not.toHaveBeenCalled();
+    expect(ask).not.toHaveBeenCalled();
+    expect(options.addWorkspaceFromPath).toHaveBeenCalledWith("/home/user/project");
+    expect(options.showLoadingProgressDialog).toHaveBeenCalledWith({
+      title: "workspace.loadingProgressAddProjectTitle",
+      message: "add:project",
+    });
+  });
+
+  it("does not add workspace when web service remote path entry is blank", async () => {
+    vi.mocked(isWebServiceRuntime).mockReturnValue(true);
+    vi.stubGlobal("prompt", vi.fn(() => "   "));
+    const options = makeOptions();
+    const { result } = renderHook(() => useWorkspaceActions(options));
+
+    await act(async () => {
+      await result.current.handleAddWorkspace();
+    });
+
+    expect(pickWorkspacePath).not.toHaveBeenCalled();
+    expect(ask).not.toHaveBeenCalled();
+    expect(options.addWorkspaceFromPath).not.toHaveBeenCalled();
+    expect(options.showLoadingProgressDialog).not.toHaveBeenCalled();
+  });
+
+  it("does not add workspace when web service remote path entry is cancelled", async () => {
+    vi.mocked(isWebServiceRuntime).mockReturnValue(true);
+    vi.stubGlobal("prompt", vi.fn(() => null));
+    const options = makeOptions();
+    const { result } = renderHook(() => useWorkspaceActions(options));
+
+    await act(async () => {
+      await result.current.handleAddWorkspace();
+    });
+
+    expect(pickWorkspacePath).not.toHaveBeenCalled();
+    expect(ask).not.toHaveBeenCalled();
+    expect(options.addWorkspaceFromPath).not.toHaveBeenCalled();
+    expect(options.showLoadingProgressDialog).not.toHaveBeenCalled();
   });
 
   it("opens new window when mode is new-window", async () => {

@@ -6,11 +6,16 @@ import { HomeChat } from "../../home/components/HomeChat";
 import { MainHeader } from "../../app/components/MainHeader";
 import { TopbarSessionTabs } from "../../app/components/TopbarSessionTabs";
 import { Messages } from "../../messages/components/Messages";
+import { MessageForkConfirmDialog } from "../../messages/components/MessageForkConfirmDialog";
 import { UpdateToast } from "../../update/components/UpdateToast";
 import { ErrorToasts } from "../../notifications/components/ErrorToasts";
 import { GlobalRuntimeNoticeDock } from "../../notifications/components/GlobalRuntimeNoticeDock";
-import { Composer } from "../../composer/components/Composer";
+import {
+  Composer,
+  type ComposerRewindDialogRequest,
+} from "../../composer/components/Composer";
 import { GitDiffViewer } from "../../git/components/GitDiffViewer";
+import { buildCanonicalGitChanges } from "../../git/utils/gitChangeModel";
 import { FileTreePanel } from "../../files/components/FileTreePanel";
 import {
   clampRendererContextMenuPosition,
@@ -24,6 +29,8 @@ import { ProjectMapPanel, type ProjectMapDatasetController } from "../../project
 import { WorkspaceNoteCardPanel } from "../../note-cards/components/WorkspaceNoteCardPanel";
 import { WorkspaceSessionActivityPanel } from "../../session-activity/components/WorkspaceSessionActivityPanel";
 import { WorkspaceSessionRadarPanel } from "../../session-activity/components/WorkspaceSessionRadarPanel";
+import { BrowserDock } from "../../browser-agent/components/BrowserDock";
+import { requestBrowserContextAttachment } from "../../browser-agent/state/browserContextAttachmentCommands";
 import { DebugPanel } from "../../debug/components/DebugPanel";
 import { PanelTabs } from "../components/PanelTabs";
 import { TabBar } from "../../app/components/TabBar";
@@ -312,6 +319,7 @@ type LayoutNodesOptions = {
     threadId: string,
     message: Pick<QueuedMessage, "text" | "images">,
   ) => Promise<RuntimeReconnectRecoveryCallbackResult> | RuntimeReconnectRecoveryCallbackResult;
+  onThreadRecoveryFork?: () => Promise<void> | void;
   handleExitPlanModeExecute?: (
     mode: Extract<AccessMode, "default" | "full-access">,
   ) => Promise<void> | void;
@@ -392,6 +400,7 @@ type LayoutNodesOptions = {
   hideLoadingProgressDialog?: (requestId: string) => void;
   cycleOpenSessionPrevShortcut: string | null;
   cycleOpenSessionNextShortcut: string | null;
+  closeCurrentSessionShortcut: string | null;
   saveFileShortcut: string | null;
   findInFileShortcut: string | null;
   toggleGitDiffListViewShortcut: string | null;
@@ -439,6 +448,8 @@ type LayoutNodesOptions = {
   onSaveLaunchScript: () => void;
   launchScriptsState?: WorkspaceLaunchScriptsState;
   mainHeaderActionsNode?: ReactNode;
+  browserDockOpen?: boolean;
+  onCloseBrowserDock?: () => void;
   centerMode: "chat" | "diff" | "editor" | "memory" | "projectMap";
   setCenterMode: (mode: "chat" | "diff" | "editor" | "memory" | "projectMap") => void;
   editorSplitCompanion: "chat" | "projectMap";
@@ -619,6 +630,7 @@ type LayoutNodesOptions = {
     userMessageId: string,
     options?: { mode?: "messages-and-files" | "messages-only" | "files-only" },
   ) => void | Promise<void>;
+  onForkFromMessage?: (userMessageId: string) => void | Promise<void>;
   canStop: boolean;
   isReviewing: boolean;
   isProcessing: boolean;
@@ -792,6 +804,7 @@ type LayoutNodesResult = {
   gitDiffViewerNode: ReactNode;
   fileViewPanelNode: ReactNode;
   projectMapPanelNode: ReactNode;
+  browserDockNode: ReactNode;
   planPanelNode: ReactNode;
   debugPanelNode: ReactNode;
   debugPanelFullNode: ReactNode;
@@ -882,6 +895,11 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     tab: TabType;
     requestKey: number;
   } | null>(null);
+  const [rewindDialogRequest, setRewindDialogRequest] =
+    useState<ComposerRewindDialogRequest | null>(null);
+  const [forkConfirmUserMessageId, setForkConfirmUserMessageId] =
+    useState<string | null>(null);
+  const rewindDialogRequestSerialRef = useRef(0);
   const activeThreadStatus = options.activeThreadId
     ? options.threadStatusById[options.activeThreadId] ?? null
     : null;
@@ -1033,6 +1051,21 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
   );
   const activeWorkspacePath = options.activeWorkspace?.path ?? null;
   const gitDiffItems = options.gitDiffs;
+  const canonicalGitPanelChanges = useMemo(
+    () =>
+      buildCanonicalGitChanges({
+        files: options.gitStatus.files,
+        stagedFiles: options.gitStatus.stagedFiles,
+        unstagedFiles: options.gitStatus.unstagedFiles,
+        diffs: options.gitDiffs,
+      }),
+    [
+      options.gitDiffs,
+      options.gitStatus.files,
+      options.gitStatus.stagedFiles,
+      options.gitStatus.unstagedFiles,
+    ],
+  );
   const onGitDiffListViewChange = options.onGitDiffListViewChange;
   const onSelectDiff = options.onSelectDiff;
   const handleOpenDiffPath = useCallback(
@@ -1298,6 +1331,37 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     },
     [selectedThreadId, selectedWorkspaceId, selectThread, selectWorkspace],
   );
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) {
+        return;
+      }
+      if (!matchesShortcutForPlatform(event, options.closeCurrentSessionShortcut)) {
+        return;
+      }
+      event.preventDefault();
+      if (!options.activeWorkspaceId || !options.activeThreadId) {
+        return;
+      }
+      applyTopbarWindowMutation(
+        (windows) =>
+          dismissTopbarSessionTab(
+            windows,
+            options.activeWorkspaceId ?? "",
+            options.activeThreadId ?? "",
+          ),
+        options.activeWorkspaceId,
+      );
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    applyTopbarWindowMutation,
+    options.activeThreadId,
+    options.activeWorkspaceId,
+    options.closeCurrentSessionShortcut,
+  ]);
   const threadStatusById = options.threadStatusById;
   const showTopbarTabMenu = useCallback(
     (
@@ -1564,51 +1628,99 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     setLocalClaudeThinkingVisible((previous) => (previous === enabled ? previous : enabled));
     onResolvedClaudeThinkingVisibleChange?.(enabled);
   }, [onResolvedClaudeThinkingVisibleChange]);
+  const onForkFromMessage = options.onForkFromMessage;
+  const handleOpenForkConfirmFromMessage = useCallback((messageId: string) => {
+    const normalizedMessageId = messageId.trim();
+    if (!normalizedMessageId) {
+      return;
+    }
+    setForkConfirmUserMessageId(normalizedMessageId);
+  }, []);
+  const handleCancelForkConfirm = useCallback(() => {
+    setForkConfirmUserMessageId(null);
+  }, []);
+  const handleConfirmForkFromMessage = useCallback(
+    async (messageId: string) => {
+      await onForkFromMessage?.(messageId);
+    },
+    [onForkFromMessage],
+  );
+  const handleOpenRewindDialogFromMessage = useCallback((messageId: string) => {
+    const normalizedMessageId = messageId.trim();
+    if (!normalizedMessageId) {
+      return;
+    }
+    const nextRequestId = rewindDialogRequestSerialRef.current + 1;
+    rewindDialogRequestSerialRef.current = nextRequestId;
+    setRewindDialogRequest({
+      requestId: nextRequestId,
+      userMessageId: normalizedMessageId,
+    });
+  }, []);
+  const handleRewindDialogRequestConsumed = useCallback((requestId: number) => {
+    setRewindDialogRequest((current) =>
+      current?.requestId === requestId ? null : current,
+    );
+  }, []);
 
   const messagesNode = useMemo(() => (
-    <Messages
-      items={options.activeItems}
-      threadId={options.activeThreadId ?? null}
-      workspaceId={options.activeWorkspace?.id ?? null}
-      workspacePath={options.activeWorkspace?.path ?? null}
-      openTargets={options.openAppTargets}
-      selectedOpenAppId={options.selectedOpenAppId}
-      showMessageAnchors={showMessageAnchors}
-      showStickyUserBubble={showStickyUserBubble}
-      codeBlockCopyUseModifier={options.codeBlockCopyUseModifier}
-      userInputRequests={options.userInputRequests}
-      approvals={options.approvals}
-      workspaces={options.workspaces}
-      onUserInputSubmit={options.handleUserInputSubmit}
-      onUserInputDismiss={options.handleUserInputDismiss}
-      onRecoverThreadRuntime={options.onRecoverThreadRuntime}
-      onRecoverThreadRuntimeAndResend={options.onRecoverThreadRuntimeAndResend}
-      onApprovalDecision={options.handleApprovalDecision}
-      onApprovalBatchAccept={options.handleApprovalBatchAccept}
-      onApprovalRemember={options.handleApprovalRemember}
-      conversationState={conversationState}
-      presentationProfile={presentationProfile}
-      activeEngine={conversationEngine}
-      claudeThinkingVisible={claudeThinkingVisible}
-      activeCollaborationModeId={options.selectedCollaborationModeId}
-      plan={options.plan}
-      isPlanMode={options.isPlanMode}
-      isPlanProcessing={options.isProcessing}
-      onOpenDiffPath={handleOpenDiffPath}
-      onOpenPlanPanel={options.onOpenPlanPanel}
-      onExitPlanModeExecute={options.handleExitPlanModeExecute}
-      onOpenWorkspaceFile={options.onOpenFile}
-      agentTaskScrollRequest={options.agentTaskScrollRequest}
-      isThinking={isThreadThinking}
-      isHistoryLoading={activeThreadHistoryLoading}
-      isContextCompacting={activeThreadStatus?.isContextCompacting ?? false}
-      proxyEnabled={options.systemProxyEnabled}
-      proxyUrl={options.systemProxyUrl}
-      processingStartedAt={activeThreadStatus?.processingStartedAt ?? null}
-      lastDurationMs={activeThreadStatus?.lastDurationMs ?? null}
-      heartbeatPulse={heartbeatPulseRef.current ?? 0}
-      codexSilentSuspectedAt={activeThreadStatus?.codexSilentSuspectedAt ?? null}
-    />
+    <>
+      <Messages
+        items={options.activeItems}
+        threadId={options.activeThreadId ?? null}
+        workspaceId={options.activeWorkspace?.id ?? null}
+        workspacePath={options.activeWorkspace?.path ?? null}
+        openTargets={options.openAppTargets}
+        selectedOpenAppId={options.selectedOpenAppId}
+        showMessageAnchors={showMessageAnchors}
+        showStickyUserBubble={showStickyUserBubble}
+        codeBlockCopyUseModifier={options.codeBlockCopyUseModifier}
+        userInputRequests={options.userInputRequests}
+        approvals={options.approvals}
+        workspaces={options.workspaces}
+        onUserInputSubmit={options.handleUserInputSubmit}
+        onUserInputDismiss={options.handleUserInputDismiss}
+        onRecoverThreadRuntime={options.onRecoverThreadRuntime}
+        onRecoverThreadRuntimeAndResend={options.onRecoverThreadRuntimeAndResend}
+        onThreadRecoveryFork={options.onThreadRecoveryFork}
+        onForkFromMessage={
+          onForkFromMessage ? handleOpenForkConfirmFromMessage : undefined
+        }
+        onRewindFromMessage={
+          options.onRewind ? handleOpenRewindDialogFromMessage : undefined
+        }
+        onApprovalDecision={options.handleApprovalDecision}
+        onApprovalBatchAccept={options.handleApprovalBatchAccept}
+        onApprovalRemember={options.handleApprovalRemember}
+        conversationState={conversationState}
+        presentationProfile={presentationProfile}
+        activeEngine={conversationEngine}
+        claudeThinkingVisible={claudeThinkingVisible}
+        activeCollaborationModeId={options.selectedCollaborationModeId}
+        plan={options.plan}
+        isPlanMode={options.isPlanMode}
+        isPlanProcessing={options.isProcessing}
+        onOpenDiffPath={handleOpenDiffPath}
+        onOpenPlanPanel={options.onOpenPlanPanel}
+        onExitPlanModeExecute={options.handleExitPlanModeExecute}
+        onOpenWorkspaceFile={options.onOpenFile}
+        agentTaskScrollRequest={options.agentTaskScrollRequest}
+        isThinking={isThreadThinking}
+        isHistoryLoading={activeThreadHistoryLoading}
+        isContextCompacting={activeThreadStatus?.isContextCompacting ?? false}
+        proxyEnabled={options.systemProxyEnabled}
+        proxyUrl={options.systemProxyUrl}
+        processingStartedAt={activeThreadStatus?.processingStartedAt ?? null}
+        lastDurationMs={activeThreadStatus?.lastDurationMs ?? null}
+        heartbeatPulse={heartbeatPulseRef.current ?? 0}
+        codexSilentSuspectedAt={activeThreadStatus?.codexSilentSuspectedAt ?? null}
+      />
+      <MessageForkConfirmDialog
+        userMessageId={forkConfirmUserMessageId}
+        onCancel={handleCancelForkConfirm}
+        onConfirm={handleConfirmForkFromMessage}
+      />
+    </>
   ), [
     options.activeItems,
     options.activeThreadId,
@@ -1628,6 +1740,14 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     options.handleUserInputDismiss,
     options.onRecoverThreadRuntime,
     options.onRecoverThreadRuntimeAndResend,
+    options.onThreadRecoveryFork,
+    onForkFromMessage,
+    handleOpenForkConfirmFromMessage,
+    forkConfirmUserMessageId,
+    handleCancelForkConfirm,
+    handleConfirmForkFromMessage,
+    options.onRewind,
+    handleOpenRewindDialogFromMessage,
     options.handleApprovalDecision,
     options.handleApprovalBatchAccept,
     options.handleApprovalRemember,
@@ -1747,6 +1867,8 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
         completionEmailDisabled={options.completionEmailDisabled}
         onToggleCompletionEmail={options.onToggleCompletionEmail}
         onRewind={options.onRewind}
+        rewindDialogRequest={rewindDialogRequest}
+        onRewindDialogRequestConsumed={handleRewindDialogRequestConsumed}
         canStop={options.canStop}
         disabled={options.isReviewing}
         contextUsage={deferredComposerLiveInputs.tokenUsage}
@@ -2237,8 +2359,8 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
         error={options.gitStatus.error}
         logError={options.gitLogError}
         logLoading={options.gitLogLoading}
-        stagedFiles={options.gitStatus.stagedFiles}
-        unstagedFiles={options.gitStatus.unstagedFiles}
+        stagedFiles={canonicalGitPanelChanges.stagedFiles}
+        unstagedFiles={canonicalGitPanelChanges.unstagedFiles}
         onSelectFile={options.onSelectDiff}
         onOpenFile={options.onOpenFile}
         selectedPath={sidebarSelectedDiffPath}
@@ -2335,6 +2457,7 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
       <Suspense fallback={<HeavyPanelFallback />}>
       <FileViewPanel
         workspaceId={options.activeWorkspace.id}
+        workspaceName={options.activeWorkspace.name}
         workspacePath={options.activeWorkspace.path}
         gitRoot={options.gitRoot}
         customSpecRoot={activeWorkspaceCustomSpecRoot}
@@ -2523,6 +2646,60 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
       <span className="workspace-title">{t("workspace.diff")}</span>
     </div>
   );
+  const browserDockNode = options.browserDockOpen ? (
+    <section
+      className="browser-agent-center-panel"
+      aria-label={t("browserAgent.dock.panelTitle")}
+    >
+      <div className="browser-agent-center-panel-header">
+        <div className="browser-agent-center-panel-heading">
+          <div className="browser-agent-center-panel-title">
+            {t("browserAgent.dock.panelTitle")}
+          </div>
+          <div className="browser-agent-center-panel-kicker">
+            {t("browserAgent.dock.panelKicker")}
+          </div>
+        </div>
+        <div className="browser-agent-center-panel-actions">
+          <button
+            type="button"
+            className="browser-agent-center-panel-attach"
+            onClick={() =>
+              requestBrowserContextAttachment({
+                workspaceId: options.activeWorkspaceId,
+              })
+            }
+            disabled={!options.activeWorkspaceId}
+            aria-label={t("browserAgent.composer.attach")}
+            title={t("browserAgent.composer.attach")}
+            data-tauri-drag-region="false"
+          >
+            {t("browserAgent.composer.attach")}
+          </button>
+          <button
+            type="button"
+            className="browser-agent-center-panel-close"
+            onClick={options.onCloseBrowserDock}
+            aria-label={t("browserAgent.dock.closePanel")}
+            data-tauri-drag-region="false"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+      {options.activeWorkspaceId ? (
+        <BrowserDock
+          workspaceId={options.activeWorkspaceId}
+          ownerSurface="main-split-browser-dock"
+          className="browser-agent-center-panel-dock"
+        />
+      ) : (
+        <div className="browser-agent-center-panel-empty">
+          {t("browserAgent.dock.noWorkspace")}
+        </div>
+      )}
+    </section>
+  ) : null;
 
   return {
     codeAnnotationBridgeProps,
@@ -2543,6 +2720,7 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     gitDiffViewerNode,
     fileViewPanelNode,
     projectMapPanelNode,
+    browserDockNode,
     planPanelNode,
     debugPanelNode,
     debugPanelFullNode,

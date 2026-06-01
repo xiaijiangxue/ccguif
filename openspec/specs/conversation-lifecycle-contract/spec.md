@@ -785,3 +785,251 @@ Within the unified conversation lifecycle, a Claude turn that never establishes 
 - **THEN** Codex, Gemini, and OpenCode lifecycle behavior MUST remain unchanged
 - **AND** provider-specific compatibility logic MUST NOT leak into the shared lifecycle layer
 
+### Requirement: Turn Settlement MUST Use Three-Evidence Lifecycle Arbitration
+
+The system MUST evaluate foreground turn settlement through a shared conversation lifecycle arbitration model that combines terminal evidence, state evidence, and progress evidence across all supported engines.
+
+#### Scenario: lifecycle arbitration uses a pure decision helper before side effects
+
+- **WHEN** lifecycle arbitration evaluates whether to settle, reject, defer, keep running, request reconciliation, or clean up busy residue
+- **THEN** it MUST first call a pure decision helper with explicit evidence, policy, and caller-provided current time
+- **AND** the helper MUST return a decision reason, scope match result, accepted evidence classes, reconciliation status, and bounded diagnostics
+- **AND** the helper MUST NOT mutate conversation state, call backend or Tauri APIs, read frontend stores directly, write debug logs, or read wall-clock time by itself
+
+#### Scenario: side effects happen only after decision interpretation
+
+- **WHEN** the pure decision helper returns a settlement, reconciliation, or cleanup decision
+- **THEN** the caller MAY perform guarded side effects according to the active rollout phase and policy
+- **AND** the side-effecting caller MUST preserve the helper's decision reason and scope match result in diagnostics when recording the outcome
+
+#### Scenario: normal completion path is not immediately replaced
+
+- **WHEN** Phase 2 guard observation is enabled
+- **THEN** existing normal terminal handlers MAY continue to append messages, update history, and finish streaming through the current path
+- **AND** three-evidence arbitration MUST observe and diagnose normal settlement consistency without blocking or replacing that path
+
+#### Scenario: terminal evidence is required for automatic completed settlement
+
+- **WHEN** a foreground turn is still marked processing
+- **AND** the system has no authoritative terminal evidence such as `turn/completed`, `turn/error`, `turn/stalled`, `runtime/ended`, user stop, status-query-confirmed terminal, replayed terminal, or equivalent normalized engine signal
+- **THEN** lifecycle arbitration MUST NOT settle the turn as completed solely from elapsed time, frontend silence, visible text, or history presence
+- **AND** the turn MAY enter suspected, degraded, recoverable stalled, or reconciliation-needed state according to existing lifecycle contracts
+
+#### Scenario: matched terminal evidence can settle active state
+
+- **WHEN** authoritative terminal evidence is correlated to the current workspace, engine, thread, active turn identity or a verified alias, and current runtime session or lease when available
+- **THEN** lifecycle arbitration MAY clear processing state and the matching active turn marker according to the active rollout phase
+- **AND** the settlement record MUST preserve the terminal source, engine, workspace id, thread id, turn id, runtime session or lease id when available, and decision reason
+
+#### Scenario: mismatched terminal evidence is rejected, not force-applied
+
+- **WHEN** terminal evidence reaches the client
+- **AND** the evidence cannot be bound to the current active workspace, engine, thread, active turn identity, verified alias, or active runtime lease when available
+- **THEN** lifecycle arbitration MUST reject or defer that settlement
+- **AND** it MUST NOT clear unrelated processing state
+- **AND** diagnostics MUST include incoming scope, current active scope, and reason when available
+
+#### Scenario: evidence without conversation scope is diagnostic-only
+
+- **WHEN** terminal, state, progress, status-query, or replay evidence lacks the minimum conversation scope required to identify workspace, engine, thread, and active turn or verified alias
+- **THEN** lifecycle arbitration MUST treat that evidence as diagnostic-only
+- **AND** it MUST NOT clear processing state, replace active turn identity, or settle the visible foreground turn
+
+#### Scenario: stale session evidence cannot settle a newer turn
+
+- **WHEN** evidence belongs to the same thread but an older turn, older runtime session, older lease, or previous foreground ownership
+- **AND** the current lifecycle state points at a newer active turn or newer active runtime lease
+- **THEN** lifecycle arbitration MUST reject or defer the stale evidence for current-state settlement
+- **AND** it MUST NOT clear the newer active turn or foreground processing state
+
+#### Scenario: foreground and background conversations remain isolated
+
+- **WHEN** background conversation evidence reaches the client while a different foreground conversation is active
+- **THEN** lifecycle arbitration MAY update diagnostics or background state for the matching conversation scope
+- **AND** it MUST NOT settle, stop, or mark completed the unrelated foreground conversation
+
+#### Scenario: fresh progress evidence protects long-running work
+
+- **WHEN** a foreground turn remains processing without terminal evidence
+- **AND** correlated progress evidence remains fresh, including heartbeat, active status, tool activity, file change, approval, user-input request, token usage, stream delta, or equivalent runtime activity
+- **THEN** lifecycle arbitration MUST treat the turn as still plausibly active
+- **AND** it MUST NOT classify the turn as stuck solely from elapsed wall time
+
+#### Scenario: terminal handling leaves busy residue
+
+- **WHEN** terminal evidence is accepted or handled for a foreground turn
+- **AND** state evidence still shows `isProcessing`, the same `activeTurnId`, or equivalent blocker residue after handling
+- **THEN** lifecycle arbitration MUST classify the condition as busy residue
+- **AND** the first rollout stage MUST record dry-run or diagnostic evidence before enabling any guarded cleanup behavior
+
+### Requirement: Missing Terminal Evidence MUST Use Authoritative Reconciliation
+
+When frontend lifecycle state remains busy but no terminal evidence is available, the system MUST use authoritative backend or runtime reconciliation before treating the turn as terminal.
+
+#### Scenario: stale progress requests reconciliation instead of completed settlement
+
+- **WHEN** a foreground turn is busy
+- **AND** terminal evidence is absent
+- **AND** correlated progress evidence is stale or absent
+- **THEN** lifecycle arbitration MUST request authoritative reconciliation or enter a degraded/reconnect state
+- **AND** it MUST NOT mark the turn completed from timeout, silence, visible content, or history presence
+
+#### Scenario: status query confirmed terminal becomes terminal evidence
+
+- **WHEN** a scoped backend or runtime status query confirms `completed`, `error`, `stalled`, or `runtime-ended` for the same workspace, engine, thread, turn or verified alias, and runtime lease when available
+- **THEN** lifecycle arbitration MAY treat that result as Terminal Evidence
+- **AND** the result MUST be re-evaluated through the same scope gate and three-evidence helper before any state cleanup occurs
+
+#### Scenario: status query says running keeps the turn active
+
+- **WHEN** a scoped backend or runtime status query reports that the turn or runtime lease is still running or active
+- **THEN** lifecycle arbitration MUST keep the foreground turn running
+- **AND** it MUST NOT clear `isProcessing`, `activeTurnId`, or blocker residue as completed settlement
+
+#### Scenario: unknown or failed reconciliation is degraded, not completed
+
+- **WHEN** reconciliation returns `unknown`, lacks sufficient scope, fails, or times out
+- **THEN** lifecycle arbitration MUST defer settlement or enter a degraded/reconnect path
+- **AND** it MUST NOT classify the turn as completed
+
+#### Scenario: replayed terminal events must remain scoped
+
+- **WHEN** the client requests missed terminal replay
+- **AND** the replay returns a terminal event with matching workspace, engine, thread, turn or verified alias, and runtime lease when available
+- **THEN** lifecycle arbitration MAY treat the replayed event as Terminal Evidence
+- **AND** unscoped, stale, or mismatched replayed events MUST remain diagnostic-only
+
+### Requirement: Three-Evidence Settlement MUST Be Cross-Engine And Content-Safe
+
+Three-evidence settlement MUST apply consistently to Claude, Codex, Gemini, and OpenCode while avoiding full conversation content in evidence records.
+
+#### Scenario: all engines use the same arbitration semantics
+
+- **WHEN** equivalent terminal, state, progress, and reconciliation evidence is observed for Claude, Codex, Gemini, or OpenCode
+- **THEN** lifecycle arbitration MUST produce equivalent settlement, rejection, deferral, keep-running, reconciliation, or residue decisions
+- **AND** engine-specific differences MUST remain inside evidence normalization or adapter layers
+
+#### Scenario: evidence records exclude full content
+
+- **WHEN** settlement evidence is recorded for diagnostics, dry-run analysis, error-log persistence, reconciliation, replay, or tests
+- **THEN** the evidence MUST use ids, event names, counts, booleans, timestamps, bounded reason strings, and status enums
+- **AND** it MUST NOT include full user prompts, assistant responses, tool outputs, command outputs, file diffs, auth files, or secret values
+
+### Requirement: Phase 1 Settlement Arbitration MUST Be Pure And Dry-Run Only
+
+Phase 1 three-evidence turn settlement implementation MUST evaluate settlement decisions through a pure helper while preserving existing lifecycle behavior.
+
+#### Scenario: pure helper evaluates scoped evidence
+
+- **WHEN** frontend lifecycle code evaluates terminal, state, progress, or reconciliation-needed evidence
+- **THEN** it MUST call a pure decision helper with explicit evidence, policy, and caller-provided current time
+- **AND** the helper MUST return action, reason, scope match result, accepted evidence classes, and bounded diagnostics
+- **AND** the helper MUST NOT mutate frontend state, call backend/Tauri APIs, write logs, or read wall-clock time directly
+
+#### Scenario: Phase 1 does not clear lifecycle state
+
+- **WHEN** the pure helper returns `settle`, `cleanup-residue`, `reject`, `defer`, `keep-running`, or `request-reconciliation`
+- **THEN** Phase 1 integration MUST record the result as dry-run diagnostic only
+- **AND** it MUST NOT clear `isProcessing`, `activeTurnId`, blocker residue, runtime lease state, message content, or conversation history
+
+#### Scenario: missing terminal evidence requests reconciliation without completion
+
+- **WHEN** no terminal evidence is available
+- **AND** progress evidence is stale or absent
+- **THEN** the pure helper SHOULD return `request-reconciliation` when reconciliation is allowed by policy
+- **AND** Phase 1 MUST NOT mark the turn completed
+
+#### Scenario: fresh progress keeps long work running
+
+- **WHEN** terminal evidence is absent
+- **AND** progress evidence is fresh
+- **THEN** the pure helper MUST return a keep-running decision with progress-protected reason
+- **AND** Phase 1 diagnostics MUST NOT classify the turn as completed
+
+#### Scenario: scope mismatch never becomes cleanup
+
+- **WHEN** evidence lacks required scope, belongs to another workspace/thread/engine, references an older turn, or references a stale runtime lease
+- **THEN** the pure helper MUST return reject or defer
+- **AND** it MUST NOT return `settle` or `cleanup-residue`
+
+### Requirement: Phase 2a Settlement Reconciliation MUST Query Authoritative Status Before Cleanup
+
+Phase 2a three-evidence settlement reconciliation MUST define an authoritative status-query path for missing terminal evidence, without performing lifecycle cleanup.
+
+#### Scenario: reconciliation-needed requests scoped status
+
+- **WHEN** lifecycle arbitration has scoped state evidence for a foreground turn
+- **AND** terminal evidence is absent
+- **AND** correlated progress evidence is stale or absent
+- **THEN** Phase 2a MUST request or plan an authoritative status query using the scoped workspace, engine, thread, turn or verified alias, and runtime lease when available
+- **AND** it MUST NOT mark the turn completed from timeout, frontend silence, visible text, history content, or stale runtime cleanup
+
+#### Scenario: status query confirmed terminal is re-evaluated
+
+- **WHEN** a scoped authoritative status query returns `completed`, `failed`, `stalled`, or `runtime-ended`
+- **THEN** lifecycle arbitration MUST convert that response into Terminal Evidence candidate
+- **AND** it MUST re-evaluate the candidate through the same pure decision helper and scope gate before any future side effect is allowed
+
+#### Scenario: status query running protects active work
+
+- **WHEN** a scoped authoritative status query returns `running`
+- **THEN** lifecycle arbitration MUST keep the turn active
+- **AND** it MUST NOT clear `isProcessing`, `activeTurnId`, blocker residue, runtime lease state, message content, or conversation history
+
+#### Scenario: unknown or failed status does not complete
+
+- **WHEN** a status query returns `unknown`, returns `query-failed`, times out, lacks sufficient scope, or fails frontend scope validation
+- **THEN** lifecycle arbitration MUST defer settlement or enter a degraded/reconnect diagnostic state
+- **AND** it MUST NOT classify the turn as completed
+
+#### Scenario: Phase 2a remains cleanup-free
+
+- **WHEN** Phase 2a observes `request-reconciliation`, terminal-confirmed status, `running`, `unknown`, or `query-failed`
+- **THEN** it MUST record bounded diagnostics only
+- **AND** it MUST NOT perform guarded cleanup, terminal replay, message mutation, history mutation, or normal completion path replacement
+
+### Requirement: Runtime Recovery Signals MUST NOT Substitute For Terminal Evidence
+
+Runtime recovery and acquire failures MUST remain diagnostic context unless a scoped authoritative status response confirms terminal state.
+
+#### Scenario: stale runtime cleanup remains diagnostic-only
+
+- **WHEN** the client observes `stale_reuse_cleanup`, manual runtime shutdown, runtime recovery quarantine, concurrent runtime acquire timeout, or stopping-runtime race
+- **THEN** lifecycle arbitration MAY attach that signal as bounded diagnostic context
+- **AND** it MUST NOT treat that signal as `completed` settlement evidence for the foreground turn
+
+#### Scenario: recovery quarantine does not clear busy state
+
+- **WHEN** runtime recovery is quarantined or paused after repeated acquire failures
+- **THEN** lifecycle arbitration MUST keep settlement separate from runtime recovery state
+- **AND** it MUST NOT clear foreground processing state unless a later scoped terminal status is accepted by the pure decision helper
+
+### Requirement: Phase 2a Reconciliation MUST Use Scoped Backend Status Without Cleanup
+
+Phase 2a lifecycle reconciliation MUST query backend/runtime status when terminal evidence is missing and progress is stale, and MUST keep all side effects disabled.
+
+#### Scenario: reconciliation query starts from pure helper decision
+
+- **WHEN** `evaluateTurnSettlement` returns `request-reconciliation`
+- **THEN** the frontend MUST issue at most one in-flight status query for the same workspace, engine, thread, turn, and runtime scope
+- **AND** it MUST include the current lifecycle scope in the request
+
+#### Scenario: terminal status is diagnostic-only in Phase 2a
+
+- **WHEN** the status query returns a scoped terminal status such as `runtime-ended`, `failed`, `stalled`, or `completed`
+- **THEN** the frontend MUST convert it to Terminal Evidence candidate and re-run the pure helper
+- **AND** Phase 2a MUST only emit diagnostics
+- **AND** it MUST NOT clear processing state, active turn id, messages, blockers, runtime leases, or history
+
+#### Scenario: running status protects active work
+
+- **WHEN** the status query returns scoped `running`
+- **THEN** the frontend MUST keep the turn active
+- **AND** it MUST emit a bounded resolved diagnostic
+
+#### Scenario: unknown status does not complete
+
+- **WHEN** the status query returns `unknown`, `query-failed`, lacks required scope, or fails frontend scope validation
+- **THEN** the frontend MUST defer settlement
+- **AND** it MUST NOT mark the turn completed
+

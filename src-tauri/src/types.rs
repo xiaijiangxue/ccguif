@@ -904,6 +904,11 @@ pub(crate) struct AppSettings {
     )]
     pub(crate) archive_thread_shortcut: Option<String>,
     #[serde(
+        default = "default_close_current_session_shortcut",
+        rename = "closeCurrentSessionShortcut"
+    )]
+    pub(crate) close_current_session_shortcut: Option<String>,
+    #[serde(
         default = "default_toggle_projects_sidebar_shortcut",
         rename = "toggleProjectsSidebarShortcut"
     )]
@@ -1179,6 +1184,21 @@ pub(crate) struct AppSettings {
         rename = "codexAutoCompactionEnabled"
     )]
     pub(crate) codex_auto_compaction_enabled: bool,
+    #[serde(
+        default = "default_browser_agent_enabled",
+        rename = "browserAgentEnabled"
+    )]
+    pub(crate) browser_agent_enabled: bool,
+    #[serde(
+        default = "default_browser_agent_prefer_built_in",
+        rename = "browserAgentPreferBuiltIn"
+    )]
+    pub(crate) browser_agent_prefer_built_in: bool,
+    #[serde(
+        default = "default_browser_agent_allow_external_provider_fallback",
+        rename = "browserAgentAllowExternalProviderFallback"
+    )]
+    pub(crate) browser_agent_allow_external_provider_fallback: bool,
     /// Default engine type: "claude", "codex", or "opencode". If not set, auto-detect.
     #[serde(default, rename = "defaultEngine")]
     pub(crate) default_engine: Option<String>,
@@ -1309,6 +1329,10 @@ fn default_new_clone_agent_shortcut() -> Option<String> {
 
 fn default_archive_thread_shortcut() -> Option<String> {
     Some("cmd+ctrl+a".to_string())
+}
+
+fn default_close_current_session_shortcut() -> Option<String> {
+    Some("cmd+w".to_string())
 }
 
 fn default_toggle_projects_sidebar_shortcut() -> Option<String> {
@@ -1548,6 +1572,18 @@ fn default_codex_auto_compaction_enabled() -> bool {
     true
 }
 
+fn default_browser_agent_enabled() -> bool {
+    true
+}
+
+fn default_browser_agent_prefer_built_in() -> bool {
+    true
+}
+
+fn default_browser_agent_allow_external_provider_fallback() -> bool {
+    true
+}
+
 fn is_allowed_codex_auto_compaction_threshold_percent(value: u16) -> bool {
     value == 92 || ((100..=200).contains(&value) && value % 10 == 0)
 }
@@ -1614,6 +1650,7 @@ impl Default for AppSettings {
             new_worktree_agent_shortcut: default_new_worktree_agent_shortcut(),
             new_clone_agent_shortcut: default_new_clone_agent_shortcut(),
             archive_thread_shortcut: default_archive_thread_shortcut(),
+            close_current_session_shortcut: default_close_current_session_shortcut(),
             toggle_projects_sidebar_shortcut: default_toggle_projects_sidebar_shortcut(),
             toggle_git_sidebar_shortcut: default_toggle_git_sidebar_shortcut(),
             toggle_global_search_shortcut: default_toggle_global_search_shortcut(),
@@ -1690,6 +1727,10 @@ impl Default for AppSettings {
             codex_auto_compaction_threshold_percent:
                 default_codex_auto_compaction_threshold_percent(),
             codex_auto_compaction_enabled: default_codex_auto_compaction_enabled(),
+            browser_agent_enabled: default_browser_agent_enabled(),
+            browser_agent_prefer_built_in: default_browser_agent_prefer_built_in(),
+            browser_agent_allow_external_provider_fallback:
+                default_browser_agent_allow_external_provider_fallback(),
         }
     }
 }
@@ -1796,6 +1837,10 @@ mod tests {
         assert_eq!(
             settings.archive_thread_shortcut.as_deref(),
             Some("cmd+ctrl+a")
+        );
+        assert_eq!(
+            settings.close_current_session_shortcut.as_deref(),
+            Some("cmd+w")
         );
         assert_eq!(
             settings.toggle_debug_panel_shortcut.as_deref(),

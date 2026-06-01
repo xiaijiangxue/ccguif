@@ -7,6 +7,7 @@ import {
   mermaidInitialize,
   mermaidRender,
   mockCodeMirrorDispatch,
+  mockOpenNewDetachedFileExplorerWindow,
 } from "./FileViewPanel.test-utils";
 import { FileViewPanel, resolveEditorAnnotationWidgetOrder } from "./FileViewPanel";
 import {
@@ -69,6 +70,7 @@ describe("FileViewPanel navigation", () => {
     cleanup();
     vi.clearAllMocks();
     mockCodeMirrorDispatch.mockReset();
+    mockOpenNewDetachedFileExplorerWindow.mockClear();
   });
 
   it("navigates directly when definition has a single target", async () => {
@@ -311,9 +313,72 @@ describe("FileViewPanel navigation", () => {
 
     await screen.findByTestId("mock-codemirror");
     expect(container.querySelector(".fvp-header-row")).toBeTruthy();
+    expect(container.querySelector(".fvp-header-row")?.hasAttribute("data-tauri-drag-region")).toBe(
+      false,
+    );
+    expect(
+      container.querySelector(".fvp-header-row-tabs")?.hasAttribute("data-tauri-drag-region"),
+    ).toBe(false);
+    expect(
+      container.querySelector(".fvp-tabs-inline")?.hasAttribute("data-tauri-drag-region"),
+    ).toBe(false);
+    expect(
+      container.querySelector(".fvp-tabs-inline .fvp-tabs-track")?.hasAttribute(
+        "data-tauri-drag-region",
+      ),
+    ).toBe(false);
     expect(container.querySelector(".fvp-topbar")).toBeNull();
     expect(screen.getByRole("tablist", { name: "Open files" })).toBeTruthy();
     expect(screen.getByTitle(/gotoDefinition/i)).toBeTruthy();
+  });
+
+  it("opens a specific file tab in the detached explorer without activating or closing it", async () => {
+    vi.mocked(readWorkspaceFile).mockResolvedValue({
+      content: "class Main {}",
+      truncated: false,
+    });
+    const onActivateTab = vi.fn();
+    const onCloseTab = vi.fn();
+
+    render(
+      <FileViewPanel
+        workspaceId="ws-tab-detached"
+        workspaceName="mossx"
+        workspacePath="/repo"
+        gitRoot="/repo"
+        filePath="src/Main.java"
+        openTabs={["src/Main.java", "src/Foo.java"]}
+        activeTabPath="src/Main.java"
+        onActivateTab={onActivateTab}
+        onCloseTab={onCloseTab}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByTestId("mock-codemirror");
+    const detachedButtons = screen.getAllByRole("button", {
+      name: "files.openDetachedTabFor",
+    });
+    fireEvent.click(detachedButtons[1]);
+
+    await waitFor(() => {
+      expect(mockOpenNewDetachedFileExplorerWindow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: "ws-tab-detached",
+          workspaceName: "mossx",
+          workspacePath: "/repo",
+          gitRoot: "/repo",
+          initialFilePath: "src/Foo.java",
+          defaultSidebarCollapsed: true,
+        }),
+      );
+    });
+    expect(onActivateTab).not.toHaveBeenCalled();
+    expect(onCloseTab).not.toHaveBeenCalled();
   });
 
   it("prefers provided highlight markers over workspace git diff fetch", async () => {

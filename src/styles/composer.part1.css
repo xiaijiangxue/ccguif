@@ -4,7 +4,7 @@
   align-items: center;
   gap: 8px;
   -webkit-app-region: no-drag;
-  padding: 12px var(--main-panel-padding) 24px;
+  padding: 12px var(--main-panel-padding) 8px;
   border-top: none;
   background: var(--surface-messages);
   grid-column: 1;

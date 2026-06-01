@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import GitFork from "lucide-react/dist/esm/icons/git-fork";
 import Terminal from "lucide-react/dist/esm/icons/terminal";
 import { Button } from "../../../components/ui/button";
 import { ensureRuntimeReady } from "../../../services/tauri";
@@ -25,6 +26,7 @@ type RuntimeReconnectCardProps = {
     threadId: string,
     message: Pick<QueuedMessage, "text" | "images">,
   ) => Promise<RuntimeReconnectRecoveryCallbackResult> | RuntimeReconnectRecoveryCallbackResult;
+  onThreadRecoveryFork?: () => Promise<void> | void;
 };
 
 export function RuntimeReconnectCard({
@@ -34,6 +36,7 @@ export function RuntimeReconnectCard({
   onRecoverThreadRuntime,
   retryMessage = null,
   onRecoverThreadRuntimeAndResend,
+  onThreadRecoveryFork,
 }: RuntimeReconnectCardProps) {
   const { t } = useTranslation();
   const [isReconnectRunning, setIsReconnectRunning] = useState(false);
@@ -51,7 +54,7 @@ export function RuntimeReconnectCard({
     ? !workspaceId || !threadId || !onRecoverThreadRuntime
     : !workspaceId;
   const resendUnavailable = requiresThreadRecovery
-    ? !workspaceId || !threadId || !onRecoverThreadRuntimeAndResend || retryMessageUnavailable
+    ? !onThreadRecoveryFork
     : reconnectUnavailable ||
       retryMessageUnavailable ||
       !threadId ||
@@ -65,10 +68,36 @@ export function RuntimeReconnectCard({
   }, [hint.rawMessage, retryMessage, threadId, workspaceId]);
 
   const handleReconnectRuntime = useCallback(async (mode: "reconnect" | "resend") => {
-    if (!workspaceId || isReconnectRunning) {
+    if (isReconnectRunning) {
+      return;
+    }
+    const activeWorkspaceId = workspaceId;
+    const activeThreadId = threadId;
+    if (!activeWorkspaceId && !(mode === "resend" && requiresThreadRecovery)) {
+      return;
+    }
+    if (mode === "resend" && requiresThreadRecovery) {
+      if (!onThreadRecoveryFork || resendUnavailable) {
+        return;
+      }
+      setIsReconnectRunning(true);
+      setReconnectStatus("idle");
+      setLastAction(mode);
+      setReconnectErrorDetail(null);
+      try {
+        await onThreadRecoveryFork();
+      } catch (error) {
+        setReconnectStatus("error");
+        setReconnectErrorDetail(normalizeRuntimeReconnectErrorMessage(error));
+      } finally {
+        setIsReconnectRunning(false);
+      }
       return;
     }
     if (mode === "resend" && (resendUnavailable || !retryMessage || !threadId)) {
+      return;
+    }
+    if (!activeWorkspaceId) {
       return;
     }
     setIsReconnectRunning(true);
@@ -77,14 +106,14 @@ export function RuntimeReconnectCard({
     setReconnectErrorDetail(null);
     try {
       if (requiresThreadRecovery) {
-        if (!threadId) {
+        if (!activeThreadId) {
           setReconnectStatus("error");
           setReconnectErrorDetail(
             t("messages.threadRecoveryUnavailable"),
           );
           return;
         }
-        await ensureRuntimeReady(workspaceId);
+        await ensureRuntimeReady(activeWorkspaceId);
         if (mode === "resend") {
           if (!onRecoverThreadRuntimeAndResend || !retryMessage) {
             setReconnectStatus("error");
@@ -92,8 +121,8 @@ export function RuntimeReconnectCard({
             return;
           }
           const resentThreadId = await onRecoverThreadRuntimeAndResend(
-            workspaceId,
-            threadId,
+            activeWorkspaceId,
+            activeThreadId,
             retryMessage,
           );
           const resentResult = normalizeRuntimeReconnectRecoveryResult(resentThreadId);
@@ -123,7 +152,7 @@ export function RuntimeReconnectCard({
           );
           return;
         }
-        const recoveredThreadId = await onRecoverThreadRuntime(workspaceId, threadId);
+        const recoveredThreadId = await onRecoverThreadRuntime(activeWorkspaceId, activeThreadId);
         const recoveredResult = normalizeRuntimeReconnectRecoveryResult(recoveredThreadId);
         if (recoveredResult.kind === "failed") {
           setReconnectStatus("error");
@@ -144,16 +173,16 @@ export function RuntimeReconnectCard({
         setReconnectErrorDetail(t("messages.threadRecoveryRestoredDetail"));
         return;
       }
-      await ensureRuntimeReady(workspaceId);
+      await ensureRuntimeReady(activeWorkspaceId);
       if (mode === "resend") {
-        if (!threadId || !retryMessage || !onRecoverThreadRuntimeAndResend) {
+        if (!activeThreadId || !retryMessage || !onRecoverThreadRuntimeAndResend) {
           setReconnectStatus("error");
           setReconnectErrorDetail(t("messages.runtimeReconnectResendUnavailable"));
           return;
         }
         const resentThreadId = await onRecoverThreadRuntimeAndResend(
-          workspaceId,
-          threadId,
+          activeWorkspaceId,
+          activeThreadId,
           retryMessage,
         );
         const resentResult = normalizeRuntimeReconnectRecoveryResult(resentThreadId);
@@ -176,8 +205,8 @@ export function RuntimeReconnectCard({
         setReconnectErrorDetail(t("messages.runtimeReconnectRestoredAndResent"));
         return;
       }
-      if (threadId && onRecoverThreadRuntime) {
-        const recoveredThreadId = await onRecoverThreadRuntime(workspaceId, threadId);
+      if (activeThreadId && onRecoverThreadRuntime) {
+        const recoveredThreadId = await onRecoverThreadRuntime(activeWorkspaceId, activeThreadId);
         const recoveredResult = normalizeRuntimeReconnectRecoveryResult(recoveredThreadId);
         if (recoveredResult.kind === "failed") {
           setReconnectStatus("error");
@@ -207,6 +236,7 @@ export function RuntimeReconnectCard({
     isReconnectRunning,
     onRecoverThreadRuntime,
     onRecoverThreadRuntimeAndResend,
+    onThreadRecoveryFork,
     requiresThreadRecovery,
     resendUnavailable,
     retryMessage,
@@ -227,6 +257,12 @@ export function RuntimeReconnectCard({
   const title = requiresThreadRecovery
     ? t("messages.threadRecoveryTitle")
     : t("messages.runtimeReconnectTitle");
+  const recoveryRecommendation = requiresThreadRecovery
+    ? t("messages.threadRecoveryRecommendation")
+    : null;
+  const recoveryDetailLabel = requiresThreadRecovery
+    ? t("messages.threadRecoveryDetailLabel")
+    : null;
   const reconnectActionLabel = isReconnectRunning && lastAction === "reconnect"
     ? requiresThreadRecovery
       ? t("messages.threadRecoveryRunning")
@@ -239,7 +275,7 @@ export function RuntimeReconnectCard({
       ? t("messages.threadRecoveryResendRunning")
       : t("messages.runtimeReconnectResendRunning")
     : requiresThreadRecovery
-      ? t("messages.threadRecoveryForkResendAction")
+      ? t("messages.threadRecoveryForkAction")
       : t("messages.runtimeReconnectResendAction");
   const showReconnectAction =
     !requiresThreadRecovery || (Boolean(onRecoverThreadRuntime) && resendUnavailable);
@@ -283,11 +319,26 @@ export function RuntimeReconnectCard({
             }}
             disabled={resendUnavailable || isReconnectRunning}
           >
+            {requiresThreadRecovery ? (
+              <GitFork className="message-runtime-recovery-button-icon" size={14} aria-hidden />
+            ) : null}
             {resendActionLabel}
           </Button>
         </div>
       </div>
-      <div className="message-runtime-recovery-detail">{hint.rawMessage}</div>
+      {recoveryRecommendation ? (
+        <div className="message-runtime-recovery-recommendation">
+          {recoveryRecommendation}
+        </div>
+      ) : null}
+      <div className="message-runtime-recovery-detail">
+        {recoveryDetailLabel ? (
+          <span className="message-runtime-recovery-detail-label">
+            {recoveryDetailLabel}
+          </span>
+        ) : null}
+        <span>{hint.rawMessage}</span>
+      </div>
       {showReconnectUnavailable ? (
         <div className="message-runtime-recovery-status is-error" aria-live="polite">
           {unavailableLabel}

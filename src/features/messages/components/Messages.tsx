@@ -109,6 +109,12 @@ const MESSAGE_JUMP_EVENT_NAME = "ccgui:jump-to-message";
 const ASSISTANT_FINALIZING_LIVE_WINDOW_MS = 320;
 const CODEX_FINALIZING_LIVE_WINDOW_MS = 6_000;
 
+type MessageActionTargets = {
+  targetByAssistantId: Map<string, string>;
+  copyTextByAssistantId: Map<string, string>;
+  latestFinalAssistantMessageId: string | null;
+};
+
 type MessagesProps = {
   items: ConversationItem[];
   threadId: string | null;
@@ -166,6 +172,9 @@ type MessagesProps = {
     threadId: string,
     message: Pick<QueuedMessage, "text" | "images">,
   ) => Promise<RuntimeReconnectRecoveryCallbackResult> | RuntimeReconnectRecoveryCallbackResult;
+  onThreadRecoveryFork?: () => Promise<void> | void;
+  onForkFromMessage?: (messageId: string) => void;
+  onRewindFromMessage?: (messageId: string) => void;
 };
 
 type HistoryExpansionScrollSnapshot = {
@@ -293,6 +302,9 @@ export const Messages = memo(function Messages({
   agentTaskScrollRequest = null,
   onRecoverThreadRuntime,
   onRecoverThreadRuntimeAndResend,
+  onThreadRecoveryFork,
+  onForkFromMessage,
+  onRewindFromMessage,
 }: MessagesProps) {
   const { t } = useTranslation();
   const isWindowsDesktop = useMemo(() => isWindowsPlatform(), []);
@@ -467,6 +479,40 @@ export const Messages = memo(function Messages({
       : items;
     return dedupeExitPlanItemsKeepFirst(baseItems);
   }, [isSelectionFrozen, items]);
+  const messageActionTargets = useMemo<MessageActionTargets>(() => {
+    const targetByAssistantId = new Map<string, string>();
+    const copyTextByAssistantId = new Map<string, string>();
+    let latestUserMessageId: string | null = null;
+    let latestFinalAssistantMessageId: string | null = null;
+    let assistantTurnTextParts: string[] = [];
+    for (const item of effectiveItems) {
+      if (item.kind !== "message") {
+        continue;
+      }
+      if (item.role === "user") {
+        latestUserMessageId = item.id;
+        assistantTurnTextParts = [];
+        continue;
+      }
+      if (item.role !== "assistant") {
+        continue;
+      }
+      if (latestUserMessageId) {
+        targetByAssistantId.set(item.id, latestUserMessageId);
+      }
+      assistantTurnTextParts.push(item.text);
+      if (item.isFinal === true) {
+        latestFinalAssistantMessageId = item.id;
+        copyTextByAssistantId.set(item.id, assistantTurnTextParts.join("\n\n"));
+        assistantTurnTextParts = [];
+      }
+    }
+    return {
+      targetByAssistantId,
+      copyTextByAssistantId,
+      latestFinalAssistantMessageId,
+    };
+  }, [effectiveItems]);
   const liveTailWorkingSet = useMemo(
     () =>
       buildLiveTailWorkingSet(effectiveItems, {
@@ -2237,6 +2283,11 @@ export const Messages = memo(function Messages({
           liveAssistantItem={liveAssistantItem}
           liveReasoningItem={liveReasoningItem}
           handleCopyMessage={handleCopyMessage}
+          messageActionTargetByAssistantId={messageActionTargets.targetByAssistantId}
+          messageCopyTextByAssistantId={messageActionTargets.copyTextByAssistantId}
+          latestFinalAssistantMessageId={messageActionTargets.latestFinalAssistantMessageId}
+          onForkFromMessage={onForkFromMessage}
+          onRewindFromMessage={onRewindFromMessage}
           handleExitPlanModeExecuteForItem={handleExitPlanModeExecuteForItem}
           heartbeatPulse={heartbeatPulse}
           hiddenClaudeReasoningOnly={hiddenClaudeReasoningOnly}
@@ -2255,6 +2306,7 @@ export const Messages = memo(function Messages({
           onOpenDiffPath={onOpenDiffPath}
           onRecoverThreadRuntime={onRecoverThreadRuntime}
           onRecoverThreadRuntimeAndResend={onRecoverThreadRuntimeAndResend}
+          onThreadRecoveryFork={onThreadRecoveryFork}
           onAssistantVisibleTextRender={handleAssistantVisibleTextRender}
           onShowAllHistoryItems={handleShowAllHistoryItems}
           openFileLink={openFileLink}

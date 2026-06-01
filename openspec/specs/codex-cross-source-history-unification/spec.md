@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the codex-cross-source-history-unification behavior contract, covering Codex Thread History MUST Be Unified Across Sources Per Workspace.
-
 ## Requirements
 ### Requirement: Codex Thread History MUST Be Unified Across Sources Per Workspace
 
@@ -42,29 +41,30 @@ Aggregation MUST produce stable canonical entries under repeated refresh, mixed-
 - **AND** canonical selection MUST be repeatable across identical inputs
 
 ### Requirement: Unified History MUST Degrade Gracefully
+
 Failure in one source path MUST NOT collapse the entire Codex history list response.
 
-#### Scenario: one codex root fails but other roots still return entries
-- **WHEN** one Codex local history root fails to scan
-- **AND** other roots for the same effective scope still succeed
-- **THEN** the system MUST continue returning entries from successful roots
-- **AND** response MUST indicate fallback or partial-source condition for diagnostics
-
 #### Scenario: live thread/list fails but local aggregate succeeds
-- **WHEN** active-source live `thread/list` request fails
-- **THEN** system MUST still return local aggregated history entries when available
-- **AND** response MUST indicate fallback/partial-source condition for diagnostics
 
-#### Scenario: local scan fails but live thread/list succeeds
-- **WHEN** local session scan path fails
-- **THEN** system MUST still return live thread entries
-- **AND** system MUST NOT return empty list solely due to local scan failure
+- **WHEN** active-source live `thread/list` request fails or times out
+- **AND** local Codex session summaries for the workspace are available
+- **THEN** system MUST still return local aggregated history entries
+- **AND** response MUST indicate `partialSource = "live-thread-list-unavailable"` or equivalent live-source degradation for diagnostics
+- **AND** the response MUST keep the existing thread/list result shape so frontend list hydration does not enter fatal error fallback solely due to the live failure
 
-#### Scenario: local scan fails for one owner workspace but others succeed
-- **WHEN** project-scoped Codex history spans main workspace and worktrees
-- **AND** local scan fails for one owner workspace but succeeds for others
-- **THEN** the system MUST still return entries discovered from successful owner workspaces
-- **AND** the failure MUST NOT collapse the whole project-scoped history response
+#### Scenario: live thread/list and local scan both fail
+
+- **WHEN** live `thread/list` fails
+- **AND** local session scan is unavailable or times out
+- **THEN** system MAY return a degraded empty response instead of a fatal live timeout when the workspace itself is valid
+- **AND** `partialSource = "local-session-scan-unavailable"` MUST take priority over live-source degradation so known-session continuity logic remains compatible
+
+#### Scenario: daemon thread/list uses bounded local fallback
+
+- **WHEN** daemon-mode `list_threads` receives `live thread/list timed out after 1500ms` or another live list failure
+- **THEN** daemon MUST attempt local Codex session summary fallback with a bounded timeout
+- **AND** daemon MUST return a degraded thread-list response when fallback can answer
+- **AND** daemon MUST NOT expose the live timeout as a fatal `thread/list error` when a degraded local response can be produced
 
 ### Requirement: Session Management Codex Catalog MUST Scan Default And Override Roots Together
 When session management reads Codex history, it MUST combine workspace-specific override roots and default Codex roots so history is not silently hidden by home/source drift.
@@ -178,3 +178,4 @@ Codex unified history projection MUST exclude known background/helper rollouts f
 - **WHEN** a Codex session has a normal user prompt that does not match a known background/helper signature
 - **THEN** unified Codex projection MUST keep returning that conversation when it belongs to the current workspace
 - **AND** helper filtering MUST NOT hide it merely because the text casually mentions memory or background work
+

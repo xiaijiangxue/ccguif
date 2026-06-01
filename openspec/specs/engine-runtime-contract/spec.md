@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines the canonical runtime realtime and history contract across supported engines.
-
 ## Requirements
-
 ### Requirement: Engine Runtime Realtime Event Contract MUST Be Canonical
 
 The system MUST treat the `NormalizedThreadEvent` shape defined in `src/features/threads/contracts/conversationCurtainContracts.ts` as the canonical realtime event contract for all supported engines (`claude` / `codex` / `gemini` / `opencode`). Each `NormalizedThreadEvent` MUST identify its semantics by the pair `(itemKind, operation)` plus the supporting fields `engine`, `workspaceId`, `threadId`, `eventId`, `timestampMs`, `item`, and `sourceMethod`. Engine-private event names captured as `sourceMethod` MAY exist as compatibility inputs but MUST NOT be treated as canonical semantics; canonical semantics live only in `(itemKind, operation)`.
@@ -128,3 +126,137 @@ The system MUST run focused TypeScript tests for adapter normalization, history 
 
 - **WHEN** CI or release validation runs OpenSpec validation
 - **THEN** `openspec validate formalize-engine-runtime-contract --strict --no-interactive` MUST pass
+
+### Requirement: Engine Runtime MUST Normalize Settlement Evidence For All Engines
+
+The engine runtime contract MUST expose enough normalized evidence for the lifecycle layer to evaluate three-evidence turn settlement consistently across Claude, Codex, Gemini, and OpenCode.
+
+#### Scenario: terminal signals map to normalized terminal evidence
+
+- **WHEN** an engine emits a completion, error, stalled, runtime-ended, interruption, or equivalent terminal signal
+- **THEN** the engine adapter or runtime bridge MUST map it to normalized terminal evidence consumable by conversation lifecycle arbitration
+- **AND** the evidence MUST preserve source method, workspace id, thread id, turn id when available, engine, runtime session or lease id when available, timestamp, and terminal kind
+
+#### Scenario: progress signals map to normalized progress evidence
+
+- **WHEN** an engine emits heartbeat, active status, stream delta, tool activity, file change, approval, user-input request, token usage, or equivalent non-terminal activity
+- **THEN** the adapter or runtime bridge MUST map it to normalized progress evidence when it can be correlated to a foreground thread or turn
+- **AND** progress evidence MUST NOT itself be treated as terminal state
+
+#### Scenario: unscoped runtime evidence cannot drive settlement
+
+- **WHEN** an engine adapter or runtime bridge cannot identify the workspace, engine, thread, and relevant turn or runtime lease for a terminal or progress event
+- **THEN** it MUST either attach an explicit diagnostic-only marker or withhold the event from lifecycle settlement inputs
+- **AND** lifecycle arbitration MUST NOT infer the missing scope from the most recent active foreground turn
+
+#### Scenario: runtime lease changes isolate old terminal events
+
+- **WHEN** a runtime reconnect, restart, retry, or adapter replacement creates a newer active runtime session or lease for the same thread
+- **AND** terminal evidence later arrives from the older runtime session or lease
+- **THEN** the adapter or lifecycle arbitration MUST classify that evidence as stale for current-turn settlement unless a verified alias explicitly binds it to the active turn
+- **AND** stale lease evidence MUST NOT clear the newer active lease's processing state
+
+#### Scenario: state evidence remains lifecycle-owned
+
+- **WHEN** lifecycle arbitration needs `isProcessing`, active turn identity, alias resolution, pending blockers, or foreground ownership
+- **THEN** that state evidence MUST be read from conversation lifecycle state
+- **AND** engine adapters MUST NOT independently mutate or reinterpret lifecycle-owned state outside documented settlement paths
+
+### Requirement: Engine Runtime MUST Provide Authoritative Reconciliation Sources
+
+The engine runtime and backend bridge MUST provide scoped authoritative status or replay mechanisms for cases where frontend terminal evidence may have been missed.
+
+#### Scenario: scoped turn status can confirm terminal or running state
+
+- **WHEN** the frontend requests turn or runtime lease status for reconciliation
+- **THEN** the backend or runtime bridge MUST require workspace id, engine, thread id, turn id or verified alias, and runtime lease id when available
+- **AND** it SHOULD return a bounded status such as `completed`, `running`, `failed`, `stalled`, `runtime-ended`, or `unknown`
+- **AND** the response MUST preserve the scope used to compute the answer
+
+#### Scenario: status responses avoid full content
+
+- **WHEN** the backend or runtime bridge responds to settlement reconciliation
+- **THEN** it MUST return scoped ids, status enum, timestamps, source method, and bounded reason when available
+- **AND** it MUST NOT return full user prompts, assistant responses, tool outputs, stdout/stderr, file diffs, auth files, or secret values as settlement evidence
+
+#### Scenario: missed terminal replay remains scoped
+
+- **WHEN** the client asks to replay missed terminal events
+- **THEN** the backend or runtime bridge MUST only replay terminal events that match the requested workspace, engine, thread, turn or verified alias, and runtime lease when available
+- **AND** replayed events that cannot be scoped MUST be marked diagnostic-only or omitted from lifecycle settlement inputs
+
+#### Scenario: status unknown does not imply completed
+
+- **WHEN** the backend or runtime bridge cannot determine whether a turn is completed or running
+- **THEN** it MUST return `unknown` or an equivalent bounded status
+- **AND** clients MUST NOT interpret that response as completed settlement evidence
+
+#### Scenario: new engine variants must join evidence parity
+
+- **WHEN** a new supported engine is added
+- **THEN** the same change set MUST document how terminal, progress, status-query, and replay evidence is normalized for that engine
+- **AND** missing evidence normalization MUST be visible as a typecheck, parity test, or OpenSpec validation gap rather than silent behavior drift
+
+### Requirement: Engine Runtime Status Query MUST Be Scoped And Conservative
+
+Engine runtime and backend bridges MUST expose future authoritative status-query behavior using scoped request and response data, and MUST avoid optimistic completed inference.
+
+#### Scenario: status query request includes conversation scope
+
+- **WHEN** the frontend lifecycle coordinator requests authoritative status for three-evidence reconciliation
+- **THEN** the request MUST include workspace id, engine, thread id, turn id or verified alias when available, runtime session id or runtime lease id when available, request source, and request timestamp
+- **AND** backend/runtime MUST reject or return diagnostic-only status for requests that lack workspace id, engine, or thread id
+
+#### Scenario: status query response echoes computed scope
+
+- **WHEN** backend/runtime returns a status query response
+- **THEN** the response MUST echo the workspace id, engine, thread id, turn id or verified alias when used, runtime session id or runtime lease id when used, status source, observed timestamp, status enum, and bounded reason
+- **AND** the frontend MUST NOT use a response for settlement if the echoed scope does not match the current lifecycle scope
+
+#### Scenario: status enum is bounded
+
+- **WHEN** backend/runtime reports turn or lease status for reconciliation
+- **THEN** it MUST use a bounded status enum containing only terminal, running, unknown, or query-failed states such as `completed`, `running`, `failed`, `stalled`, `runtime-ended`, `unknown`, and `query-failed`
+- **AND** it MUST NOT encode full prompt, assistant output, tool output, stdout, stderr, file diff, auth data, or secrets in the status value or reason
+
+#### Scenario: unsupported engine status is explicit
+
+- **WHEN** an engine cannot provide authoritative turn or lease status
+- **THEN** backend/runtime MUST return `unknown` or `query-failed` with a bounded reason
+- **AND** it MUST NOT synthesize `completed` from elapsed time, history content, visible text, or frontend silence
+
+#### Scenario: stale lease status is not current terminal proof
+
+- **WHEN** backend/runtime can only answer status for an older runtime session or older lease
+- **AND** the frontend current lifecycle scope has a newer runtime session or lease for the same thread
+- **THEN** the response MUST be treated as stale for current-state settlement
+- **AND** it MUST NOT clear the newer active runtime lease or foreground processing state
+
+### Requirement: Runtime Reconciliation Status Query MUST Be Conversation Scoped
+
+Backend/runtime MUST expose a bounded status-query contract for three-evidence reconciliation.
+
+#### Scenario: required scope is enforced
+
+- **WHEN** a status query request lacks workspace id, engine, or thread id
+- **THEN** backend/runtime MUST return `query-failed` or diagnostic-only `unknown`
+- **AND** it MUST NOT infer completion
+
+#### Scenario: active matching runtime work reports running
+
+- **WHEN** runtime manager has active turn lease, stream lease, or foreground work matching the requested workspace, engine, thread, and turn when available
+- **THEN** backend/runtime MUST return `running`
+- **AND** it MUST echo the matched scope
+
+#### Scenario: scoped runtime-ended context reports runtime-ended
+
+- **WHEN** runtime manager has a recent runtime-ended context for the same workspace and engine
+- **AND** the affected thread/turn scope matches the request
+- **THEN** backend/runtime MAY return `runtime-ended`
+- **AND** it MUST include a bounded reason and observed timestamp
+
+#### Scenario: unscoped runtime failure remains unknown
+
+- **WHEN** runtime manager has runtime failure or recovery context but cannot match the requested thread/turn
+- **THEN** backend/runtime MUST return `unknown`
+- **AND** it MUST NOT return `completed` or `runtime-ended` for the active turn

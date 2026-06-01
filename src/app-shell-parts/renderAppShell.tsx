@@ -42,7 +42,7 @@ export function renderAppShell(ctx: any) {
     dropOverlayText, editorHighlightTarget, editorNavigationTarget, editorSplitCompanion, editorSplitLayout, effectiveModels, effectiveReasoningSupported, effectiveRuntimeMode, effectiveSelectedModel,
     effectiveSelectedModelId, effectiveUiMode, engineModelsAsOptions, engineSelectedModelIdByType, engineSelection, engineStatuses, ensureLaunchTerminal, ensureTerminalWithTitle,
     ensureWorkspaceThreadListLoaded, entry, errorToasts, errorToastsNode, existing, exitDiffView, expandRightPanel, expandSidebar,
-    filePanelMode, filePassword, fileReferenceMode, fileStatus, fileViewPanelNode, projectMapPanelNode, files, finishedByAgentUpdate, finishedByDuration,
+    filePanelMode, filePassword, fileReferenceMode, fileStatus, fileViewPanelNode, projectMapPanelNode, browserDockNode, files, finishedByAgentUpdate, finishedByDuration,
     firstAnswer, flushDraggedHeight, force, forkThreadForWorkspace, getGlobalPromptsDir, getPinTimestamp, getThreadRows, getWorkspaceGroupName,
     getWorkspacePromptsDir, gitCommitDiffs, gitDiffListView, gitDiffPanelNode, gitDiffViewStyle, gitDiffViewerNode, gitHistoryPanelHeight, gitHistoryPanelHeightRef,
     gitIssues, gitIssuesError, gitIssuesLoading, gitIssuesTotal, gitLogAhead, gitLogAheadEntries, gitLogBehind, gitLogBehindEntries,
@@ -84,7 +84,7 @@ export function renderAppShell(ctx: any) {
     openWorktreePrompt, path, payload, perfSnapshotRef, persistProjectCopiesFolder, pickImages, pinThread, pinnedThreadsVersion,
     planByThread, planPanelHeight, planPanelNode, pointerId, prefillDraft, prevFiles, previous, previousAgentTimestamp,
     previousDurationMs, previousThreadIdRef, previousTracker, prompts, pushError, pushLoading, queueGitStatusRefresh, queueMessage,
-    queueSaveSettings, rafId, rateLimitsByWorkspace, reasoningOptions, reasoningSupported, recentThreads, reduceTransparency, refreshAccountInfo,
+    queueSaveSettings, rafId, rateLimitsByWorkspace, reasoningOptions, reasoningSupported, recentThreads, reduceTransparency, windowTransparencyEnabled, windowOpacity, refreshAccountInfo,
     refreshAccountRateLimits, refreshFiles, refreshGitDiffs, refreshGitLog, refreshGitStatus, refreshThread, refreshWorkspaces, releaseNotesActiveIndex,
     releaseNotesEntries, releaseNotesError, releaseNotesLoading, releaseNotesOpen, reloadSelectedAgent, removeImage, removeImagesForThread, removeThread,
     removeWorkspace, removeWorktree, renamePrompt, renameThread, renameWorkspaceGroup, renameWorktree, renameWorktreeNotice, renameWorktreePrompt,
@@ -101,7 +101,7 @@ export function renderAppShell(ctx: any) {
     setEngineSelectedModelIdByType, setFilePanelMode, setFileReferenceMode, setGitDiffListView, setGitDiffViewStyle, setGitHistoryPanelHeight, setGitPanelMode, setGitRootScanDepth,
     setGlobalSearchFilesByWorkspace, setHighlightedBranchIndex, setHighlightedCommitIndex, setHighlightedPresetIndex, setIsEditorFileMaximized, setIsPanelLocked, setIsPlanPanelDismissed, setIsSearchPaletteOpen,
     setKanbanViewState, setLiveEditPreviewEnabled, setPrefillDraft,
-    setReduceTransparency, setRightPanelWidth, setSearchContentFilters, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope, setSelectedAgent, setSelectedCollaborationModeId,
+    setReduceTransparency, setWindowTransparencyEnabled, setWindowOpacity, setRightPanelWidth, setSearchContentFilters, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope, setSelectedAgent, setSelectedCollaborationModeId,
     setSelectedCommitSha, setSelectedComposerKanbanPanelId, setSelectedDiffPath, setSelectedEffort, setSelectedKanbanTaskId, setSelectedModelId, setSelectedPullRequest, setWorkspaceHomeWorkspaceId,
     settingsHighlightTarget, settingsOpen, settingsSection, shouldForceResumeInCode, shouldImplementPlan, shouldLoadDiffs, shouldLoadGitHubPanelData, shouldMountSpecHub,
     shouldShowSidebarTopbarContent, showComposer, showDebugButton, showGitDetail, showGitHistory, showHome, showKanban, showNextReleaseNotes,
@@ -371,6 +371,7 @@ export function renderAppShell(ctx: any) {
         gitDiffViewerNode={gitDiffViewerNode}
         fileViewPanelNode={fileViewPanelNode}
         projectMapPanelNode={projectMapPanelNode}
+        browserDockNode={browserDockNode}
         planPanelNode={planPanelNode}
         runtimeConsoleDockNode={runtimeConsoleDockNode}
         debugPanelNode={debugPanelNode}
@@ -400,6 +401,10 @@ export function renderAppShell(ctx: any) {
                 onAssignWorkspaceGroup={assignWorkspaceGroup}
                 reduceTransparency={reduceTransparency}
                 onToggleTransparency={setReduceTransparency}
+                windowTransparencyEnabled={windowTransparencyEnabled}
+                onToggleWindowTransparency={setWindowTransparencyEnabled}
+                windowOpacity={windowOpacity}
+                onWindowOpacityChange={setWindowOpacity}
                 appSettings={appSettings}
                 openAppIconById={openAppIconById}
                 onUpdateAppSettings={async (next) => {
@@ -410,6 +415,7 @@ export function renderAppShell(ctx: any) {
                 onRunCodexDoctor={doctor}
                 onRunClaudeDoctor={claudeDoctor}
                 activeWorkspace={activeWorkspace}
+                activeThreadId={activeThreadId}
                 activeEngine={activeEngine}
                 onUpdateWorkspaceCodexBin={async (id, codexBin) => {
                   await updateWorkspaceCodexBin(id, codexBin);

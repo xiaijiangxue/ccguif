@@ -155,8 +155,13 @@ export function useThreadUserInput({
   dispatch,
   resolveClaudeContinuationThreadId,
 }: UseThreadUserInputOptions) {
-  const handleUserInputSubmit = useCallback(
-    async (request: RequestUserInputRequest, response: RequestUserInputResponse) => {
+  const settleUserInputRequest = useCallback(
+    async (
+      request: RequestUserInputRequest,
+      response: RequestUserInputResponse,
+      options?: { recordSubmittedItem?: boolean },
+    ) => {
+      const recordSubmittedItem = options?.recordSubmittedItem ?? true;
       const rawThreadId = request.params.thread_id;
       const resolvedThreadId =
         (rawThreadId
@@ -179,15 +184,23 @@ export function useThreadUserInput({
           timestamp: Date.now(),
         });
       }
+      const responseOptions: {
+        threadId: string | null | undefined;
+        turnId: string | null | undefined;
+        skippedQuestionIds?: string[];
+      } = {
+        threadId: runtimeThreadId,
+        turnId: request.params.turn_id,
+      };
+      if (response.skippedQuestionIds?.length) {
+        responseOptions.skippedQuestionIds = response.skippedQuestionIds;
+      }
       try {
         await respondToUserInputRequest(
           request.workspace_id,
           request.request_id,
           response.answers,
-          {
-            threadId: runtimeThreadId,
-            turnId: request.params.turn_id,
-          },
+          responseOptions,
         );
       } catch (error) {
         if (stateThreadId) {
@@ -209,6 +222,25 @@ export function useThreadUserInput({
         throw error;
       }
       if (stateThreadId) {
+        const payload = buildSubmittedPayload(request, response);
+        const fallbackOutput = buildSubmittedFallbackOutput(payload);
+        dispatch({
+          type: "upsertItem",
+          workspaceId: request.workspace_id,
+          threadId: stateThreadId,
+          item: {
+            id: request.params.item_id,
+            kind: "tool",
+            toolType: "askuserquestion",
+            title: "Tool: askuserquestion",
+            detail: "",
+            status: "completed",
+            output: fallbackOutput,
+          },
+          hasCustomName: true,
+        });
+      }
+      if (stateThreadId && recordSubmittedItem) {
         const payload = buildSubmittedPayload(request, response);
         dispatch({
           type: "upsertItem",
@@ -236,15 +268,22 @@ export function useThreadUserInput({
     [dispatch, resolveClaudeContinuationThreadId],
   );
 
-  const handleUserInputDismiss = useCallback(
-    (request: RequestUserInputRequest) => {
-      dispatch({
-        type: "removeUserInputRequest",
-        requestId: request.request_id,
-        workspaceId: request.workspace_id,
-      });
+  const handleUserInputSubmit = useCallback(
+    async (request: RequestUserInputRequest, response: RequestUserInputResponse) => {
+      await settleUserInputRequest(request, response, { recordSubmittedItem: true });
     },
-    [dispatch],
+    [settleUserInputRequest],
+  );
+
+  const handleUserInputDismiss = useCallback(
+    async (request: RequestUserInputRequest) => {
+      await settleUserInputRequest(
+        request,
+        { answers: {} },
+        { recordSubmittedItem: false },
+      );
+    },
+    [settleUserInputRequest],
   );
 
   return { handleUserInputSubmit, handleUserInputDismiss };

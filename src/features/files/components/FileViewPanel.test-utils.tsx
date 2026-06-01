@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 
 export const mockCodeMirrorDispatch = vi.fn();
+export const mockOpenNewDetachedFileExplorerWindow = vi.fn(async () => "created" as const);
 
 function createDoc(text: string) {
   const lines = text.split("\n");
@@ -196,6 +197,28 @@ vi.mock("../../../services/tauri", () => ({
   getCodeIntelDefinition: vi.fn(),
   getCodeIntelReferences: vi.fn(),
 }));
+
+vi.mock("../detachedFileExplorer", () => {
+  return {
+    buildDetachedFileExplorerSession: (input: {
+      workspaceId: string;
+      workspacePath: string;
+      workspaceName: string;
+      gitRoot?: string | null;
+      initialFilePath?: string | null;
+      defaultSidebarCollapsed?: boolean;
+    }) => ({
+      workspaceId: input.workspaceId.trim(),
+      workspacePath: input.workspacePath.trim(),
+      workspaceName: input.workspaceName.trim(),
+      gitRoot: input.gitRoot?.trim() || null,
+      initialFilePath: input.initialFilePath?.trim() || null,
+      defaultSidebarCollapsed: input.defaultSidebarCollapsed === true,
+      updatedAt: 123,
+    }),
+    openNewDetachedFileExplorerWindow: mockOpenNewDetachedFileExplorerWindow,
+  };
+});
 
 export const mermaidInitialize = vi.fn();
 export const mermaidRender = vi.fn(async (_id: string, source: string) => ({

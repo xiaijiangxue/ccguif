@@ -9,6 +9,10 @@ vi.mock("../../tasks/utils/taskRunStorage", () => ({
   loadTaskRunStore: vi.fn(),
 }));
 
+vi.mock("../../browser-agent/components/BrowserDock", () => ({
+  BrowserDock: () => null,
+}));
+
 const mockedLoadTaskRunStore = vi.mocked(loadTaskRunStore);
 
 const baseWorkspace: WorkspaceInfo = {

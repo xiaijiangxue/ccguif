@@ -24,11 +24,13 @@
 .detached-file-explorer-menubar {
   display: flex;
   align-items: center;
-  min-height: 24px;
+  min-height: 32px;
   padding: 0 10px;
   border-bottom: 1px solid var(--detached-menubar-border);
   background: var(--detached-menubar-bg);
   flex: 0 0 auto;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .macos-desktop .detached-file-explorer-menubar {

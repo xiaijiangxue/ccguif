@@ -116,7 +116,7 @@
 html,
 body {
   margin: 0;
-  background: #0d0f14;
+  background: transparent;
   overflow: hidden;
 }
 

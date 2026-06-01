@@ -198,9 +198,38 @@ export type ProjectMapManifest = {
   lensStats: ProjectMapLensStats[];
 };
 
+export type ProjectMapRunFailureCategory =
+  | "output_parse_failed"
+  | "ownership_mismatch"
+  | "evidence_read_failed"
+  | "persistence_failed"
+  | "cancelled";
+
+export type ProjectMapRunOwnership = {
+  workspaceId: string | null;
+  workspacePath: string;
+  storageKey: string;
+  storageLocation: ProjectMapStorageLocation;
+};
+
+export type ProjectMapOrganizerRunResult = {
+  unassignedCount: number;
+  candidateCount: number;
+  skippedCount: number;
+  unsafeCount: number;
+  skips?: ProjectMapOrganizerRunItem[];
+  unsafe?: ProjectMapOrganizerRunItem[];
+};
+
+export type ProjectMapOrganizerRunItem = {
+  nodeId: string;
+  title: string;
+  reason: string;
+};
+
 export type ProjectMapRunMetadata = {
   id: string;
-  kind: "global" | "node" | "auto" | "conversation";
+  kind: "global" | "node" | "auto" | "conversation" | "organizer";
   status: "pending" | "running" | "completed" | "failed" | "cancelled";
   phase?:
     | "queued"
@@ -224,9 +253,12 @@ export type ProjectMapRunMetadata = {
   preferredLanguage?: ProjectMapPreferredLanguage;
   readSources?: ProjectMapSource[];
   storageLocation?: ProjectMapStorageLocation;
+  ownership?: ProjectMapRunOwnership;
   writePath?: string;
   autoIngestion?: ProjectMapAutoIngestionRunContext;
+  organizerResult?: ProjectMapOrganizerRunResult;
   error?: string | null;
+  failureCategory?: ProjectMapRunFailureCategory | null;
 };
 
 export type ProjectMapRunLog = {
@@ -241,13 +273,15 @@ export type ProjectMapGenerationIntent =
   | "global"
   | "completeNode"
   | "calibrateNode"
-  | "autoIngestion";
+  | "autoIngestion"
+  | "organizeUnassigned";
 
 export type ProjectMapGenerationScope =
   | { kind: "global"; lensIds: ProjectMapLensId[] }
   | { kind: "node"; nodeId: string; includeDescendants: boolean }
   | { kind: "auto"; messageHashes: string[] }
-  | { kind: "conversation"; memoryId: string };
+  | { kind: "conversation"; memoryId: string }
+  | { kind: "organizer"; unassignedCount: number };
 
 export type ProjectMapGenerationRequest = {
   id: string;
@@ -259,6 +293,7 @@ export type ProjectMapGenerationRequest = {
   preferredLanguage: ProjectMapPreferredLanguage;
   readSources: ProjectMapSource[];
   storageLocation: ProjectMapStorageLocation;
+  ownership?: ProjectMapRunOwnership;
   writePath: string;
   createdAt: string;
   autoIngestion?: ProjectMapAutoIngestionRunContext;
@@ -274,15 +309,27 @@ export type ProjectMapNodePatch = {
   candidate?: boolean;
 };
 
+export type ProjectMapCandidateKind = "contentPatch" | "parentMove";
+
+export type ProjectMapParentMoveCandidate = {
+  nodeId: string;
+  fromParentId: string;
+  suggestedParentId: string;
+  confidence: ProjectMapConfidence;
+  reason: string;
+};
+
 export type ProjectMapCandidate = {
   id: string;
   status: "pending" | "confirmed" | "rejected";
   createdAt: string;
   updatedAt: string;
-  source: "global" | "node" | "auto" | "conversation";
+  source: "global" | "node" | "auto" | "conversation" | "organizer";
+  kind?: ProjectMapCandidateKind;
   targetLensId: ProjectMapLensId;
   targetNodeId?: string | null;
   patch: ProjectMapNodePatch;
+  move?: ProjectMapParentMoveCandidate;
   evidence: ProjectMapEvidenceRecord[];
 };
 

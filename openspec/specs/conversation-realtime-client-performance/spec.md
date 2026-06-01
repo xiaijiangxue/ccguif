@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the conversation-realtime-client-performance behavior contract, covering Realtime Conversation Client MUST Expose A Three-Engine Performance Budget.
-
 ## Requirements
 ### Requirement: Realtime Conversation Client MUST Expose A Three-Engine Performance Budget
 The client MUST define a shared performance budget for Codex, Claude Code, and Gemini realtime conversation turns so optimization decisions are evaluated against the same observable contract.
@@ -122,3 +121,204 @@ Background session scheduling optimizations MUST be independently rollback-safe 
 - **WHEN** staged hydration is disabled by a rollback flag
 - **THEN** the client MAY restore baseline foreground rendering behavior for switched sessions
 - **AND** diagnostics MUST continue collecting enough ingress, flush, render, and long task evidence to compare baseline and optimized behavior
+
+### Requirement: Realtime Evidence MUST Correlate Visible-Lag Risk
+
+Realtime performance reports MUST correlate first-token latency, inter-token jitter, batching behavior, terminal pressure, and visible-lag risk for the same scenario.
+
+#### Scenario: realtime summary includes visible-lag risk
+- **WHEN** realtime performance evidence is generated
+- **THEN** the summary MUST include first-token latency and inter-token jitter where available
+- **AND** the summary MUST classify visible-lag risk without hiding terminal-settlement pressure
+
+#### Scenario: terminal pressure remains separate from provider delay
+- **WHEN** realtime evidence shows terminal or batching pressure
+- **THEN** the report MUST distinguish client-side terminal pressure from provider first-token delay
+- **AND** it MUST NOT attribute all lag to the provider without correlated evidence
+
+### Requirement: Realtime Performance Budget MUST Cover Single Long Live Assistant Rows
+
+Realtime client performance evidence MUST include the cost of a single active assistant row growing to large text sizes, because list virtualization alone does not bound reducer, Markdown, layout, or scroll work inside that row. The P0 evidence target is Claude Code long output; other engines MAY opt in through the same budget.
+
+#### Scenario: Claude Code long live row diagnostics distinguish local amplification
+- **WHEN** Claude Code streams a long assistant message
+- **AND** the assistant text grows beyond ordinary preview limits
+- **THEN** diagnostics MUST be able to correlate delta ingress cadence, reducer merge cost, normalization cost, render cost, visible text growth, and long task evidence for the same turn
+- **AND** diagnostics MUST distinguish local reducer or render amplification from upstream provider delay
+
+#### Scenario: canonical text is not truncated on active append paths
+- **WHEN** an active assistant message receives text deltas beyond the display preview budget
+- **THEN** the reducer MUST preserve the canonical assistant text without applying preview truncation
+- **AND** later deltas MUST merge onto the untruncated canonical body
+ - **AND** this MUST hold for both reducer fast path normalization and fallback `prepareThreadItems` normalization
+
+#### Scenario: rollback keeps diagnostics available
+- **WHEN** long-row render fallback or shadow recovery is disabled by a rollback flag
+- **THEN** realtime diagnostics MUST still record enough ingress, reducer, render, and visible-growth evidence to compare baseline and optimized behavior
+
+### Requirement: Foreground Terminal Settlement Diagnostics MUST Identify The Failure Class
+Realtime client diagnostics MUST emit enough structured evidence to classify foreground turns that render final output but remain in processing state.
+
+#### Scenario: terminal event reaches frontend
+- **WHEN** the app-server bridge receives `turn/completed`, `turn/error`, `turn/stalled`, or `runtime/ended` for a foreground conversation turn
+- **THEN** diagnostics MUST record that the terminal event reached the frontend bridge
+- **AND** the record MUST include workspace id, thread id, turn id when available, event type, and whether final content was present when known
+
+#### Scenario: terminal event is rejected by settlement guard
+- **WHEN** a terminal event reaches frontend turn settlement
+- **AND** active turn identity or alias guards prevent clearing processing state
+- **THEN** diagnostics MUST classify the result as rejected terminal settlement
+- **AND** the record MUST include incoming turn id, current active turn id, target thread id, resolved alias when available, and processing state
+
+#### Scenario: terminal event is deferred by lifecycle blockers
+- **WHEN** a terminal completion event is intentionally deferred because lifecycle blockers still exist
+- **THEN** diagnostics MUST classify the result as deferred terminal settlement
+- **AND** the record MUST include blocker names or counts, assistant ingress evidence, and current active turn id
+
+#### Scenario: terminal handling leaves busy residue
+- **WHEN** terminal event handling finishes for a foreground turn
+- **AND** the thread remains in processing mode or keeps the same active turn id
+- **THEN** diagnostics MUST classify the result as terminal settlement busy residue
+- **AND** the record MUST distinguish this case from missing terminal event and provider streaming delay
+
+### Requirement: Foreground Settlement Diagnostics MUST Stay Bounded And Content-Safe
+Settlement diagnostics MUST be safe to collect during long conversations without storing prompt or assistant body text.
+
+#### Scenario: diagnostic payload excludes conversation content
+- **WHEN** frontend emits foreground settlement diagnostics
+- **THEN** the payload MUST NOT include full user prompt, assistant response, tool output, command output, or file diff content
+- **AND** it MAY include ids, event labels, counts, status strings, timestamps, booleans, and bounded reason strings
+
+#### Scenario: repeated progress evidence remains bounded
+- **WHEN** a long-running foreground turn receives many progress events before terminal settlement
+- **THEN** diagnostics MUST retain the latest progress evidence source and timestamp rather than appending unbounded per-event content
+- **AND** terminal settlement diagnostics MUST be able to reference that latest progress evidence
+
+### Requirement: Settlement Diagnostics MUST Support Three-Evidence Dry-Run Decisions
+
+Realtime diagnostics MUST support dry-run three-evidence settlement decisions before guarded settlement behavior is enabled.
+
+#### Scenario: dry-run decision records why settlement would or would not occur
+
+- **WHEN** the client receives terminal evidence, observes busy residue, evaluates a suspected stuck foreground turn, or requests reconciliation
+- **THEN** diagnostics SHOULD record the dry-run settlement decision such as `wouldSettle`, `wouldReject`, `wouldDefer`, `wouldKeepRunning`, `wouldRequestReconciliation`, or `wouldCleanupResidue`
+- **AND** the record MUST include the terminal/state/progress/reconciliation evidence classes and conversation scope match result used for the decision without full conversation content
+
+#### Scenario: scope mismatch remains visible without touching current UI
+
+- **WHEN** dry-run settlement sees terminal, progress, status-query, or replay evidence from another thread, another engine, an older turn, an older runtime lease, or a previous foreground owner
+- **THEN** diagnostics MUST classify the decision as scope mismatch, stale evidence, or equivalent
+- **AND** the foreground UI state MUST remain unchanged by that evidence
+
+#### Scenario: long-task protection remains distinguishable from stuck settlement
+
+- **WHEN** a foreground turn has no terminal evidence but has fresh progress evidence
+- **THEN** diagnostics MUST classify the decision as progress-protected or equivalent
+- **AND** the system MUST NOT report the case as completed, terminal settlement failure, or provider delay without additional evidence
+
+#### Scenario: busy residue remains separate from provider or render delay
+
+- **WHEN** final output is visible or terminal evidence was handled
+- **AND** state evidence still shows processing residue
+- **THEN** diagnostics MUST classify the issue as settlement busy residue or equivalent
+- **AND** it MUST remain distinguishable from upstream provider delay, backend forwarding stall, event delivery failure, and client render amplification
+
+#### Scenario: reconciliation outcome is visible
+
+- **WHEN** the frontend requests authoritative turn status or missed terminal replay because terminal evidence is absent and progress is stale
+- **THEN** diagnostics MUST record a bounded reconciliation outcome such as `status-completed`, `status-running`, `status-unknown`, `query-failed`, `replay-terminal`, or `replay-unscoped`
+- **AND** the record MUST include scope match result and decision reason without full conversation content
+
+#### Scenario: Phase 2 behavior is kill-switchable
+
+- **WHEN** guarded busy-residue cleanup or stale-progress reconciliation application is enabled
+- **THEN** diagnostics MUST identify whether the behavior was dry-run, feature-flagged active, or disabled by kill switch
+- **AND** disabling the behavior MUST leave the original normal completion path available
+
+### Requirement: Dry-Run Settlement Diagnostics MUST Be Bounded And Distinguishable
+
+Phase 1 diagnostics MUST expose settlement arbitration outcomes without changing runtime or UI behavior.
+
+#### Scenario: dry-run actions are recorded as would-decisions
+
+- **WHEN** Phase 1 records a settlement arbitration result
+- **THEN** diagnostics SHOULD map helper actions to dry-run labels such as `wouldSettle`, `wouldReject`, `wouldDefer`, `wouldKeepRunning`, `wouldRequestReconciliation`, or `wouldCleanupResidue`
+- **AND** the record MUST include scope match result and decision reason without full conversation content
+
+#### Scenario: busy residue remains diagnostic-only
+
+- **WHEN** terminal evidence is matched but state evidence still indicates busy residue
+- **THEN** Phase 1 diagnostics MAY record `wouldCleanupResidue`
+- **AND** the integration MUST NOT perform cleanup or alter visible conversation state
+
+#### Scenario: reconciliation-needed is separate from provider delay
+
+- **WHEN** terminal evidence is absent and progress is stale or absent
+- **THEN** diagnostics SHOULD record reconciliation-needed or equivalent
+- **AND** the record MUST remain distinguishable from upstream provider delay, runtime still active, render delay, and normal long-task protection
+
+#### Scenario: content safety is preserved
+
+- **WHEN** dry-run settlement diagnostics are persisted or shown in debug entries
+- **THEN** they MUST use bounded ids, booleans, counts, timestamps, enum status, and bounded reason strings
+- **AND** they MUST NOT include full prompts, assistant responses, tool outputs, command outputs, file diffs, auth files, or secret values
+
+### Requirement: Status Query Reconciliation Diagnostics MUST Be Bounded And Distinguishable
+
+Phase 2a reconciliation diagnostics MUST make status-query attempts and outcomes visible without changing runtime or UI behavior.
+
+#### Scenario: query attempt is distinguishable from provider delay
+
+- **WHEN** lifecycle arbitration requests authoritative status because terminal evidence is missing and progress is stale
+- **THEN** diagnostics MUST record a bounded reconciliation-query attempt with a label or category distinct from upstream provider delay, render delay, normal long-task protection, and terminal busy residue
+- **AND** the diagnostic MUST include scoped ids, status-query source, timestamps, progress age, and decision reason when available
+
+#### Scenario: query result records conservative outcome
+
+- **WHEN** authoritative status query returns `completed`, `running`, `failed`, `stalled`, `runtime-ended`, `unknown`, or `query-failed`
+- **THEN** diagnostics MUST record the bounded status enum, scope match result, status source, and bounded reason
+- **AND** diagnostics MUST show whether the response was accepted as Terminal Evidence candidate, kept running, rejected as stale, or deferred
+
+#### Scenario: recovery context remains separate
+
+- **WHEN** status reconciliation overlaps with runtime recovery quarantine, concurrent runtime acquire timeout, stale runtime cleanup, or stopping-runtime race
+- **THEN** diagnostics MAY include bounded recovery context fields such as recovery state, acquire state, ended source, retry delay, and query failure reason
+- **AND** those fields MUST remain separate from terminal status and MUST NOT imply completed settlement
+
+#### Scenario: normal query consistency does not flood error log
+
+- **WHEN** status query confirms a normal running or normally completed state without residue, stale scope, or query failure
+- **THEN** the client SHOULD avoid persisting high-volume normal consistency records to the global error log
+- **AND** abnormal outcomes such as stale scope, query failure, unknown status, terminal-confirmed busy residue, or rejected scope SHOULD be persistable as bounded core diagnostics
+
+#### Scenario: reconciliation diagnostics exclude content
+
+- **WHEN** reconciliation query diagnostics are persisted or shown in debug entries
+- **THEN** they MUST use bounded ids, booleans, counts, timestamps, enum status, and bounded reason strings
+- **AND** they MUST NOT include full prompts, assistant responses, tool outputs, command outputs, stdout, stderr, file diffs, auth files, or secret values
+
+### Requirement: Phase 2a Reconciliation Diagnostics MUST Be Bounded And Persist Abnormal Outcomes
+
+Status-query reconciliation diagnostics MUST be distinguishable from normal provider delay and must avoid content payloads.
+
+#### Scenario: query attempt is logged
+
+- **WHEN** frontend issues a status query because the pure helper requested reconciliation
+- **THEN** it MUST emit a bounded `query-requested` diagnostic with scope ids and progress age
+
+#### Scenario: query result is logged
+
+- **WHEN** frontend receives a status query response
+- **THEN** it MUST emit a bounded `query-resolved` diagnostic containing status enum, scope match, status source, bounded reason, and helper decision
+
+#### Scenario: rejected or failed query is persistable
+
+- **WHEN** status response scope is rejected, status is unknown, or the query fails
+- **THEN** the diagnostic SHOULD be eligible for global error-log persistence
+- **AND** it MUST exclude prompts, assistant text, command output, stdout, stderr, file diffs, auth data, and secrets
+
+#### Scenario: hanging query receives bounded failed outcome
+
+- **WHEN** a reconciliation status query does not return within the diagnostic timeout window
+- **THEN** the frontend MUST emit a bounded `query-failed` diagnostic for the same workspace, engine, thread, turn, and query scope
+- **AND** timeout failure MUST NOT clear processing state, active turn id, messages, blockers, runtime leases, or history

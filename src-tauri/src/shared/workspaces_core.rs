@@ -181,7 +181,7 @@ where
     Ok(())
 }
 
-async fn resolve_workspace_root(
+pub(crate) async fn resolve_workspace_root(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: &str,
 ) -> Result<PathBuf, String> {
@@ -1727,6 +1727,56 @@ mod tests {
             result.expect_err("spawn failure should surface"),
             "spawn failed"
         );
+    }
+
+    #[tokio::test]
+    async fn connect_workspace_with_runtime_manager_records_acquiring_before_spawn_completes() {
+        let mut workspace_map = HashMap::new();
+        workspace_map.insert(
+            "ws-codex".to_string(),
+            workspace_entry("ws-codex", Some("codex")),
+        );
+
+        let workspaces = Mutex::new(workspace_map);
+        let sessions: Mutex<HashMap<String, Arc<crate::backend::app_server::WorkspaceSession>>> =
+            Mutex::new(HashMap::new());
+        let app_settings = Mutex::new(AppSettings::default());
+        let runtime_manager = Arc::new(crate::runtime::RuntimeManager::new(&std::env::temp_dir()));
+
+        let connect_future = connect_workspace_core(
+            "ws-codex".to_string(),
+            &workspaces,
+            &sessions,
+            &app_settings,
+            Some(&runtime_manager),
+            "ensure-runtime-ready",
+            true,
+            |_entry, _default_bin, _codex_args, _codex_home| async {
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                Err("spawn should not finish in this test".to_string())
+            },
+        );
+
+        tokio::pin!(connect_future);
+
+        tokio::select! {
+            result = &mut connect_future => {
+                panic!("connect should still be waiting on the guarded spawn: {result:?}");
+            }
+            _ = tokio::time::sleep(Duration::from_millis(25)) => {}
+        }
+
+        let snapshot = runtime_manager.snapshot(&AppSettings::default()).await;
+        let row = snapshot
+            .rows
+            .iter()
+            .find(|item| item.workspace_id == "ws-codex")
+            .expect("guarded connect should create an acquiring runtime row");
+        assert_eq!(
+            row.lifecycle_state,
+            crate::runtime::RuntimeLifecycleState::Acquiring
+        );
+        assert_eq!(row.user_action.as_deref(), Some("wait"));
     }
 
     #[tokio::test]

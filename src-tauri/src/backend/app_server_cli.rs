@@ -111,6 +111,15 @@ fn build_std_command_for_binary(bin: &Path) -> std::process::Command {
             command.arg(bin);
             return command;
         }
+        if bin_lower.ends_with(".ps1") {
+            let mut command = crate::utils::std_command("powershell");
+            command.arg("-NoProfile");
+            command.arg("-ExecutionPolicy");
+            command.arg("Bypass");
+            command.arg("-File");
+            command.arg(bin);
+            return command;
+        }
     }
 
     crate::utils::std_command(bin)
@@ -311,7 +320,7 @@ pub fn find_cli_binary(name: &str, custom_bin: Option<&str>) -> Option<PathBuf> 
     // This is more reliable than relying on PATH/PATHEXT
     #[cfg(windows)]
     {
-        let extensions = ["cmd", "exe", "bat", "com"];
+        let extensions = ["cmd", "exe", "bat", "com", "ps1"];
         for search_path in get_extra_search_paths() {
             // Try with various extensions
             for ext in &extensions {
@@ -403,7 +412,7 @@ fn is_windows_background_safe_opencode_candidate(path: &Path) -> bool {
         .and_then(|value| value.to_str())
         .map(|value| value.to_ascii_lowercase());
     match extension.as_deref() {
-        Some("cmd") | Some("bat") | Some("com") => true,
+        Some("cmd") | Some("bat") | Some("com") | Some("ps1") => true,
         Some("exe") => is_known_windows_cli_install_path(path),
         _ => false,
     }
@@ -435,7 +444,7 @@ fn prefer_windows_executable_variant(path: PathBuf) -> PathBuf {
         .map(|value| value.to_ascii_lowercase());
     if matches!(
         ext.as_deref(),
-        Some("cmd") | Some("exe") | Some("bat") | Some("com")
+        Some("cmd") | Some("exe") | Some("bat") | Some("com") | Some("ps1")
     ) {
         return path;
     }
@@ -447,7 +456,7 @@ fn prefer_windows_executable_variant(path: PathBuf) -> PathBuf {
         return path;
     };
 
-    for preferred_ext in ["cmd", "exe", "bat", "com"] {
+    for preferred_ext in ["cmd", "exe", "bat", "com", "ps1"] {
         let candidate = parent.join(format!("{file_name}.{preferred_ext}"));
         if candidate.exists() {
             return candidate;
@@ -555,6 +564,10 @@ pub(crate) fn wrapper_kind_for_binary(bin: &str) -> &'static str {
         "cmd-wrapper"
     } else if normalized.ends_with(".bat") {
         "bat-wrapper"
+    } else if normalized.ends_with(".ps1") {
+        "ps1-wrapper"
+    } else if normalized.ends_with(".exe") {
+        "exe-binary"
     } else {
         "direct"
     }
@@ -562,7 +575,10 @@ pub(crate) fn wrapper_kind_for_binary(bin: &str) -> &'static str {
 
 #[allow(dead_code)]
 pub(crate) fn launch_context_uses_command_wrapper(launch_context: &CodexLaunchContext) -> bool {
-    launch_context.wrapper_kind != "direct"
+    matches!(
+        launch_context.wrapper_kind,
+        "cmd-wrapper" | "bat-wrapper" | "ps1-wrapper"
+    )
 }
 
 fn codex_args_contain_instruction_override(args: &[String]) -> bool {
@@ -634,26 +650,187 @@ pub(crate) fn apply_codex_app_server_args(
     Ok(())
 }
 
-#[cfg(windows)]
-fn proxy_env_snapshot() -> serde_json::Map<String, Value> {
-    [
-        "HTTP_PROXY",
-        "HTTPS_PROXY",
-        "ALL_PROXY",
-        "NO_PROXY",
-        "http_proxy",
-        "https_proxy",
-        "all_proxy",
-        "no_proxy",
-    ]
-    .into_iter()
-    .map(|key| (key.to_string(), json!(env::var(key).ok())))
-    .collect()
+const PROXY_ENV_KEYS: [&str; 8] = [
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "ALL_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "all_proxy",
+    "no_proxy",
+];
+
+fn redact_proxy_env_value(key: &str, value: String) -> String {
+    if key.eq_ignore_ascii_case("NO_PROXY") {
+        return value;
+    }
+
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return value;
+    }
+
+    let Some(at_index) = trimmed.find('@') else {
+        return value;
+    };
+    let credentials_start = trimmed.find("://").map(|index| index + 3).unwrap_or(0);
+    if at_index <= credentials_start {
+        return value;
+    }
+
+    format!(
+        "{}[redacted]@{}",
+        &trimmed[..credentials_start],
+        &trimmed[at_index + 1..]
+    )
 }
 
-#[cfg(not(windows))]
 fn proxy_env_snapshot() -> serde_json::Map<String, Value> {
-    serde_json::Map::new()
+    PROXY_ENV_KEYS
+        .into_iter()
+        .map(|key| {
+            let value = env::var(key)
+                .ok()
+                .map(|raw_value| redact_proxy_env_value(key, raw_value));
+            (key.to_string(), json!(value))
+        })
+        .collect()
+}
+
+pub(crate) fn build_proxy_diagnosis(proxy_snapshot: &serde_json::Map<String, Value>) -> Value {
+    let configured_keys: Vec<String> = PROXY_ENV_KEYS
+        .iter()
+        .filter_map(|key| {
+            let value = proxy_snapshot.get(*key).and_then(Value::as_str)?;
+            if value.trim().is_empty() {
+                None
+            } else {
+                Some((*key).to_string())
+            }
+        })
+        .collect();
+
+    let primary_source = configured_keys
+        .iter()
+        .find(|key| {
+            matches!(
+                key.as_str(),
+                "HTTPS_PROXY"
+                    | "https_proxy"
+                    | "HTTP_PROXY"
+                    | "http_proxy"
+                    | "ALL_PROXY"
+                    | "all_proxy"
+            )
+        })
+        .map(|_| "processEnv");
+
+    json!({
+        "category": if primary_source.is_some() { "proxyConfigured" } else { "missingProxy" },
+        "primarySource": primary_source,
+        "configuredKeys": configured_keys,
+        "processEnv": proxy_snapshot,
+        "valuesRedacted": true,
+    })
+}
+
+pub(crate) fn classify_endpoint_failure(details: Option<&str>) -> &'static str {
+    let Some(details) = details else {
+        return "unknown";
+    };
+    let normalized = details.to_ascii_lowercase();
+    if normalized.contains("timed out") || normalized.contains("timeout") {
+        "timeout"
+    } else if normalized.contains("dns") || normalized.contains("could not resolve") {
+        "dnsFailure"
+    } else if normalized.contains("tls")
+        || normalized.contains("certificate")
+        || normalized.contains("ssl")
+    {
+        "tlsFailure"
+    } else if normalized.contains("proxy") || normalized.contains("407") {
+        "proxyUnreachable"
+    } else if normalized.contains("status") || normalized.contains("http") {
+        "httpStatus"
+    } else {
+        "unknown"
+    }
+}
+
+fn value_string(debug_info: &Value, key: &str) -> Option<String> {
+    debug_info
+        .get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+}
+
+fn is_explicit_path(value: &str) -> bool {
+    value.contains('/') || value.contains('\\')
+}
+
+pub(crate) fn build_engine_environment_diagnosis(
+    engine_name: &str,
+    requested_bin: Option<&str>,
+    debug_info: &Value,
+) -> Value {
+    let engine_prefix = if engine_name.eq_ignore_ascii_case("claude") {
+        "claude"
+    } else {
+        "codex"
+    };
+    let found_key = format!("{engine_prefix}Found");
+    let standard_key = format!("{engine_prefix}StandardWhich");
+    let fallback_binary = value_string(debug_info, &found_key);
+    let gui_path_binary = value_string(debug_info, &standard_key);
+    let resolved_binary = value_string(debug_info, "resolvedBinaryPath");
+    let configured_path = requested_bin
+        .map(str::trim)
+        .filter(|value| !value.is_empty() && is_explicit_path(value))
+        .map(ToString::to_string);
+    let configured_path_missing = configured_path
+        .as_deref()
+        .map(|path| !Path::new(path).exists())
+        .unwrap_or(false);
+    let missed_by_gui_path = fallback_binary.is_some() && gui_path_binary.is_none();
+    let category = if configured_path_missing {
+        "configuredPathMissing"
+    } else if missed_by_gui_path {
+        "environmentDrift"
+    } else if fallback_binary.is_some()
+        && gui_path_binary.is_some()
+        && fallback_binary != gui_path_binary
+    {
+        "pathPrecedenceDiffers"
+    } else if fallback_binary.is_some() || gui_path_binary.is_some() {
+        "resolved"
+    } else {
+        "notFound"
+    };
+    let message = match category {
+        "configuredPathMissing" => "Configured executable path does not exist.",
+        "environmentDrift" => {
+            "Executable was found by platform fallback but not by the GUI process PATH."
+        }
+        "pathPrecedenceDiffers" => {
+            "Extended resolver and GUI process PATH resolve different executables."
+        }
+        "resolved" => "Executable is visible to the runtime resolver.",
+        _ => "Executable was not found by the runtime resolver.",
+    };
+
+    json!({
+        "category": category,
+        "message": message,
+        "configuredPath": configured_path,
+        "configuredPathMissing": configured_path_missing,
+        "guiPathBinary": gui_path_binary,
+        "fallbackBinary": fallback_binary,
+        "resolvedBinaryPath": resolved_binary,
+        "missedByGuiPath": missed_by_gui_path,
+    })
 }
 
 /// Get debug information for CLI detection (useful for troubleshooting on Windows)
@@ -673,9 +850,14 @@ pub fn get_cli_debug_info(custom_bin: Option<&str>) -> serde_json::Value {
         json!(launch_context.wrapper_kind),
     );
     debug.insert("pathEnvUsed".to_string(), json!(launch_context.path_env));
+    let proxy_snapshot = proxy_env_snapshot();
     debug.insert(
         "proxyEnvSnapshot".to_string(),
-        Value::Object(proxy_env_snapshot()),
+        Value::Object(proxy_snapshot.clone()),
+    );
+    debug.insert(
+        "proxyDiagnosis".to_string(),
+        build_proxy_diagnosis(&proxy_snapshot),
     );
 
     // Environment variables (Windows-specific)
@@ -759,6 +941,16 @@ pub fn build_command_for_binary_with_console(bin: &str, hide_console: bool) -> C
         if bin_lower.ends_with(".cmd") || bin_lower.ends_with(".bat") {
             let mut cmd = crate::utils::async_command_with_console_visibility("cmd", hide_console);
             cmd.arg("/c");
+            cmd.arg(bin);
+            return cmd;
+        }
+        if bin_lower.ends_with(".ps1") {
+            let mut cmd =
+                crate::utils::async_command_with_console_visibility("powershell", hide_console);
+            cmd.arg("-NoProfile");
+            cmd.arg("-ExecutionPolicy");
+            cmd.arg("Bypass");
+            cmd.arg("-File");
             cmd.arg(bin);
             return cmd;
         }
@@ -1121,7 +1313,7 @@ mod tests {
     }
 
     #[test]
-    fn launch_context_uses_command_wrapper_only_for_cmd_or_bat() {
+    fn launch_context_uses_command_wrapper_only_for_windows_launch_wrappers() {
         let direct = CodexLaunchContext {
             resolved_bin: "codex".to_string(),
             wrapper_kind: wrapper_kind_for_binary("codex"),
@@ -1137,10 +1329,22 @@ mod tests {
             wrapper_kind: wrapper_kind_for_binary("C:/tools/codex.bat"),
             path_env: None,
         };
+        let ps1_wrapper = CodexLaunchContext {
+            resolved_bin: "C:/tools/codex.ps1".to_string(),
+            wrapper_kind: wrapper_kind_for_binary("C:/tools/codex.ps1"),
+            path_env: None,
+        };
+        let exe_binary = CodexLaunchContext {
+            resolved_bin: "C:/tools/codex.exe".to_string(),
+            wrapper_kind: wrapper_kind_for_binary("C:/tools/codex.exe"),
+            path_env: None,
+        };
 
         assert!(!launch_context_uses_command_wrapper(&direct));
         assert!(launch_context_uses_command_wrapper(&cmd_wrapper));
         assert!(launch_context_uses_command_wrapper(&bat_wrapper));
+        assert!(launch_context_uses_command_wrapper(&ps1_wrapper));
+        assert!(!launch_context_uses_command_wrapper(&exe_binary));
     }
 
     #[test]
@@ -1285,6 +1489,94 @@ mod tests {
         assert_eq!(
             wrapper_kind_for_binary(r"C:\Users\demo\AppData\Roaming\npm\codex.cmd"),
             "cmd-wrapper"
+        );
+        assert_eq!(
+            wrapper_kind_for_binary(r"C:\Users\demo\AppData\Roaming\npm\codex.exe"),
+            "exe-binary"
+        );
+        assert_eq!(
+            wrapper_kind_for_binary(r"C:\Users\demo\AppData\Roaming\npm\codex.ps1"),
+            "ps1-wrapper"
+        );
+    }
+
+    #[test]
+    fn proxy_diagnosis_reports_redacted_process_proxy_evidence() {
+        let mut snapshot = serde_json::Map::new();
+        snapshot.insert(
+            "HTTPS_PROXY".to_string(),
+            json!(redact_proxy_env_value(
+                "HTTPS_PROXY",
+                "https://user:secret@proxy.example:8080".to_string()
+            )),
+        );
+        snapshot.insert("NO_PROXY".to_string(), json!("localhost,127.0.0.1"));
+
+        let diagnosis = build_proxy_diagnosis(&snapshot);
+
+        assert_eq!(diagnosis["category"], "proxyConfigured");
+        assert_eq!(diagnosis["primarySource"], "processEnv");
+        assert_eq!(
+            snapshot["HTTPS_PROXY"],
+            "https://[redacted]@proxy.example:8080"
+        );
+        assert_eq!(snapshot["NO_PROXY"], "localhost,127.0.0.1");
+    }
+
+    #[test]
+    fn environment_diagnosis_classifies_gui_path_drift() {
+        let debug_info = json!({
+            "resolvedBinaryPath": "/opt/homebrew/bin/codex",
+            "codexFound": "/opt/homebrew/bin/codex",
+            "codexStandardWhich": null,
+        });
+
+        let diagnosis = build_engine_environment_diagnosis("codex", None, &debug_info);
+
+        assert_eq!(diagnosis["category"], "environmentDrift");
+        assert_eq!(diagnosis["missedByGuiPath"], true);
+        assert_eq!(diagnosis["fallbackBinary"], "/opt/homebrew/bin/codex");
+    }
+
+    #[test]
+    fn environment_diagnosis_prioritizes_missing_configured_path() {
+        let debug_info = json!({
+            "resolvedBinaryPath": "/opt/homebrew/bin/codex",
+            "codexFound": "/opt/homebrew/bin/codex",
+            "codexStandardWhich": null,
+        });
+
+        let diagnosis = build_engine_environment_diagnosis(
+            "codex",
+            Some("/definitely/missing/codex"),
+            &debug_info,
+        );
+
+        assert_eq!(diagnosis["category"], "configuredPathMissing");
+        assert_eq!(diagnosis["configuredPathMissing"], true);
+    }
+
+    #[test]
+    fn endpoint_failure_classifier_maps_actionable_categories() {
+        assert_eq!(
+            classify_endpoint_failure(Some("Timed out while checking endpoint")),
+            "timeout"
+        );
+        assert_eq!(
+            classify_endpoint_failure(Some("DNS lookup failed")),
+            "dnsFailure"
+        );
+        assert_eq!(
+            classify_endpoint_failure(Some("TLS certificate rejected")),
+            "tlsFailure"
+        );
+        assert_eq!(
+            classify_endpoint_failure(Some("Proxy returned 407")),
+            "proxyUnreachable"
+        );
+        assert_eq!(
+            classify_endpoint_failure(Some("HTTP status 500")),
+            "httpStatus"
         );
     }
 

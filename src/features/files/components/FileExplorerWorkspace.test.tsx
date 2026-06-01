@@ -89,6 +89,76 @@ function WorkspaceHarness() {
   );
 }
 
+function CollapsedWorkspaceHarness() {
+  const [activeFilePath, setActiveFilePath] = useState<string | null>("src/index.ts");
+
+  return (
+    <FileExplorerWorkspace
+      workspaceId="workspace-1"
+      workspaceName="workspace"
+      workspacePath="/tmp/workspace"
+      gitRoot="nested/repo"
+      files={["src/index.ts"]}
+      directories={["src"]}
+      isLoading={false}
+      gitStatusFiles={[]}
+      gitignoredFiles={new Set<string>()}
+      gitignoredDirectories={new Set<string>()}
+      openTargets={[]}
+      openAppIconById={{}}
+      selectedOpenAppId=""
+      onSelectOpenAppId={() => undefined}
+      openTabs={activeFilePath ? [activeFilePath] : []}
+      activeFilePath={activeFilePath}
+      navigationTarget={null}
+      onOpenFile={(path) => setActiveFilePath(path)}
+      onActivateTab={() => undefined}
+      onCloseTab={() => undefined}
+      onCloseAllTabs={() => setActiveFilePath(null)}
+      fileViewHeaderLayout="single-row"
+      defaultSidebarCollapsed
+    />
+  );
+}
+
+function AsyncCollapsedWorkspaceHarness() {
+  const [defaultSidebarCollapsed, setDefaultSidebarCollapsed] = useState(false);
+  const [activeFilePath, setActiveFilePath] = useState<string | null>("src/index.ts");
+
+  return (
+    <>
+      <button type="button" onClick={() => setDefaultSidebarCollapsed(true)}>
+        apply-session-collapse
+      </button>
+      <FileExplorerWorkspace
+        workspaceId="workspace-1"
+        workspaceName="workspace"
+        workspacePath="/tmp/workspace"
+        gitRoot="nested/repo"
+        files={["src/index.ts"]}
+        directories={["src"]}
+        isLoading={false}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+        gitignoredDirectories={new Set<string>()}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        openTabs={activeFilePath ? [activeFilePath] : []}
+        activeFilePath={activeFilePath}
+        navigationTarget={null}
+        onOpenFile={(path) => setActiveFilePath(path)}
+        onActivateTab={() => undefined}
+        onCloseTab={() => undefined}
+        onCloseAllTabs={() => setActiveFilePath(null)}
+        fileViewHeaderLayout="single-row"
+        defaultSidebarCollapsed={defaultSidebarCollapsed}
+      />
+    </>
+  );
+}
+
 describe("FileExplorerWorkspace", () => {
   beforeEach(() => {
     openOrFocusDetachedSpecHubMock.mockClear();
@@ -132,6 +202,20 @@ describe("FileExplorerWorkspace", () => {
         gitStatusFiles: [{ path: "src/index.ts", status: "M", additions: 1, deletions: 0 }],
       }),
     );
+  });
+
+  it("starts with the detached sidebar collapsed when requested by the session", () => {
+    render(<CollapsedWorkspaceHarness />);
+
+    expect(screen.getByTestId("file-view-panel-direction").textContent).toBe("right");
+  });
+
+  it("collapses the detached sidebar when the session preference arrives after mount", () => {
+    render(<AsyncCollapsedWorkspaceHarness />);
+
+    expect(screen.getByTestId("file-view-panel-direction").textContent).toBe("left");
+    fireEvent.click(screen.getByText("apply-session-collapse"));
+    expect(screen.getByTestId("file-view-panel-direction").textContent).toBe("right");
   });
 
   it("passes the fixed sample matrix through to FileViewPanel without rewriting paths", () => {

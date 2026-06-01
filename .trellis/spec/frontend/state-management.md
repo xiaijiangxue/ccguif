@@ -219,6 +219,62 @@ document.documentElement.dataset.themePreset = activeThemePresetId;
 - Runtime state：来自 Tauri command/event 的状态
 - Derived state：从已有 state 计算，不持久化
 
+## Scenario: Branded transient browser session keys
+
+### 1. Scope / Trigger
+
+- Trigger：修改 `sessionStorage` / `localStorage` key、browser-agent 与 composer 之间的临时 URL bridge key、或任何会进入 shipping surface 的 frontend storage key。
+- 目标：防止旧品牌 token 残留导致 `check:branding` gate 失败，并保证读写双方 key 同步。
+
+### 2. Signatures
+
+- Browser pending URL key：`const PENDING_BROWSER_URL_KEY = "ccgui.browserAgent.pendingUrl"`
+- Writer：`window.sessionStorage.setItem(PENDING_BROWSER_URL_KEY, browserNavigationUrl)`
+- Reader：`window.sessionStorage.getItem(PENDING_BROWSER_URL_KEY)` / `removeItem(PENDING_BROWSER_URL_KEY)`
+
+### 3. Contracts
+
+- Shipping storage key MUST use current product namespace, e.g. `ccgui.*`.
+- Shipping storage key MUST NOT contain legacy brand tokens such as `mossx`, `MossX`, `codemoss`, `CodeMoss`, `moss-x`, or `moss_x`.
+- Transient bridge keys shared by two components MUST be updated on both writer and reader in the same change.
+- `sessionStorage` bridge keys are not long-term persisted identity state; no migration is required unless the key is stored in `clientStorage` or survives app restart.
+- If a legacy key must remain for compatibility, it MUST be covered by an explicit branding-check allowlist and a removal rationale.
+
+### 4. Validation & Error Matrix
+
+| 场景 | 必须行为 | 禁止行为 |
+|---|---|---|
+| composer writes pending browser URL | writes `ccgui.browserAgent.pendingUrl` | writes `mossx.browserAgent.pendingUrl` |
+| BrowserDock reads pending browser URL | reads/removes the same key as writer | writer/reader key drift |
+| branding gate scans shipping surfaces | no legacy brand token remains | adding new legacy token to `src/**` |
+| true compatibility exception | explicit allowlist + rationale | silently hiding legacy token in random code |
+
+### 5. Good / Base / Bad Cases
+
+- Good：`Composer` and `BrowserDock` both use `ccgui.browserAgent.pendingUrl`.
+- Base：feature-local transient key uses a domain-specific `ccgui.<feature>.<purpose>` name.
+- Bad：renaming only writer or only reader, causing one-shot browser URL handoff to disappear.
+- Bad：using `mossx.*` because the key is "internal"; branding checks still scan shipping code.
+
+### 6. Tests Required
+
+- Contract/gate：run `npm run check:branding` after changing shipping storage keys.
+- Component tests only required when behavior changes beyond key renaming.
+
+### 7. Wrong vs Correct
+
+#### Wrong
+
+```typescript
+const PENDING_BROWSER_URL_KEY = "mossx.browserAgent.pendingUrl";
+```
+
+#### Correct
+
+```typescript
+const PENDING_BROWSER_URL_KEY = "ccgui.browserAgent.pendingUrl";
+```
+
 ## 提升为共享状态的条件
 
 仅在以下情况提升：

@@ -13,14 +13,16 @@ interface Bounds {
   maxWrapperHeightPx: number;
 }
 
-// Use v2 key to avoid loading old width values from v1
-const STORAGE_KEY = 'chat-input-box:size-v2';
+// Use v3 key to migrate the editable area two lines shorter without mutating the old v2 record.
+const STORAGE_KEY = 'chat-input-box:size-v3';
+const LEGACY_STORAGE_KEY = 'chat-input-box:size-v2';
 
 const VIEWPORT_HEIGHT_FALLBACK_PX = 800;
 const MAX_WRAPPER_HEIGHT_VIEWPORT_RATIO = 0.55;
 const MAX_WRAPPER_HEIGHT_CAP_PX = 520;
 const MIN_MAX_WRAPPER_HEIGHT_PX = 140;
-const DEFAULT_MIN_WRAPPER_HEIGHT_PX = 112;
+const DEFAULT_MIN_WRAPPER_HEIGHT_PX = 66;
+const LEGACY_WRAPPER_HEIGHT_REDUCTION_PX = 46;
 const COLLAPSE_OVERSHOOT_PX = 36;
 const EXPAND_DRAG_THRESHOLD_PX = 18;
 const COLLAPSE_EXPAND_HOLD_MS = 400;
@@ -62,6 +64,40 @@ function sanitizeLoadedSize(raw: unknown): SizeState {
   return { wrapperHeightPx, isCollapsed };
 }
 
+function migrateLegacyLoadedSize(raw: unknown): SizeState {
+  if (!raw || typeof raw !== 'object') return { wrapperHeightPx: null, isCollapsed: false };
+  const obj = raw as Record<string, unknown>;
+
+  const legacyWrapperHeightPx =
+    typeof obj.wrapperHeightPx === 'number' && Number.isFinite(obj.wrapperHeightPx)
+      ? obj.wrapperHeightPx
+      : null;
+  const wrapperHeightPx =
+    legacyWrapperHeightPx === null
+      ? null
+      : Math.max(
+        DEFAULT_MIN_WRAPPER_HEIGHT_PX,
+        Math.round(legacyWrapperHeightPx - LEGACY_WRAPPER_HEIGHT_REDUCTION_PX)
+      );
+
+  const isCollapsed = obj.isCollapsed === true;
+  return { wrapperHeightPx, isCollapsed };
+}
+
+function readInitialSize(): SizeState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return sanitizeLoadedSize(JSON.parse(raw));
+
+    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacyRaw) return migrateLegacyLoadedSize(JSON.parse(legacyRaw));
+  } catch {
+    // fall through to default size
+  }
+
+  return { wrapperHeightPx: null, isCollapsed: false };
+}
+
 export function computeResize(
   start: { startY: number; startWrapperHeightPx: number },
   current: { y: number },
@@ -96,16 +132,9 @@ export function useResizableChatInputBox({
   editableWrapperStyle: CSSProperties;
   getHandleProps: (dir: ResizeDirection) => ComponentPropsWithoutRef<'div'>;
   nudge: (delta: { wrapperHeightPx?: number }) => void;
+  collapse: () => void;
 } {
-  const [size, setSize] = useState<SizeState>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return { wrapperHeightPx: null, isCollapsed: false };
-      return sanitizeLoadedSize(JSON.parse(raw));
-    } catch {
-      return { wrapperHeightPx: null, isCollapsed: false };
-    }
-  });
+  const [size, setSize] = useState<SizeState>(readInitialSize);
   const sizeRef = useRef<SizeState>(size);
   sizeRef.current = size;
 
@@ -297,6 +326,19 @@ export function useResizableChatInputBox({
     [editableWrapperRef]
   );
 
+  const collapse = useCallback(() => {
+    const bounds = getBounds();
+    const wrapperEl = editableWrapperRef.current;
+    const wrapperRectHeight = wrapperEl?.getBoundingClientRect().height ?? bounds.minWrapperHeightPx;
+    const currentHeight = sizeRef.current.wrapperHeightPx ?? wrapperRectHeight;
+    const wrapperHeightPx = clamp(Math.round(currentHeight), bounds.minWrapperHeightPx, bounds.maxWrapperHeightPx);
+
+    setSize({
+      wrapperHeightPx,
+      isCollapsed: true,
+    });
+  }, [editableWrapperRef]);
+
   const stopResize = useCallback(() => {
     const start = startRef.current;
     if (!start) return;
@@ -451,5 +493,6 @@ export function useResizableChatInputBox({
     editableWrapperStyle,
     getHandleProps,
     nudge,
+    collapse,
   };
 }

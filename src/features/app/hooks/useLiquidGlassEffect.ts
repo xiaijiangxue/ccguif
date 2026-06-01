@@ -1,8 +1,4 @@
-import { useEffect, useRef } from "react";
-import {
-  isGlassSupported,
-  setLiquidGlassEffect,
-} from "tauri-plugin-liquid-glass-api";
+import { useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { DebugEntry } from "../../../types";
 
@@ -11,33 +7,26 @@ type Params = {
   onDebug?: (entry: DebugEntry) => void;
 };
 
-export function useLiquidGlassEffect({ reduceTransparency, onDebug }: Params) {
-  const supportedRef = useRef<boolean | null>(null);
-
+export function useLiquidGlassEffect({
+  reduceTransparency,
+  onDebug,
+}: Params) {
   useEffect(() => {
     let cancelled = false;
 
     const apply = async () => {
       try {
         const window = getCurrentWindow();
-        // Always disable window transparency effects (glass/vibrancy)
-        // All themes now use opaque backgrounds
-        if (supportedRef.current === null) {
-          supportedRef.current = await isGlassSupported();
-        }
-        if (supportedRef.current) {
-          await setLiquidGlassEffect({ enabled: false });
-        }
-        await window.setEffects({ effects: [] });
+        await window.clearEffects();
       } catch (error) {
         if (cancelled || !onDebug) {
           return;
         }
         onDebug({
-          id: `${Date.now()}-client-liquid-glass-error`,
+          id: `${Date.now()}-client-window-effects-clear-warning`,
           timestamp: Date.now(),
-          source: "error",
-          label: "liquid-glass/apply-error",
+          source: "client",
+          label: "window-effects/clear-warning",
           payload: error instanceof Error ? error.message : String(error),
         });
       }

@@ -45,6 +45,7 @@ import type {
   GitPushPreviewResponse,
   ReviewTarget,
 } from "../types";
+import type { AutoSessionMetadata } from "./tauri/sessionManagement";
 export type {
   WorkspaceSessionCatalogEntry,
   WorkspaceSessionCatalogQuery,
@@ -61,6 +62,7 @@ export type {
   WorkspaceSessionFolderTree,
   WorkspaceSessionFolderMutation,
   WorkspaceSessionAssignmentResponse,
+  AutoSessionMetadata,
 } from "./tauri/sessionManagement";
 export {
   assignWorkspaceSessionFolders,
@@ -77,6 +79,7 @@ export {
   listWorkspaceSessionFolders,
   listWorkspaceSessions,
   moveWorkspaceSessionFolder,
+  recordAutoSessionMetadata,
   renameWorkspaceSessionFolder,
   unarchiveWorkspaceSessions,
 } from "./tauri/sessionManagement";
@@ -102,7 +105,59 @@ export {
   writeGlobalCodexConfigToml,
 } from "./tauri/textFiles";
 export { getComputerUseBridgeStatus, runComputerUseActivationProbe, runComputerUseCodexBroker, runComputerUseHostContractDiagnostics } from "./tauri/computerUse";
-export { runClaudeDoctor, runCodexDoctor } from "./tauri/doctor";
+export {
+  captureBrowserAgentSnapshot,
+  captureBrowserAgentSnapshotV2,
+  cleanupBrowserAgentEvidence,
+  cleanupBrowserAgentSessions,
+  closeBrowserAgentSession,
+  createBrowserAgentSession,
+  generateBrowserAgentCodeCandidates,
+  getBrowserAgentPlatformCapability,
+  getBrowserAgentSettings,
+  getBrowserAgentStatus,
+  hideBrowserAgentWebview,
+  listBrowserAgentEvidence,
+  listBrowserAgentSessions,
+  mountBrowserAgentWebview,
+  refreshBrowserAgentSnapshot,
+  routeBrowserAgentProvider,
+  runBrowserAgentAction,
+  syncBrowserAgentWebviewBounds,
+  updateBrowserAgentSession,
+  validateBrowserAgentUrl,
+} from "./tauri/browserAgent";
+export type {
+  BrowserActionAuditEntry,
+  BrowserActionRequest,
+  BrowserActionResult,
+  BrowserActionTarget,
+  BrowserEvidenceCleanupResult,
+  BrowserEvidenceRecord,
+  BrowserAgentFeaturePhase,
+  BrowserAgentSettings,
+  BrowserAgentStatus,
+  BrowserContextAttachment,
+  BrowserContextSnapshot,
+  BrowserCodeCandidate,
+  BrowserSession,
+  BrowserSessionCleanupResult,
+  BrowserSessionStatus,
+  BrowserUrlValidationResult,
+  CreateBrowserSessionRequest,
+  UpdateBrowserSessionRequest,
+  BrowserDiagnostic,
+  BrowserElementBounds,
+  BrowserFormSummary,
+  BrowserLandmark,
+  BrowserNetworkSummary,
+  BrowserPlatformCapability,
+  BrowserPrivacyReport,
+  BrowserProviderRouteDecision,
+  BrowserSnapshotBudget,
+  BrowserTextNode,
+} from "../features/browser-agent/types";
+export { previewCodexLaunchProfile, runClaudeDoctor, runCodexDoctor } from "./tauri/doctor";
 export { getCliInstallPlan, runCliInstaller } from "./tauri/cliInstaller";
 export type {
   ComputerUseActivationFailureKind,
@@ -227,6 +282,7 @@ export {
   addWorkspace,
   addWorktree,
   applyWorktreeChanges,
+  appendClientErrorLog,
   connectWorkspace,
   ensureRuntimeReady,
   ensureWorkspacePathDir,
@@ -240,6 +296,7 @@ export {
   noteWebServiceReconnected,
   openNewWindow,
   openWorkspaceIn,
+  queryTurnReconciliationStatus,
   readPanelLockPasswordFile,
   removeWorkspace,
   removeWorktree,
@@ -359,9 +416,10 @@ export async function getConfigModel(workspaceId: string): Promise<string | null
   return trimmed.length > 0 ? trimmed : null;
 }
 
-export async function startThread(workspaceId: string) {
+export async function startThread(workspaceId: string, options?: { autoSession?: AutoSessionMetadata | null }) {
   return invoke<Record<string, unknown> | null | undefined>("start_thread", {
     workspaceId,
+    autoSession: options?.autoSession ?? null,
   });
 }
 
@@ -480,12 +538,20 @@ export async function respondToUserInputRequest(
   workspaceId: string,
   requestId: number | string,
   answers: Record<string, { answers: string[] }>,
-  options?: { threadId?: string | null; turnId?: string | null },
+  options?: {
+    threadId?: string | null;
+    turnId?: string | null;
+    skippedQuestionIds?: string[];
+  },
 ) {
+  const result: Record<string, unknown> = { answers };
+  if (options?.skippedQuestionIds?.length) {
+    result.skippedQuestionIds = options.skippedQuestionIds;
+  }
   return invoke("respond_to_server_request", {
     workspaceId,
     requestId,
-    result: { answers },
+    result,
     threadId: options?.threadId ?? null,
     turnId: options?.turnId ?? null,
   });
@@ -1853,6 +1919,13 @@ export async function generateCommitMessageWithEngine(
   const response = await engineSendMessageSync(workspaceId, {
     text: prompt,
     engine,
+    autoSession: {
+      sessionPurpose: "commit-message",
+      visibility: "hidden",
+      ownerFeature: "git",
+      autoArchive: true,
+      createdBy: "system",
+    },
   });
   return response.text;
 }
@@ -2028,6 +2101,7 @@ export async function engineSendMessage(
     agent?: string | null;
     variant?: string | null;
     customSpecRoot?: string | null;
+    autoSession?: AutoSessionMetadata | null;
   },
 ): Promise<Record<string, unknown>> {
   if (isEngineRpcFallbackMode() && params.engine && params.engine !== "codex") {
@@ -2054,6 +2128,7 @@ export async function engineSendMessage(
       agent: params.agent ?? null,
       variant: params.variant ?? null,
       customSpecRoot: params.customSpecRoot ?? null,
+      autoSession: params.autoSession ?? null,
     });
   } catch (error) {
     if (isUnknownMethodError(error, "engine_send_message")) {
@@ -2090,6 +2165,7 @@ export async function engineSendMessageSync(
     agent?: string | null;
     variant?: string | null;
     customSpecRoot?: string | null;
+    autoSession?: AutoSessionMetadata | null;
   },
 ): Promise<{ engine: EngineType; text: string }> {
   if (isEngineRpcFallbackMode() && params.engine && params.engine !== "codex") {
@@ -2111,6 +2187,7 @@ export async function engineSendMessageSync(
       agent: params.agent ?? null,
       variant: params.variant ?? null,
       customSpecRoot: params.customSpecRoot ?? null,
+      autoSession: params.autoSession ?? null,
     });
   } catch (error) {
     if (isUnknownMethodError(error, "engine_send_message_sync")) {
@@ -2251,4 +2328,20 @@ export async function deleteGeminiSession(workspacePath: string, sessionId: stri
  */
 export async function getPendingOpenPaths(): Promise<string[]> {
   return invoke<string[]>("get_pending_open_paths");
+}
+
+export type WindowOpacityApplyResult = {
+  requestedOpacity: number;
+  appliedOpacity: number;
+  applied: boolean;
+  platform: string;
+  reason: string | null;
+};
+
+export function setMainWindowOpacity(
+  opacity: number,
+): Promise<WindowOpacityApplyResult> {
+  return invoke<WindowOpacityApplyResult>("set_main_window_opacity", {
+    opacity,
+  });
 }

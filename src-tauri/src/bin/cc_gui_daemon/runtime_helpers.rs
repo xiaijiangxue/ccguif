@@ -152,7 +152,7 @@ impl DaemonState {
                 );
                 workspaces_core::disconnect_workspace_session_core(
                     &self.sessions,
-                    None,
+                    Some(&self.runtime_manager),
                     workspace_id,
                 )
                 .await;
@@ -170,7 +170,7 @@ impl DaemonState {
                         );
                         workspaces_core::disconnect_workspace_session_core(
                             &self.sessions,
-                            None,
+                            Some(&self.runtime_manager),
                             workspace_id,
                         )
                         .await;
@@ -178,7 +178,7 @@ impl DaemonState {
                 }
             }
         }
-        self.connect_workspace(
+        self.connect_codex_workspace_session(
             workspace_id.to_string(),
             env!("CARGO_PKG_VERSION").to_string(),
             Some("ensure-runtime-ready".to_string()),

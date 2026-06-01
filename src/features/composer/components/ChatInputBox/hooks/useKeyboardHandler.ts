@@ -196,6 +196,20 @@ export function useKeyboardHandler({
       }
 
       if (commandCompletion.isOpen) {
+        const isCommandSendShortcut =
+          sendShortcut === 'cmdEnter' &&
+          isEnterKey &&
+          (e.metaKey || e.ctrlKey) &&
+          !isIMEComposing;
+        if (isCommandSendShortcut) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (sdkStatusLoading || !sdkInstalled) return;
+
+          submittedOnEnterRef.current = true;
+          handleSubmit();
+          return;
+        }
         const handled = commandCompletion.handleKeyDown(e.nativeEvent);
         if (handled) {
           e.preventDefault();

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EngineType, WorkspaceInfo } from "../../../types";
 import { projectMemoryList } from "../../../services/tauri/projectMemory";
 import type {
+  ProjectMapCandidate,
   ProjectMapDataset,
   ProjectMapGenerationRequest,
   ProjectMapNode,
@@ -10,6 +11,8 @@ import type {
   ProjectMapSource,
   ProjectMapStorageLocation,
   ProjectMapRunMetadata,
+  ProjectMapRunFailureCategory,
+  ProjectMapRunOwnership,
 } from "../types";
 import {
   createEmptyProjectMapDataset,
@@ -20,6 +23,7 @@ import {
   runProjectMapGenerationWorker,
   type ProjectMapRunUpdate,
 } from "../services/projectMapGenerationWorker";
+import { getProjectMapUnassignedDiscoveryChildren } from "../services/projectMapNodeOrganizer";
 import {
   createProjectMapGenerationRequest,
   createRunMetadataFromRequest,
@@ -52,6 +56,12 @@ export type ProjectMapGenerationDefaults = {
   model?: string | null;
 };
 
+export type ProjectMapConfirmAllCandidatesResult = {
+  confirmed: number;
+  skipped: number;
+  errors: string[];
+};
+
 export type ProjectMapDatasetController = {
   dataset: ProjectMapDataset;
   status: ProjectMapDatasetStatus;
@@ -62,6 +72,7 @@ export type ProjectMapDatasetController = {
   reload: () => Promise<void>;
   switchReadLocation: (location: ProjectMapStorageLocation) => void;
   openGlobalCollection: () => void;
+  openUnassignedOrganizer: () => void;
   openNodeGeneration: (kind: "node" | "calibrate", node: ProjectMapNode) => void;
   openRefreshEvidence: (node: ProjectMapNode | null) => void;
   closeGenerationRequest: () => void;
@@ -69,6 +80,7 @@ export type ProjectMapDatasetController = {
   cancelGenerationRun: (runId: string) => Promise<void>;
   clearFinishedRuns: () => Promise<void>;
   confirmCandidate: (candidateId: string) => Promise<boolean>;
+  confirmAllCandidates: () => Promise<ProjectMapConfirmAllCandidatesResult>;
   rejectCandidate: (candidateId: string) => Promise<boolean>;
   confirmNodeCandidate: (nodeId: string) => Promise<boolean>;
   rejectNodeCandidate: (nodeId: string) => Promise<boolean>;
@@ -80,8 +92,41 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function createProjectMapWorkerKey(workspaceId: string, runId: string): string {
-  return `${workspaceId}:${runId}`;
+function createProjectMapWorkerKey(workspaceId: string, storageKey: string, runId: string): string {
+  return `${workspaceId}:${storageKey}:${runId}`;
+}
+
+function orderProjectMapCandidatesForConfirmation(candidates: ProjectMapCandidate[]): ProjectMapCandidate[] {
+  const parentMoveByNodeId = new Map<string, ProjectMapCandidate>();
+  for (const candidate of candidates) {
+    if (candidate.kind === "parentMove" && candidate.move) {
+      parentMoveByNodeId.set(candidate.move.nodeId, candidate);
+    }
+  }
+
+  const orderedCandidates: ProjectMapCandidate[] = [];
+  const visitingCandidateIds = new Set<string>();
+  const visitedCandidateIds = new Set<string>();
+  const visitCandidate = (candidate: ProjectMapCandidate) => {
+    if (visitedCandidateIds.has(candidate.id) || visitingCandidateIds.has(candidate.id)) {
+      return;
+    }
+    visitingCandidateIds.add(candidate.id);
+    const parentCandidate = candidate.move
+      ? parentMoveByNodeId.get(candidate.move.suggestedParentId)
+      : null;
+    if (parentCandidate) {
+      visitCandidate(parentCandidate);
+    }
+    visitingCandidateIds.delete(candidate.id);
+    visitedCandidateIds.add(candidate.id);
+    orderedCandidates.push(candidate);
+  };
+
+  for (const candidate of candidates) {
+    visitCandidate(candidate);
+  }
+  return orderedCandidates;
 }
 
 export function __resetProjectMapWorkerClaimsForTests(): void {
@@ -175,6 +220,7 @@ function createDatasetWithFailedRun(
   dataset: ProjectMapDataset,
   runId: string,
   error: string,
+  failureCategory: ProjectMapRunFailureCategory | null = classifyProjectMapRunFailure(error),
 ): ProjectMapDataset {
   const completedAt = new Date().toISOString();
   const phase: NonNullable<ProjectMapRunMetadata["phase"]> = "failed";
@@ -190,6 +236,7 @@ function createDatasetWithFailedRun(
             progress: 100,
             completedAt,
             error,
+            failureCategory,
             logs: [
               ...(run.logs ?? []),
               {
@@ -221,6 +268,7 @@ function createDatasetWithCancelledRun(
             phase,
             progress: 100,
             completedAt,
+            failureCategory: "cancelled",
             logs: [
               ...(run.logs ?? []),
               {
@@ -308,14 +356,6 @@ function resolveWritePath(
   return storageDir ?? `.ccgui/project-map/${storageKey}`;
 }
 
-function resolveRunStorageLocation(
-  dataset: ProjectMapDataset,
-  runId: string,
-  fallback: ProjectMapStorageLocation,
-): ProjectMapStorageLocation {
-  return dataset.runs.find((run) => run.id === runId)?.storageLocation ?? fallback;
-}
-
 function resolveWorkspaceIdentity(
   workspace: Pick<WorkspaceInfo, "id" | "name" | "path"> | null | undefined,
 ) {
@@ -324,6 +364,73 @@ function resolveWorkspaceIdentity(
     workspacePath: workspace?.path ?? "",
     workspaceId: workspace?.id ?? null,
   };
+}
+
+function createProjectMapRunOwnership(input: {
+  workspaceId: string | null;
+  workspacePath: string | null;
+  storageKey: string;
+  storageLocation: ProjectMapStorageLocation;
+}): ProjectMapRunOwnership {
+  return {
+    workspaceId: input.workspaceId,
+    workspacePath: input.workspacePath ?? "",
+    storageKey: input.storageKey,
+    storageLocation: input.storageLocation,
+  };
+}
+
+function resolveProjectMapRunOwnership(input: {
+  run: ProjectMapRunMetadata;
+  fallbackWorkspaceId: string;
+  fallbackWorkspacePath: string | null;
+  fallbackStorageKey: string;
+  fallbackStorageLocation: ProjectMapStorageLocation;
+}): ProjectMapRunOwnership {
+  return input.run.ownership ?? createProjectMapRunOwnership({
+    workspaceId: input.fallbackWorkspaceId,
+    workspacePath: input.fallbackWorkspacePath,
+    storageKey: input.fallbackStorageKey,
+    storageLocation: input.run.storageLocation ?? input.fallbackStorageLocation,
+  });
+}
+
+function classifyProjectMapRunFailure(
+  message: string,
+): ProjectMapRunFailureCategory | null {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("ownership mismatch") ||
+    normalized.includes("storage key mismatch") ||
+    normalized.includes("manifest ownership")
+  ) {
+    return "ownership_mismatch";
+  }
+  if (
+    normalized.includes("json") ||
+    normalized.includes("structured") ||
+    normalized.includes("ai output") ||
+    normalized.includes("valid project-map nodes") ||
+    normalized.includes("valid project map payload")
+  ) {
+    return "output_parse_failed";
+  }
+  if (
+    normalized.includes("evidence") ||
+    normalized.includes("workspace file") ||
+    normalized.includes("read workspace")
+  ) {
+    return "evidence_read_failed";
+  }
+  if (
+    normalized.includes("persist") ||
+    normalized.includes("write") ||
+    normalized.includes("storage") ||
+    normalized.includes("project map root")
+  ) {
+    return "persistence_failed";
+  }
+  return null;
 }
 
 function resolveGenerationDefaults(
@@ -550,20 +657,24 @@ export function useProjectMapDataset(
       return;
     }
 
-    const workerKey = createProjectMapWorkerKey(workspaceId, activeRun.id);
+    const runOwnership = resolveProjectMapRunOwnership({
+      run: activeRun,
+      fallbackWorkspaceId: workspaceId,
+      fallbackWorkspacePath: workspacePath,
+      fallbackStorageKey: datasetRef.current.manifest.storageKey,
+      fallbackStorageLocation: activeReadLocation,
+    });
+    const workerWorkspaceId = runOwnership.workspaceId ?? workspaceId;
+    const workerStorageKey = runOwnership.storageKey;
+    const workerStorageLocation = runOwnership.storageLocation;
+    const workerKey = createProjectMapWorkerKey(workerWorkspaceId, workerStorageKey, activeRun.id);
     if (activeProjectMapWorkerKeys.has(workerKey)) {
       return;
     }
     activeProjectMapWorkerKeys.add(workerKey);
-    const workerStorageKey = datasetRef.current.manifest.storageKey;
-    const workerStorageLocation = resolveRunStorageLocation(
-      datasetRef.current,
-      activeRun.id,
-      activeReadLocation,
-    );
     const workerDatasetRef: { current: ProjectMapDataset } = { current: datasetRef.current };
     const isActiveWorkerWorkspace = () =>
-      workspaceIdRef.current === workspaceId &&
+      workspaceIdRef.current === workerWorkspaceId &&
       activeReadLocationRef.current === workerStorageLocation &&
       datasetRef.current.manifest.storageKey === workerStorageKey;
     const getWorkerDatasetSnapshot = () =>
@@ -585,7 +696,7 @@ export function useProjectMapDataset(
         setStatus("persisted");
       }
       await writeProjectMapDataset({
-        workspaceId,
+        workspaceId: workerWorkspaceId,
         dataset: nextDataset,
         createBackup,
         storageLocation: workerStorageLocation,
@@ -628,7 +739,7 @@ export function useProjectMapDataset(
             startedAt: runStartedAt,
           };
         const generatedDataset = await runProjectMapGenerationWorker({
-          workspaceId,
+          workspaceId: workerWorkspaceId,
           dataset: runningDataset,
           run: runningRun,
           onRunUpdate: updateRun,
@@ -638,9 +749,13 @@ export function useProjectMapDataset(
         }
         const completedAt = new Date().toISOString();
         const latestWorkerDataset = getWorkerDatasetSnapshot();
+        const generatedRunById = new Map(generatedDataset.runs.map((run) => [run.id, run]));
         const generatedWithLatestRuns = {
           ...generatedDataset,
-          runs: latestWorkerDataset.runs,
+          runs: latestWorkerDataset.runs.map((run) => {
+            const generatedRun = generatedRunById.get(run.id);
+            return generatedRun ? { ...run, organizerResult: generatedRun.organizerResult } : run;
+          }),
         };
         const completedRun =
           generatedWithLatestRuns.runs.find((run) => run.id === activeRun.id) ?? activeRun;
@@ -692,10 +807,12 @@ export function useProjectMapDataset(
           return;
         }
         const message = errorMessage(workerError);
+        const failureCategory = classifyProjectMapRunFailure(message);
         const failedDataset = createDatasetWithFailedRun(
           getWorkerDatasetSnapshot(),
           activeRun.id,
           message,
+          failureCategory,
         );
         try {
           await persistWorkerDataset(failedDataset);
@@ -724,6 +841,7 @@ export function useProjectMapDataset(
     expectedStorageKey,
     status,
     workspaceId,
+    workspacePath,
   ]);
 
   useEffect(() => {
@@ -785,6 +903,12 @@ export function useProjectMapDataset(
             messageHashes: unprocessedMessages.map((message) => message.messageHash),
           },
           storageLocation: DEFAULT_STORAGE_LOCATION,
+          ownership: createProjectMapRunOwnership({
+            workspaceId,
+            workspacePath,
+            storageKey: checkedDataset.manifest.storageKey,
+            storageLocation: DEFAULT_STORAGE_LOCATION,
+          }),
           writePath: defaultWritePath,
           readSources: extractProjectMapMemoryEvidencePaths(consumedMemories).map(projectMapSourceFromPath),
           autoIngestion: {
@@ -815,7 +939,7 @@ export function useProjectMapDataset(
     return () => {
       cancelled = true;
     };
-  }, [dataset, defaultWritePath, persistDataset, preferredLanguage, status, workspaceId]);
+  }, [dataset, defaultWritePath, persistDataset, preferredLanguage, status, workspaceId, workspacePath]);
 
   const openGlobalCollection = useCallback(() => {
     const defaults = resolveGenerationDefaults(dataset, generationDefaults);
@@ -828,10 +952,49 @@ export function useProjectMapDataset(
         preferredLanguage,
         scope: { kind: "global", lensIds: dataset.lenses.map((lens) => lens.id) },
         storageLocation: DEFAULT_STORAGE_LOCATION,
+        ownership: createProjectMapRunOwnership({
+          workspaceId,
+          workspacePath,
+          storageKey: dataset.manifest.storageKey,
+          storageLocation: DEFAULT_STORAGE_LOCATION,
+        }),
         writePath: defaultWritePath,
       }),
     );
-  }, [dataset, defaultWritePath, generationDefaults, preferredLanguage]);
+  }, [dataset, defaultWritePath, generationDefaults, preferredLanguage, workspaceId, workspacePath]);
+
+  const openUnassignedOrganizer = useCallback(() => {
+    if (!workspaceId) {
+      setError("Project Map organizer requires an active workspace.");
+      return;
+    }
+    const unassignedCount = getProjectMapUnassignedDiscoveryChildren(dataset).length;
+    if (unassignedCount === 0) {
+      setError("No unassigned Project Map discoveries are available to organize.");
+      return;
+    }
+    const defaults = resolveGenerationDefaults(dataset, generationDefaults);
+    setPendingRequest(
+      createProjectMapGenerationRequest({
+        dataset,
+        kind: "organizer",
+        engine: defaults.engine,
+        model: defaults.model,
+        preferredLanguage,
+        scope: { kind: "organizer", unassignedCount },
+        generationIntent: "organizeUnassigned",
+        storageLocation: DEFAULT_STORAGE_LOCATION,
+        ownership: createProjectMapRunOwnership({
+          workspaceId,
+          workspacePath,
+          storageKey: dataset.manifest.storageKey,
+          storageLocation: DEFAULT_STORAGE_LOCATION,
+        }),
+        writePath: defaultWritePath,
+        readSources: [],
+      }),
+    );
+  }, [dataset, defaultWritePath, generationDefaults, preferredLanguage, workspaceId, workspacePath]);
 
   const openNodeGeneration = useCallback(
     (kind: "node" | "calibrate", node: ProjectMapNode) => {
@@ -846,12 +1009,18 @@ export function useProjectMapDataset(
           scope: { kind: "node", nodeId: node.id, includeDescendants: kind === "node" },
           generationIntent: kind === "calibrate" ? "calibrateNode" : "completeNode",
           storageLocation: DEFAULT_STORAGE_LOCATION,
+          ownership: createProjectMapRunOwnership({
+            workspaceId,
+            workspacePath,
+            storageKey: dataset.manifest.storageKey,
+            storageLocation: DEFAULT_STORAGE_LOCATION,
+          }),
           writePath: defaultWritePath,
           node,
         }),
       );
     },
-    [dataset, defaultWritePath, generationDefaults, preferredLanguage],
+    [dataset, defaultWritePath, generationDefaults, preferredLanguage, workspaceId, workspacePath],
   );
 
   const openRefreshEvidence = useCallback(
@@ -868,12 +1037,18 @@ export function useProjectMapDataset(
             ? { kind: "node", nodeId: node.id, includeDescendants: false }
             : { kind: "global", lensIds: dataset.lenses.map((lens) => lens.id) },
           storageLocation: DEFAULT_STORAGE_LOCATION,
+          ownership: createProjectMapRunOwnership({
+            workspaceId,
+            workspacePath,
+            storageKey: dataset.manifest.storageKey,
+            storageLocation: DEFAULT_STORAGE_LOCATION,
+          }),
           writePath: defaultWritePath,
           node,
         }),
       );
     },
-    [dataset, defaultWritePath, generationDefaults, preferredLanguage],
+    [dataset, defaultWritePath, generationDefaults, preferredLanguage, workspaceId, workspacePath],
   );
 
   const confirmGenerationRequest = useCallback(async (requestOverride?: ProjectMapGenerationRequest) => {
@@ -887,6 +1062,7 @@ export function useProjectMapDataset(
     try {
       await persistDataset(queuedDataset, false, request.storageLocation);
       datasetRef.current = queuedDataset;
+      setDataset(queuedDataset);
       setPendingRequest(null);
     } catch (writeError) {
       setError(errorMessage(writeError));
@@ -944,6 +1120,70 @@ export function useProjectMapDataset(
     },
     [persistDataset],
   );
+
+  const confirmAllCandidates = useCallback(async (): Promise<ProjectMapConfirmAllCandidatesResult> => {
+    const confirmedAt = new Date().toISOString();
+    let nextDataset = datasetRef.current;
+    let confirmed = 0;
+    const errors: string[] = [];
+    const pendingReviewCandidates = orderProjectMapCandidatesForConfirmation(
+      (nextDataset.candidates ?? []).filter((candidate) => candidate.status === "pending"),
+    ).map((candidate) => candidate.id);
+
+    for (const candidateId of pendingReviewCandidates) {
+      const result = confirmProjectMapCandidate({
+        dataset: nextDataset,
+        candidateId,
+        confirmedAt,
+      });
+      if (result.ok) {
+        nextDataset = result.dataset;
+        confirmed += 1;
+        continue;
+      }
+      errors.push(`${candidateId}: ${result.errors.join("; ")}`);
+    }
+
+    const pendingCandidateTargetIds = new Set(
+      (nextDataset.candidates ?? [])
+        .filter((candidate) => candidate.status === "pending")
+        .map((candidate) => candidate.targetNodeId ?? candidate.patch.nodeId),
+    );
+    const standaloneNodeCandidateIds = nextDataset.nodes
+      .filter((node) => node.candidate && !pendingCandidateTargetIds.has(node.id))
+      .map((node) => node.id);
+
+    for (const nodeId of standaloneNodeCandidateIds) {
+      const result = confirmProjectMapNodeCandidate({
+        dataset: nextDataset,
+        nodeId,
+        confirmedAt,
+      });
+      if (result.ok) {
+        nextDataset = result.dataset;
+        confirmed += 1;
+        continue;
+      }
+      errors.push(`${nodeId}: ${result.errors.join("; ")}`);
+    }
+
+    const skipped = pendingReviewCandidates.length + standaloneNodeCandidateIds.length - confirmed;
+    if (confirmed === 0) {
+      setError(errors.join("\n") || "No pending Project Map candidates were accepted.");
+      return { confirmed, skipped, errors };
+    }
+
+    setError(errors.length > 0 ? errors.join("\n") : null);
+    try {
+      await persistDataset(nextDataset);
+      datasetRef.current = nextDataset;
+      return { confirmed, skipped, errors };
+    } catch (writeError) {
+      const message = errorMessage(writeError);
+      setError(message);
+      return { confirmed: 0, skipped: confirmed + skipped, errors: [message] };
+    }
+  }, [persistDataset]);
 
   const rejectCandidate = useCallback(
     async (candidateId: string): Promise<boolean> => {
@@ -1063,6 +1303,7 @@ export function useProjectMapDataset(
     reload,
     switchReadLocation,
     openGlobalCollection,
+    openUnassignedOrganizer,
     openNodeGeneration,
     openRefreshEvidence,
     closeGenerationRequest: () => setPendingRequest(null),
@@ -1070,6 +1311,7 @@ export function useProjectMapDataset(
     cancelGenerationRun,
     clearFinishedRuns,
     confirmCandidate,
+    confirmAllCandidates,
     rejectCandidate,
     confirmNodeCandidate,
     rejectNodeCandidate,

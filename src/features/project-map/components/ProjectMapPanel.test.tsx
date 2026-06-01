@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import type { ComponentProps } from "react";
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { mockProjectMapData } from "../mockProjectMapData";
 import type { ProjectMapDatasetController } from "../hooks/useProjectMapDataset";
 import type { ProjectMapDataset, ProjectMapNode, ProjectMapRunMetadata } from "../types";
+import { PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID } from "../utils/incrementalGeneration";
 import { ProjectMapPanel } from "./ProjectMapPanel";
 
 function renderMockProjectMapPanel(
@@ -31,6 +32,7 @@ function createDatasetControllerMock(
     reload: vi.fn(async () => undefined),
     switchReadLocation: vi.fn(),
     openGlobalCollection: vi.fn(),
+    openUnassignedOrganizer: vi.fn(),
     openNodeGeneration: vi.fn(),
     openRefreshEvidence: vi.fn(),
     closeGenerationRequest: vi.fn(),
@@ -38,6 +40,7 @@ function createDatasetControllerMock(
     cancelGenerationRun: vi.fn(async () => undefined),
     clearFinishedRuns: vi.fn(async () => undefined),
     confirmCandidate: vi.fn(async () => true),
+    confirmAllCandidates: vi.fn(async () => ({ confirmed: 0, skipped: 0, errors: [] })),
     rejectCandidate: vi.fn(async () => true),
     confirmNodeCandidate: vi.fn(async () => true),
     rejectNodeCandidate: vi.fn(async () => true),
@@ -50,6 +53,22 @@ function createDatasetControllerMock(
 beforeEach(() => {
   window.localStorage.clear();
 });
+
+afterEach(() => {
+  cleanup();
+  window.localStorage.clear();
+  vi.clearAllMocks();
+});
+
+function getGraphViewport(container: HTMLElement): HTMLElement {
+  const graphViewport = container.querySelector<HTMLElement>(".project-map-graph-viewport");
+  expect(graphViewport).toBeTruthy();
+  return graphViewport!;
+}
+
+function getGraphNodeButton(container: HTMLElement, name: RegExp | string): HTMLElement {
+  return within(getGraphViewport(container)).getByRole("button", { name });
+}
 
 function getGraphNodeBounds(nodeElement: Element): {
   left: number;
@@ -176,6 +195,25 @@ describe("ProjectMapPanel", () => {
     expect(screen.queryByText("项目画像 Project Profile")).toBeNull();
   });
 
+  it("surfaces storage ownership mismatch without rendering trusted graph data", () => {
+    const datasetController = createDatasetControllerMock({
+      dataset: {
+        ...mockProjectMapData,
+        nodes: [],
+        lenses: [],
+      },
+      status: "error",
+      error: "Project map storage key mismatch: expected mossx-abcd, received springboot-demo-8e13fe53.",
+    });
+
+    render(<ProjectMapPanel workspaceName="mossx" datasetController={datasetController} />);
+
+    expect(screen.getByText("projectMap.loadErrorTitle")).toBeTruthy();
+    expect(screen.getByText(/storage key mismatch/i)).toBeTruthy();
+    expect(screen.queryByText("项目画像 Project Profile")).toBeNull();
+    expect(screen.queryByRole("button", { name: /接口表面 API Surface/i })).toBeNull();
+  });
+
   it("renders the spider overview with bilingual project knowledge content", () => {
     const view = renderMockProjectMapPanel();
 
@@ -206,6 +244,41 @@ describe("ProjectMapPanel", () => {
     expect(view.container.querySelector("textarea, [contenteditable='true']")).toBeNull();
   });
 
+  it("uses the normalized node projection for graph selection and inspector details", () => {
+    const canonicalApiNode = mockProjectMapData.nodes.find((node) => node.id === "hub-api");
+    expect(canonicalApiNode).toBeTruthy();
+    const duplicateApiNode: ProjectMapNode = {
+      ...canonicalApiNode!,
+      summary: "Duplicate API surface summary from a later lens pass.",
+      detail: {
+        ...canonicalApiNode!.detail,
+        coreDescription: "Duplicate API surface summary from a later lens pass.",
+        keyFacts: ["Duplicate node contributed an extra API evidence fact."],
+        keyLogic: [],
+        riskSignals: [],
+        relatedArtifacts: [
+          { type: "file", label: "duplicate-api", path: "src/duplicate/api.ts" },
+        ],
+      },
+      children: [],
+      sources: [{ type: "file", label: "duplicate-api", path: "src/duplicate/api.ts" }],
+      confidence: "medium",
+      lastGeneratedAt: "2026-05-26T03:00:00.000Z",
+    };
+    const datasetWithDuplicateNode: ProjectMapDataset = {
+      ...mockProjectMapData,
+      nodes: [...mockProjectMapData.nodes, duplicateApiNode],
+    };
+
+    const view = render(<ProjectMapPanel workspaceName="mossx" dataset={datasetWithDuplicateNode} />);
+    fireEvent.click(getGraphNodeButton(view.container, /接口表面 API Surface/i));
+
+    const detailPanel = screen.getByLabelText("projectMap.detailPanel");
+    expect(within(detailPanel).getByText("该视角来自 Project Profile 和 evidence scan，不是 UI 固定枚举。")).toBeTruthy();
+    expect(within(detailPanel).getByText("Duplicate node contributed an extra API evidence fact.")).toBeTruthy();
+    expect(within(detailPanel).getAllByText("src/duplicate/api.ts").length).toBeGreaterThan(0);
+  });
+
   it("uses a provided dataset controller for Project Map actions", () => {
     const openNodeGeneration = vi.fn();
     const datasetController = createDatasetControllerMock({ openNodeGeneration });
@@ -224,6 +297,73 @@ describe("ProjectMapPanel", () => {
       "node",
       expect.objectContaining({ id: "project-core" }),
     );
+  });
+
+  it("shows AI organizer action when unassigned discoveries exist", () => {
+    const openUnassignedOrganizer = vi.fn();
+    const unassignedChild: ProjectMapNode = {
+      ...mockProjectMapData.nodes.find((node) => node.id === "risk-taxonomy-drift")!,
+      parentId: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+    };
+    const unassignedParent: ProjectMapNode = {
+      ...mockProjectMapData.nodes.find((node) => node.id === "hub-risk")!,
+      id: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+      title: "待整理发现 Unassigned Discoveries",
+      parentId: "project-core",
+      children: [unassignedChild.id],
+    };
+    const dataset: ProjectMapDataset = {
+      ...mockProjectMapData,
+      nodes: [
+        ...mockProjectMapData.nodes.filter((node) => node.id !== unassignedChild.id),
+        unassignedChild,
+        unassignedParent,
+      ],
+    };
+    const datasetController = createDatasetControllerMock({
+      dataset,
+      openUnassignedOrganizer,
+    });
+
+    render(<ProjectMapPanel workspaceName="mossx" datasetController={datasetController} />);
+    fireEvent.click(screen.getByRole("button", { name: "projectMap.organizeUnassigned" }));
+
+    expect(openUnassignedOrganizer).toHaveBeenCalledTimes(1);
+  });
+
+  it("explains how to operate unassigned discoveries from the detail panel", () => {
+    const openUnassignedOrganizer = vi.fn();
+    const unassignedChild: ProjectMapNode = {
+      ...mockProjectMapData.nodes.find((node) => node.id === "risk-taxonomy-drift")!,
+      parentId: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+    };
+    const unassignedParent: ProjectMapNode = {
+      ...mockProjectMapData.nodes.find((node) => node.id === "hub-risk")!,
+      id: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+      title: "待整理发现 Unassigned Discoveries",
+      parentId: "project-core",
+      children: [unassignedChild.id],
+    };
+    const dataset: ProjectMapDataset = {
+      ...mockProjectMapData,
+      nodes: [
+        ...mockProjectMapData.nodes.filter((node) => node.id !== unassignedChild.id),
+        unassignedChild,
+        unassignedParent,
+      ],
+    };
+    const datasetController = createDatasetControllerMock({
+      dataset,
+      openUnassignedOrganizer,
+    });
+
+    render(<ProjectMapPanel workspaceName="mossx" datasetController={datasetController} />);
+    fireEvent.click(screen.getByRole("button", { name: /待整理发现 Unassigned Discoveries/i }));
+
+    const detailPanel = screen.getByLabelText("projectMap.detailPanel");
+    expect(within(detailPanel).getByText("projectMap.unassignedOrganizer.title")).toBeTruthy();
+    fireEvent.click(within(detailPanel).getByRole("button", { name: "projectMap.unassignedOrganizer.organize" }));
+    expect(openUnassignedOrganizer).toHaveBeenCalledTimes(1);
   });
 
   it("collapses the project map chrome into a compact header", () => {
@@ -641,7 +781,7 @@ describe("ProjectMapPanel", () => {
 
     expect(screen.queryByRole("button", { name: "projectMap.refreshEvidence" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: /projectMap\.candidateBadge|候选|candidates/i }));
+    fireEvent.click(screen.getByRole("button", { name: "projectMap.candidateBadge" }));
 
     const detailPanel = screen.getByLabelText("projectMap.detailPanel");
     expect(within(detailPanel).getByText("projectMap.candidateNotice.title")).toBeTruthy();
@@ -652,6 +792,72 @@ describe("ProjectMapPanel", () => {
 
     expect(screen.queryByRole("button", { name: /分类漂移 Taxonomy Drift/i })).toBeNull();
     expect(screen.getAllByRole("button", { name: /风险 Risk/i }).length).toBeGreaterThan(0);
+  });
+
+  it("accepts all current candidates from the toolbar", async () => {
+    const confirmAllCandidates = vi.fn(async () => ({ confirmed: 2, skipped: 1, errors: [] }));
+    renderMockProjectMapPanel({
+      datasetController: createDatasetControllerMock({
+        confirmAllCandidates,
+      }),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "projectMap.confirmAllCandidates" }));
+
+    await waitFor(() => expect(confirmAllCandidates).toHaveBeenCalledTimes(1));
+    expect(screen.getByText("projectMap.confirmAllCandidatesResult")).toBeTruthy();
+  });
+
+  it("uses candidate badge as a review entry for AI organizer parent-move candidates", () => {
+    const movingNode: ProjectMapNode = {
+      ...mockProjectMapData.nodes.find((node) => node.id === "risk-taxonomy-drift")!,
+      parentId: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+      candidate: false,
+    };
+    const unassignedParent: ProjectMapNode = {
+      ...mockProjectMapData.nodes.find((node) => node.id === "hub-risk")!,
+      id: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+      title: "待整理发现 Unassigned Discoveries",
+      parentId: "project-core",
+      children: [movingNode.id],
+    };
+    const dataset: ProjectMapDataset = {
+      ...mockProjectMapData,
+      nodes: [
+        ...mockProjectMapData.nodes.filter((node) => node.id !== movingNode.id),
+        movingNode,
+        unassignedParent,
+      ],
+      candidates: [
+        {
+          id: "organizer-move-risk",
+          status: "pending",
+          createdAt: "2026-05-30T08:00:00.000Z",
+          updatedAt: "2026-05-30T08:00:00.000Z",
+          source: "organizer",
+          kind: "parentMove",
+          targetLensId: movingNode.lensId,
+          targetNodeId: movingNode.id,
+          patch: { nodeId: movingNode.id },
+          move: {
+            nodeId: movingNode.id,
+            fromParentId: PROJECT_MAP_UNASSIGNED_DISCOVERIES_NODE_ID,
+            suggestedParentId: "hub-risk",
+            confidence: "medium",
+            reason: "风险节点应归入 Risk hub。",
+          },
+          evidence: [],
+        },
+      ],
+    };
+
+    render(<ProjectMapPanel workspaceName="mossx" dataset={dataset} />);
+    fireEvent.click(screen.getByRole("button", { name: "projectMap.candidateBadge" }));
+
+    const detailPanel = screen.getByLabelText("projectMap.detailPanel");
+    expect(within(detailPanel).getByText("projectMap.candidateNotice.parentMoveBody")).toBeTruthy();
+    expect(within(detailPanel).getByRole("button", { name: "projectMap.candidateNotice.confirm" })).toBeTruthy();
+    expect(within(detailPanel).getByRole("button", { name: "projectMap.candidateNotice.reject" })).toBeTruthy();
   });
 
   it("shows confirm and reject actions when a selected node has a pending candidate record", () => {
@@ -977,5 +1183,36 @@ describe("ProjectMapPanel", () => {
     expect(within(drawer).getByLabelText("projectMap.tasks.cancelRun")).toBeTruthy();
     expect(within(drawer).getByText("projectMap.tasks.clearDone")).toBeTruthy();
     expect(within(drawer).getByText("projectMap.tasks.closeHint")).toBeTruthy();
+  });
+
+  it("shows failed run categories and diagnostics in the task drawer", () => {
+    const failedDataset: ProjectMapDataset = {
+      ...mockProjectMapData,
+      runs: [
+        {
+          id: "global_run_failed",
+          kind: "global",
+          status: "failed",
+          phase: "failed",
+          engine: "codex",
+          model: "gpt-5.4",
+          startedAt: "2026-05-26T01:20:00.000Z",
+          completedAt: "2026-05-26T01:21:00.000Z",
+          scope: "global",
+          failureCategory: "output_parse_failed",
+          error: "AI output did not contain a JSON object.",
+        },
+      ],
+    };
+
+    render(<ProjectMapPanel workspaceName="mossx" dataset={failedDataset} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /projectMap\.tasks\.button|Tasks|任务/ }));
+
+    const drawer = screen.getByRole("dialog", { name: "projectMap.tasks.drawerTitle" });
+    expect(within(drawer).getByText("global_run_failed")).toBeTruthy();
+    expect(within(drawer).getByText("projectMap.tasks.failureCategory.label")).toBeTruthy();
+    expect(within(drawer).getByText("projectMap.tasks.failureCategory.output_parse_failed")).toBeTruthy();
+    expect(within(drawer).getByText("AI output did not contain a JSON object.")).toBeTruthy();
   });
 });

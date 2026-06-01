@@ -6,10 +6,12 @@ import {
   sendUserMessage,
   startThread,
 } from "../../../services/tauri";
+import { parseModelStructuredJsonObject } from "../../../services/modelStructuredOutput";
 import { subscribeAppServerEvents, type Unsubscribe } from "../../../services/events";
 import type { AppServerEvent } from "../../../types";
 import type { EngineType } from "../../../types";
 import type {
+  ProjectMapCandidate,
   ProjectMapDataset,
   ProjectMapDiagramArtifact,
   ProjectMapDiagramDocument,
@@ -24,6 +26,8 @@ import type {
   ProjectMapSource,
 } from "../types";
 import { mergeProjectMapGenerationResult } from "../utils/incrementalGeneration";
+import { validateProjectMapNodePatch } from "../utils/evidenceGate";
+import { organizeProjectMapUnassignedDiscoveries } from "./projectMapNodeOrganizer";
 import {
   getProjectMapPathBasename,
   getProjectMapPathExtension,
@@ -91,11 +95,62 @@ const SUPPORTED_SOURCE_TYPES = new Set<ProjectMapSource["type"]>([
   "test",
   "conversation",
 ]);
+const PROJECT_MAP_GENERATION_AUTO_SESSION = {
+  sessionPurpose: "project-map-generation",
+  visibility: "system-auto",
+  ownerFeature: "project-map",
+  autoArchive: false,
+  createdBy: "system",
+} as const;
 const PROJECT_MAP_JSON_SCHEMA_EXAMPLE =
   '{"profile": {"primaryLanguage": "unknown", "languages": [], "shapes": [], "frameworks": [], "interfaceKinds": [], "buildSystems": []}, "lenses": [], "nodes": [{"id": "...", "lensId": "...", "nodeKind": "...", "title": "...", "summary": "...", "detail": {"coreDescription": "...", "keyFacts": [], "keyLogic": [], "riskSignals": [], "diagramArtifacts": [], "relatedArtifacts": []}, "parentId": null, "children": [], "sources": [], "confidence": "high|medium|low|unknown", "stale": false, "candidate": false}], "diagrams": [{"id": "...", "nodeId": "...", "title": "...", "kind": "flowchart|sequence|state|class|er|timeline|mindmap|other", "summary": "...", "sourceRefs": ["path"], "mermaid": "graph TD\\nA-->B"}]}';
 
 function nowIso(): string {
   return new Date().toISOString();
+}
+
+function getOrganizerCandidateReplacementKey(candidate: ProjectMapCandidate): string | null {
+  if (candidate.source !== "organizer" || candidate.kind !== "parentMove" || !candidate.move) {
+    return null;
+  }
+  return `${candidate.move.nodeId}->${candidate.move.suggestedParentId}`;
+}
+
+function mergeOrganizerCandidates(input: {
+  existingCandidates: ProjectMapCandidate[];
+  organizerCandidates: ProjectMapCandidate[];
+}): ProjectMapCandidate[] {
+  const replacementKeys = new Set(
+    input.organizerCandidates
+      .map(getOrganizerCandidateReplacementKey)
+      .filter((key): key is string => Boolean(key)),
+  );
+  return [
+    ...input.organizerCandidates,
+    ...input.existingCandidates.filter((candidate) => {
+      if (candidate.status !== "pending") {
+        return true;
+      }
+      const key = getOrganizerCandidateReplacementKey(candidate);
+      return !key || !replacementKeys.has(key);
+    }),
+  ];
+}
+
+function upsertOrganizerRunResult(input: {
+  runs: ProjectMapRunMetadata[];
+  activeRun: ProjectMapRunMetadata;
+  organizerResult: ProjectMapRunMetadata["organizerResult"];
+}): ProjectMapRunMetadata[] {
+  let matched = false;
+  const runs = input.runs.map((run) => {
+    if (run.id !== input.activeRun.id) {
+      return run;
+    }
+    matched = true;
+    return { ...run, organizerResult: input.organizerResult };
+  });
+  return matched ? runs : [{ ...input.activeRun, organizerResult: input.organizerResult }, ...runs];
 }
 
 function normalizeEngine(value: string): EngineType {
@@ -587,6 +642,9 @@ function resolveGenerationIntent(run: ProjectMapRunMetadata): ProjectMapGenerati
   if (run.kind === "auto" || requestScope.kind === "auto") {
     return "autoIngestion";
   }
+  if (run.kind === "organizer" || requestScope.kind === "organizer") {
+    return "organizeUnassigned";
+  }
   return requestScope.kind === "node" ? "completeNode" : "global";
 }
 
@@ -698,7 +756,9 @@ function buildPromptOutputRules(intent: ProjectMapGenerationIntent): string[] {
       : intent === "autoIngestion"
         ? [
             "Return incremental additions or corrections for the existing map; absence from output is not deletion.",
-            "New top-level concepts must set parentId to the existing Root node id from the context. Do not create a second root.",
+            "Only durable structural domains, modules, subsystems, or broad capabilities may use the existing Root node id as parentId. Do not create a second root.",
+            "Task, bugfix, risk, workflow, test, artifact, and evidence discoveries must set parentId to the nearest existing structural parent when possible.",
+            "If no reliable structural parent exists, set parentId to unassigned-discoveries so the client can group it for later triage.",
             "Use existing ids when updating known concepts; create new stable kebab-case ids only for new evidence-backed concepts.",
           ]
       : [
@@ -861,7 +921,9 @@ async function runCodexThreadTurn(input: {
   model: string;
   update: (update: ProjectMapRunUpdate) => Promise<void>;
 }): Promise<string> {
-  const threadStart = await startThread(input.workspaceId);
+  const threadStart = await startThread(input.workspaceId, {
+    autoSession: PROJECT_MAP_GENERATION_AUTO_SESSION,
+  });
   const threadId = extractThreadIdFromResponse(threadStart);
   if (!threadId) {
     throw new Error("Failed to start Codex project-map thread.");
@@ -930,6 +992,7 @@ async function runAiTurn(input: {
       model: input.run.model,
       accessMode: "read-only",
       continueSession: false,
+      autoSession: PROJECT_MAP_GENERATION_AUTO_SESSION,
     });
     return generated.text;
   } finally {
@@ -938,386 +1001,15 @@ async function runAiTurn(input: {
 }
 
 function parseJsonPayload(text: string): ProjectMapAiPayload {
-  const candidates = extractJsonObjectCandidates(text);
-  if (candidates.length === 0) {
-    throw new Error("AI output did not contain a JSON object.");
-  }
-
-  let lastParseMessage = "Unable to parse JSON string";
-  let sawParsableNonPayload = false;
-  for (const objectText of candidates) {
-    try {
-      const parsed = JSON.parse(objectText) as unknown;
-      if (isProjectMapAiPayloadShape(parsed)) {
-        return parsed as ProjectMapAiPayload;
-      }
-      sawParsableNonPayload = true;
-    } catch (error) {
-      lastParseMessage = error instanceof Error ? error.message : String(error);
-      const repaired = repairLenientJsonObjectText(objectText);
-      if (repaired === objectText) {
-        continue;
-      }
-      try {
-        const parsed = JSON.parse(repaired) as unknown;
-        if (isProjectMapAiPayloadShape(parsed)) {
-          return parsed as ProjectMapAiPayload;
-        }
-        sawParsableNonPayload = true;
-      } catch (repairError) {
-        lastParseMessage = repairError instanceof Error ? repairError.message : String(repairError);
-      }
-    }
-  }
-  if (sawParsableNonPayload) {
-    throw new Error("AI output did not contain a Project Map JSON payload.");
-  }
-  throw new Error(`AI output did not contain valid JSON. ${lastParseMessage}`);
+  return parseModelStructuredJsonObject({
+    text,
+    validator: isProjectMapAiPayloadShape,
+    payloadDescription: "Project Map JSON payload",
+  });
 }
 
-function isProjectMapAiPayloadShape(value: unknown): boolean {
+function isProjectMapAiPayloadShape(value: unknown): value is ProjectMapAiPayload {
   return isRecord(value) && ("profile" in value || "lenses" in value || "nodes" in value);
-}
-
-function extractJsonObjectCandidates(text: string): string[] {
-  const candidateTexts = [text, ...extractFencedBlockContents(text)];
-  const candidates: string[] = [];
-  const seen = new Set<string>();
-  for (const candidateText of candidateTexts) {
-    for (const objectText of scanBalancedJsonObjects(candidateText)) {
-      const trimmed = objectText.trim();
-      if (!trimmed || seen.has(trimmed)) {
-        continue;
-      }
-      candidates.push(trimmed);
-      seen.add(trimmed);
-    }
-  }
-  return candidates.sort((left, right) => right.length - left.length);
-}
-
-function extractFencedBlockContents(text: string): string[] {
-  const blocks: string[] = [];
-  const fencePattern = /```(?:json|JSON)?\s*([\s\S]*?)```/g;
-  let match: RegExpExecArray | null = fencePattern.exec(text);
-  while (match) {
-    if (match[1]?.trim()) {
-      blocks.push(match[1]);
-    }
-    match = fencePattern.exec(text);
-  }
-  return blocks;
-}
-
-function scanBalancedJsonObjects(text: string): string[] {
-  const objects: string[] = [];
-  let objectStart = -1;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-        continue;
-      }
-      if (char === "\\") {
-        escaped = true;
-        continue;
-      }
-      if (char === '"') {
-        inString = false;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      inString = true;
-      escaped = false;
-      continue;
-    }
-    if (char === "{") {
-      if (depth === 0) {
-        objectStart = index;
-      }
-      depth += 1;
-      continue;
-    }
-    if (char === "}" && depth > 0) {
-      depth -= 1;
-      if (depth === 0 && objectStart >= 0) {
-        objects.push(text.slice(objectStart, index + 1));
-        objectStart = -1;
-      }
-    }
-  }
-
-  return objects;
-}
-
-function repairLenientJsonObjectText(text: string): string {
-  return stripTrailingJsonCommas(
-    quoteBareJsonStringValues(quoteBareJsonObjectKeys(removeJsonPlaceholderEllipsis(convertSingleQuotedJsonStrings(text)))),
-  );
-}
-
-function removeJsonPlaceholderEllipsis(text: string): string {
-  let result = "";
-  let index = 0;
-  while (index < text.length) {
-    const char = text[index];
-    if (char === '"') {
-      const { value, endIndex } = readJsonStringLiteral(text, index);
-      result += value;
-      index = endIndex + 1;
-      continue;
-    }
-    if (text.startsWith("...", index)) {
-      index += 3;
-      continue;
-    }
-    result += char;
-    index += 1;
-  }
-  return result;
-}
-
-function convertSingleQuotedJsonStrings(text: string): string {
-  let result = "";
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    if (char !== "'") {
-      result += char;
-      continue;
-    }
-
-    let value = "";
-    let cursor = index + 1;
-    while (cursor < text.length) {
-      const current = text[cursor];
-      if (current === "\\" && cursor + 1 < text.length) {
-        value += text[cursor + 1];
-        cursor += 2;
-        continue;
-      }
-      if (current === "'") {
-        break;
-      }
-      value += current;
-      cursor += 1;
-    }
-
-    if (cursor >= text.length || text[cursor] !== "'") {
-      result += char;
-      continue;
-    }
-
-    result += JSON.stringify(value);
-    index = cursor;
-  }
-  return result;
-}
-
-function quoteBareJsonObjectKeys(text: string): string {
-  const stack: Array<{ type: "array" | "object"; expectKey: boolean }> = [];
-  let result = "";
-  let index = 0;
-
-  while (index < text.length) {
-    const char = text[index];
-    if (char === '"') {
-      const { value, endIndex } = readJsonStringLiteral(text, index);
-      result += value;
-      index = endIndex + 1;
-      continue;
-    }
-
-    const top = stack.at(-1);
-    if (top?.type === "object" && top.expectKey && isIdentifierStart(char)) {
-      const keyStart = index;
-      let keyEnd = index + 1;
-      while (keyEnd < text.length && isIdentifierPart(text[keyEnd])) {
-        keyEnd += 1;
-      }
-      let colonIndex = keyEnd;
-      while (colonIndex < text.length && /\s/.test(text[colonIndex])) {
-        colonIndex += 1;
-      }
-      if (text[colonIndex] === ":") {
-        result += `${JSON.stringify(text.slice(keyStart, keyEnd))}${text.slice(keyEnd, colonIndex + 1)}`;
-        top.expectKey = false;
-        index = colonIndex + 1;
-        continue;
-      }
-    }
-
-    result += char;
-    if (char === "{") {
-      stack.push({ type: "object", expectKey: true });
-    } else if (char === "[") {
-      stack.push({ type: "array", expectKey: false });
-    } else if (char === "}" || char === "]") {
-      stack.pop();
-    } else if (char === "," && top?.type === "object") {
-      top.expectKey = true;
-    } else if (char === ":" && top?.type === "object") {
-      top.expectKey = false;
-    }
-    index += 1;
-  }
-
-  return result;
-}
-
-function readJsonStringLiteral(text: string, startIndex: number): { value: string; endIndex: number } {
-  let value = text[startIndex];
-  let index = startIndex + 1;
-  while (index < text.length) {
-    const char = text[index];
-    value += char;
-    if (char === "\\" && index + 1 < text.length) {
-      value += text[index + 1];
-      index += 2;
-      continue;
-    }
-    if (char === '"') {
-      return { value, endIndex: index };
-    }
-    index += 1;
-  }
-  return { value, endIndex: text.length - 1 };
-}
-
-function stripTrailingJsonCommas(text: string): string {
-  let result = "";
-  let index = 0;
-  while (index < text.length) {
-    const char = text[index];
-    if (char === '"') {
-      const { value, endIndex } = readJsonStringLiteral(text, index);
-      result += value;
-      index = endIndex + 1;
-      continue;
-    }
-    if (char === ",") {
-      let cursor = index + 1;
-      while (cursor < text.length && /\s/.test(text[cursor])) {
-        cursor += 1;
-      }
-      if (text[cursor] === "}" || text[cursor] === "]") {
-        index += 1;
-        continue;
-      }
-    }
-    result += char;
-    index += 1;
-  }
-  return result;
-}
-
-function quoteBareJsonStringValues(text: string): string {
-  let result = "";
-  let index = 0;
-  while (index < text.length) {
-    const char = text[index];
-    if (char === '"') {
-      const { value, endIndex } = readJsonStringLiteral(text, index);
-      result += value;
-      index = endIndex + 1;
-      continue;
-    }
-
-    if (char === ":" || char === "[" || char === ",") {
-      const quoted = quoteValueAfterJsonSeparator(text, index, char);
-      if (quoted) {
-        result += quoted.value;
-        index = quoted.endIndex + 1;
-        continue;
-      }
-    }
-
-    result += char;
-    index += 1;
-  }
-  return result;
-}
-
-function quoteValueAfterJsonSeparator(
-  text: string,
-  separatorIndex: number,
-  separator: string,
-): { value: string; endIndex: number } | null {
-  const prefixEnd = separatorIndex + 1;
-  let valueStart = prefixEnd;
-  while (valueStart < text.length && /\s/.test(text[valueStart])) {
-    valueStart += 1;
-  }
-
-  const firstValueChar = text[valueStart];
-  if (!firstValueChar || firstValueChar === "}" || firstValueChar === "]") {
-    return null;
-  }
-  if (!shouldQuoteBareJsonValue(text, valueStart, separator)) {
-    return null;
-  }
-
-  const valueEnd = findBareJsonValueEnd(text, valueStart);
-  const rawValue = text.slice(valueStart, valueEnd).trim();
-  if (!rawValue) {
-    return null;
-  }
-
-  return {
-    value: `${text.slice(separatorIndex, valueStart)}${JSON.stringify(rawValue)}`,
-    endIndex: valueEnd - 1,
-  };
-}
-
-function shouldQuoteBareJsonValue(text: string, valueStart: number, separator: string): boolean {
-  const char = text[valueStart];
-  if (char === '"' || char === "{" || char === "[") {
-    return false;
-  }
-  if (separator === "," && !isArrayItemSeparator(text, valueStart)) {
-    return false;
-  }
-
-  const valueEnd = findBareJsonValueEnd(text, valueStart);
-  const rawValue = text.slice(valueStart, valueEnd).trim();
-  if (!rawValue || rawValue === "true" || rawValue === "false" || rawValue === "null") {
-    return false;
-  }
-  return !/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/.test(rawValue);
-}
-
-function isArrayItemSeparator(text: string, valueStart: number): boolean {
-  let cursor = valueStart - 1;
-  while (cursor >= 0 && /\s/.test(text[cursor])) {
-    cursor -= 1;
-  }
-  return text[cursor] === "[" || text[cursor] === ",";
-}
-
-function findBareJsonValueEnd(text: string, valueStart: number): number {
-  let cursor = valueStart;
-  while (cursor < text.length) {
-    const char = text[cursor];
-    if (char === "," || char === "}" || char === "]" || char === "\n" || char === "\r") {
-      return cursor;
-    }
-    cursor += 1;
-  }
-  return cursor;
-}
-
-function isIdentifierStart(char: string): boolean {
-  return /[A-Za-z_$]/.test(char);
-}
-
-function isIdentifierPart(char: string): boolean {
-  return /[A-Za-z0-9_$-]/.test(char);
 }
 
 function isProjectMapSource(value: unknown): value is ProjectMapSource {
@@ -1733,6 +1425,38 @@ function isMemoryOnlyGeneratedNode(node: ProjectMapNode): boolean {
   return node.sources.length > 0 && node.sources.every((source) => source.type === "conversation");
 }
 
+function hasNonMemoryGeneratedSource(node: ProjectMapNode): boolean {
+  return node.sources.some((source) => source.type !== "conversation");
+}
+
+function keepGeneratedNodeAsCandidate(node: ProjectMapNode): ProjectMapNode {
+  return {
+    ...node,
+    candidate: true,
+    confidence: node.confidence === "high" ? "medium" : node.confidence,
+  };
+}
+
+function canAutoApplyEvidenceBackedGeneratedNode(node: ProjectMapNode): boolean {
+  if (node.candidate || node.stale || !hasNonMemoryGeneratedSource(node)) {
+    return false;
+  }
+  if (node.confidence !== "high" && node.confidence !== "medium") {
+    return false;
+  }
+
+  const gate = validateProjectMapNodePatch(node, {
+    nodeId: node.id,
+    summary: node.summary,
+    detail: node.detail,
+    sources: node.sources,
+    confidence: node.confidence,
+    stale: node.stale,
+    candidate: node.candidate,
+  });
+  return gate.ok;
+}
+
 function applyAutoIngestionCandidateSafety(
   nodes: ProjectMapNode[],
   run: ProjectMapRunMetadata,
@@ -1744,19 +1468,14 @@ function applyAutoIngestionCandidateSafety(
   const applyMode = run.autoIngestion?.applyMode ?? "createCandidate";
   return nodes.map((node) => {
     if (applyMode === "createCandidate") {
-      return {
-        ...node,
-        candidate: true,
-        confidence: node.confidence === "high" ? "medium" : node.confidence,
-      };
+      return keepGeneratedNodeAsCandidate(node);
     }
 
-    if (isMemoryOnlyGeneratedNode(node)) {
-      return {
-        ...node,
-        candidate: true,
-        confidence: node.confidence === "high" ? "medium" : node.confidence,
-      };
+    if (
+      isMemoryOnlyGeneratedNode(node) ||
+      !canAutoApplyEvidenceBackedGeneratedNode(node)
+    ) {
+      return keepGeneratedNodeAsCandidate(node);
     }
 
     return node;
@@ -1883,6 +1602,57 @@ function applyAiPayload(input: {
   };
 }
 
+async function runOrganizerTask(input: {
+  workspaceId: string;
+  dataset: ProjectMapDataset;
+  run: ProjectMapRunMetadata;
+  update: (update: ProjectMapRunUpdate) => Promise<void>;
+}): Promise<ProjectMapDataset> {
+  await input.update({
+    phase: "preparingSources",
+    progress: 12,
+    log: "Preparing unassigned Project Map discoveries for AI organizer.",
+  });
+  const organizerResult = await organizeProjectMapUnassignedDiscoveries({
+    workspaceId: input.workspaceId,
+    dataset: input.dataset,
+    engine: input.run.engine,
+    model: input.run.model,
+    preferredLanguage: input.run.preferredLanguage,
+  });
+  await input.update({
+    phase: "writingMap",
+    progress: 88,
+    log: `Organizer produced ${organizerResult.candidates.length} safe candidate${organizerResult.candidates.length === 1 ? "" : "s"} from ${organizerResult.unassignedCount} unassigned node${organizerResult.unassignedCount === 1 ? "" : "s"} (${organizerResult.skippedCount} skipped, ${organizerResult.unsafeCount} unsafe ignored).`,
+  });
+  const updatedAt = nowIso();
+  const runResult = {
+    unassignedCount: organizerResult.unassignedCount,
+    candidateCount: organizerResult.candidates.length,
+    skippedCount: organizerResult.skippedCount,
+    unsafeCount: organizerResult.unsafeCount,
+    skips: organizerResult.skips,
+    unsafe: organizerResult.unsafe,
+  };
+  return {
+    ...input.dataset,
+    manifest: {
+      ...input.dataset.manifest,
+      updatedAt,
+      lastRunId: input.run.id,
+    },
+    runs: upsertOrganizerRunResult({
+      runs: input.dataset.runs,
+      activeRun: input.run,
+      organizerResult: runResult,
+    }),
+    candidates: mergeOrganizerCandidates({
+      organizerCandidates: organizerResult.candidates,
+      existingCandidates: input.dataset.candidates ?? [],
+    }),
+  };
+}
+
 export async function runProjectMapGenerationWorker({
   workspaceId,
   dataset,
@@ -1892,6 +1662,9 @@ export async function runProjectMapGenerationWorker({
   const update = async (updateValue: ProjectMapRunUpdate) => {
     await onRunUpdate(updateValue);
   };
+  if (resolveGenerationIntent(run) === "organizeUnassigned") {
+    return runOrganizerTask({ workspaceId, dataset, run, update });
+  }
   const evidence = await collectWorkspaceEvidence({
     workspaceId,
     requestSources: run.readSources ?? [],

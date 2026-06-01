@@ -3,9 +3,7 @@
 ## Purpose
 
 定义 Git 提交信息 AI 生成能力的统一契约，覆盖语言选择、引擎选择、生成链路路由与输出清洗，确保生成结果可直接用于提交输入框且行为可预测。
-
 ## Requirements
-
 ### Requirement: AI Commit Message Generation MUST Support Language Selection
 
 系统 MUST 支持按语言生成提交信息（`zh` / `en`），并保持 Conventional Commits 约束。
@@ -93,3 +91,17 @@ AI 提交信息生成 MUST 基于“本次真正会进入 commit 的 diff 集合
 - **WHEN** generation request 中的 scope path 使用 `\\` 分隔符
 - **THEN** 系统 MUST 将其规范化为与 `/` 分隔符等价的路径语义
 - **AND** diff targeting 结果 MUST 与 POSIX 写法一致
+
+### Requirement: Commit Message Helper Sessions SHALL Be Hidden Automatic Sessions
+AI commit message generation sessions SHALL be classified as hidden automatic helper sessions and SHALL NOT appear in normal workspace session lists.
+
+#### Scenario: Commit message generation creates hidden helper
+- **WHEN** the system starts a session or thread to generate a commit message
+- **THEN** it SHALL record automatic session metadata with `sessionPurpose=commit-message`
+- **AND** it SHALL set `visibility=hidden`
+
+#### Scenario: Commit helper remains excluded from root
+- **WHEN** commit message generation completes or fails
+- **THEN** the helper session SHALL NOT appear at workspace root
+- **AND** any existing archive or background hide behavior SHALL remain compatible with the generic hidden classification
+

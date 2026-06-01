@@ -6,7 +6,12 @@ import { useNewAgentShortcut } from "./useNewAgentShortcut";
 import type { LoadingProgressDialogConfig } from "./useLoadingProgressDialogState";
 import { runWithLoadingProgress } from "../utils/loadingProgressActions";
 import { pushGlobalRuntimeNotice } from "../../../services/globalRuntimeNotices";
-import { ensureRuntimeReady, openNewWindow, pickWorkspacePath } from "../../../services/tauri";
+import {
+  ensureRuntimeReady,
+  isWebServiceRuntime,
+  openNewWindow,
+  pickWorkspacePath,
+} from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
 import type { DebugEntry, EngineType, WorkspaceInfo } from "../../../types";
 
@@ -398,6 +403,18 @@ export function useWorkspaceActions({
 
   const handleAddWorkspace = useCallback(async () => {
     try {
+      if (isWebServiceRuntime()) {
+        const manualPath = window.prompt(
+          t("workspace.addWorkspaceRemotePathPrompt"),
+          "",
+        );
+        const path = manualPath?.trim() ?? "";
+        if (!path) {
+          return;
+        }
+        await handleAddWorkspaceFromPath(path);
+        return;
+      }
       const path = await pickWorkspacePath();
       if (!path) {
         return;

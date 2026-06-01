@@ -6,17 +6,33 @@ Define correlated stream latency diagnostics so the system can distinguish upstr
 ## Requirements
 ### Requirement: Stream Latency Diagnostics MUST Capture Correlated Turn Evidence
 
-系统 MUST 为流式会话记录可关联的 latency 证据，以区分 upstream provider 延迟、chunk cadence 异常与 client render amplification。
+The system MUST record correlated latency evidence for streaming conversation turns so it can distinguish upstream provider delay, chunk cadence anomalies, client render amplification, and visible-output stalls.
 
 #### Scenario: first token and render pacing are recorded with turn correlation
-- **WHEN** 某个流式会话 turn 从用户发送进入 processing，且后续收到首个 assistant chunk
-- **THEN** 系统 MUST 记录该 turn 的 first token latency、首个可见 render latency 与后续 chunk cadence 摘要
-- **AND** 记录中 MUST 包含 `workspaceId`、`threadId`、`engine`、`providerId/providerName/baseUrl`、`model` 与 `platform` 等可关联维度
+
+- **WHEN** a streaming conversation turn starts and later receives the first assistant chunk
+- **THEN** the system MUST record first-token latency, first visible render latency, and subsequent chunk cadence summary
+- **AND** records MUST include `workspaceId`, `threadId`, `engine`, `providerId/providerName/baseUrl`, `model`, and `platform` when available
 
 #### Scenario: prolonged waiting or timeout still emits correlated latency evidence
-- **WHEN** 某个流式会话在 waiting 状态下长时间没有收到首个 chunk，或最终进入 `FIRST_PACKET_TIMEOUT` / 等价超时
-- **THEN** 系统 MUST 记录一条带相同 correlation dimensions 的 latency diagnostic
-- **AND** 该诊断 MUST 能区分“尚未收到首包”和“已收到 chunk 但后续 cadence 异常”
+
+- **WHEN** a streaming conversation remains in waiting state without receiving the first chunk, or eventually enters `FIRST_PACKET_TIMEOUT` or equivalent timeout
+- **THEN** the system MUST record latency diagnostics with the same correlation dimensions
+- **AND** diagnostics MUST distinguish no-first-packet from chunk cadence anomalies after ingress
+
+#### Scenario: non-text runtime progress is not classified as backend silence
+
+- **WHEN** a conversation has not yet received assistant text ingress
+- **AND** the backend emits command execution, file change, tool output, terminal interaction, or equivalent runtime activity for the active turn
+- **THEN** diagnostics MUST record that activity as non-text progress evidence
+- **AND** first-token pending warnings MUST NOT fire solely because assistant text has not arrived yet
+- **AND** the first assistant text latency MUST remain unset until assistant text ingress actually occurs
+
+#### Scenario: candidate and active mitigation evidence are distinct
+
+- **WHEN** a stream mitigation candidate profile is selected before or during visible render analysis
+- **THEN** diagnostics MUST record candidate profile id and candidate reason separately from active mitigation profile id and active mitigation reason
+- **AND** disabling active mitigation MUST NOT erase the evidence that a candidate was selected
 
 ### Requirement: Stream Latency Diagnostics MUST Reuse Existing Diagnostics Surfaces And Stay Bounded
 
@@ -34,35 +50,28 @@ Define correlated stream latency diagnostics so the system can distinguish upstr
 
 ### Requirement: Latency Diagnostics MUST Distinguish Upstream Delay From Client Render Amplification
 
-系统 MUST 避免把所有“出字慢”都记录成同一种原因。
+The system MUST avoid recording all slow visible text symptoms as one root cause.
 
 #### Scenario: upstream pending is classified without blaming renderer
-- **WHEN** 会话长时间未收到首个 chunk，且 renderer 没有出现持续重渲染热点
-- **THEN** 系统 MUST 将该次慢体验归类为 upstream pending、first-token delay 或等价类别
-- **AND** 诊断 MUST NOT 错误归因为 client render amplification
+
+- **WHEN** a conversation waits for a long time before receiving the first chunk
+- **AND** renderer evidence does not show repeated render lag after chunk ingress
+- **THEN** diagnostics MUST classify the slow path as upstream pending, first-token delay, or equivalent
+- **AND** diagnostics MUST NOT report client render amplification as the primary cause
 
 #### Scenario: render amplification is classified after chunk ingress exists
-- **WHEN** 会话已经收到 chunk，且 chunk cadence 正常，但可见文本更新明显滞后于 chunk 到达
-- **THEN** 系统 MUST 将该次慢体验归类为 client render amplification、render pacing lag 或等价类别
-- **AND** 诊断 MUST 保留相关节流/scroll/render 路径的证据摘要
 
-#### Scenario: visible-output stall is classified after assistant text delta exists
-- **WHEN** `Claude` 或 `Codex` 会话已经收到 assistant text delta
-- **AND** 同一 live assistant item 的 visible text 在 bounded window 内不再增长
-- **THEN** 系统 MUST 将该次慢体验归类为 `visible-output-stall-after-first-delta` 或等价类别
-- **AND** 该分类 MUST NOT 依赖 provider/model 指纹
+- **WHEN** a conversation has received chunks and chunk cadence is normal
+- **AND** visible text or visible rows lag behind chunk arrival
+- **THEN** diagnostics MUST classify the issue as client render amplification, render pacing lag, or equivalent
+- **AND** diagnostics MUST retain evidence of active or candidate mitigation profile state
 
-#### Scenario: repeat-turn full-curtain blanking is classified separately from visible stall
-- **WHEN** `Claude` 会话已经成功显示过前序回合内容
-- **AND** 后续 turn 进入 processing 或 realtime 更新阶段
-- **AND** 当前 conversation curtain 失去全部可读内容，而不是仅仅出现可见文本增长停顿
-- **THEN** diagnostics MUST 将该次异常归类为 `repeat-turn blanking` 或等价显式类别
-- **AND** diagnostics MUST NOT 将其压缩成 `visible-output-stall-after-first-delta`
+#### Scenario: first visible latency is classified before visible stall
 
-#### Scenario: blanking evidence stays correlated with render recovery
-- **WHEN** 系统记录 `repeat-turn blanking` diagnostics
-- **THEN** 记录 MUST 保留 `workspaceId`、`threadId`、`engine`、`platform`、active mitigation profile 与 turn 相关 evidence
-- **AND** triage 时 MUST 能将该诊断与具体的 blanking recovery 行为关联起来
+- **WHEN** a Windows Claude Code turn has assistant text ingress
+- **AND** the first visible render is delayed beyond the configured first-visible threshold
+- **THEN** diagnostics MAY classify the delay separately from `visible-output-stall-after-first-delta`
+- **AND** this classification MUST NOT be treated as proof of durable stale-thread recovery failure
 
 ### Requirement: Stream Latency Diagnostics MUST Classify Backend Forwarding Stalls Separately
 
@@ -114,12 +123,20 @@ Stream latency diagnostics MUST capture frontend client evidence beyond first-to
 - **AND** this evidence MUST be correlated with stream engine, thread, turn, render profile, and active mitigation state
 
 ### Requirement: Diagnostics MUST Compare Baseline And Optimized Paths
+
 Realtime diagnostics MUST support comparing baseline and optimized behavior without requiring a code rebuild.
 
 #### Scenario: rollback flag keeps comparable diagnostics
+
 - **WHEN** an optimization flag disables batching, incremental derivation, render pacing, or mitigation activation
 - **THEN** diagnostics MUST continue emitting comparable evidence dimensions
 - **AND** triage MUST be able to determine whether the regression exists in the optimized path, the baseline path, or both
+
+#### Scenario: threshold configuration remains bounded and rollback-safe
+
+- **WHEN** first-visible, render-amplification, visible-output-stall, or preemptive-candidate thresholds are adjusted through an approved config/debug path
+- **THEN** diagnostics MUST record the threshold source or effective threshold where practical
+- **AND** rollback to default thresholds MUST preserve existing non-Windows and non-Claude behavior
 
 ### Requirement: Stream Latency Diagnostics MUST Classify Claude First Token Delay Separately
 

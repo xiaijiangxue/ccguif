@@ -1,10 +1,25 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   DiagnosticsBundleExportResult,
+  DebugEntry,
   RuntimePoolSnapshot,
+  TurnReconciliationStatusRequest,
+  TurnReconciliationStatusResponse,
   WorkspaceInfo,
   WorkspaceSettings,
 } from "../../types";
+
+export type ClientErrorLogEntry = {
+  schemaVersion: number;
+  timestamp: string;
+  source: DebugEntry["source"];
+  label: string;
+  payload?: unknown;
+};
+
+export type ClientErrorLogAppendResult = {
+  filePath: string;
+};
 
 export type WorktreeSetupStatus = {
   shouldRun: boolean;
@@ -164,8 +179,20 @@ export async function noteWebServiceReconnected(
   return invoke("note_web_service_reconnected", { workspaceId });
 }
 
+export async function queryTurnReconciliationStatus(
+  request: TurnReconciliationStatusRequest,
+): Promise<TurnReconciliationStatusResponse> {
+  return invoke("query_turn_reconciliation_status", { request });
+}
+
 export async function exportDiagnosticsBundle(): Promise<DiagnosticsBundleExportResult> {
   return invoke("export_diagnostics_bundle");
+}
+
+export async function appendClientErrorLog(
+  entry: ClientErrorLogEntry,
+): Promise<ClientErrorLogAppendResult> {
+  return invoke("append_client_error_log", { entry });
 }
 
 export async function mutateRuntimePool(mutation: {

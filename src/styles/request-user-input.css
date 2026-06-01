@@ -22,6 +22,75 @@
   width: min(1120px, 100%);
 }
 
+.request-user-input-collapsed {
+  width: min(760px, 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-card-strong);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.request-user-input-collapsed-main {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.request-user-input-collapsed-title {
+  min-width: 0;
+  color: var(--text-strong);
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.request-user-input-collapsed-timer {
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--surface-card-muted);
+  color: var(--text-subtle);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+}
+
+.request-user-input-collapsed-error {
+  color: var(--error-text, #ef4444);
+  font-size: 11px;
+}
+
+.request-user-input-collapsed-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.request-user-input-collapsed-expand {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+  color: var(--text-subtle);
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 10px;
+}
+
+.request-user-input-collapsed-expand:hover:not(:disabled) {
+  border-color: var(--border-stronger);
+  color: var(--text);
+}
+
 .request-user-input-message.request-user-input-history {
   align-items: flex-end;
 }

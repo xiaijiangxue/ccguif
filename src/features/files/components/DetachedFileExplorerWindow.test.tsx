@@ -14,11 +14,13 @@ const configureDetachedExternalChangeMonitorMock = vi.fn(async (): Promise<{
 }> => ({ mode: "watcher" }));
 const clearDetachedExternalChangeMonitorMock = vi.fn(async () => undefined);
 type MockDetachedSession = {
+  windowLabel?: string | null;
   workspaceId: string;
   workspacePath: string;
   workspaceName: string;
   gitRoot: string | null;
   initialFilePath: string | null;
+  defaultSidebarCollapsed?: boolean;
   updatedAt: number;
 };
 
@@ -165,6 +167,7 @@ describe("DetachedFileExplorerWindow", () => {
         gitRoot: "nested/repo",
         gitStatusFiles: [{ path: "src/index.ts", status: "M", additions: 2, deletions: 1 }],
         fileViewHeaderLayout: "single-row",
+        defaultSidebarCollapsed: false,
       }),
     );
     expect(useCodeCssVarsMock).toHaveBeenCalledWith(
@@ -207,6 +210,62 @@ describe("DetachedFileExplorerWindow", () => {
         navigationTarget: null,
       }),
     );
+  });
+
+  it("passes the detached session sidebar collapse preference to the workspace", () => {
+    detachedSession = {
+      ...detachedSession,
+      initialFilePath: "src/index.ts",
+      defaultSidebarCollapsed: true,
+      updatedAt: 5,
+    };
+
+    render(<DetachedFileExplorerWindow />);
+
+    expect(fileExplorerWorkspaceMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        defaultSidebarCollapsed: true,
+      }),
+    );
+  });
+
+  it("keeps per-tab detached windows on the shared detached menubar drag chrome", () => {
+    detachedSession = {
+      ...detachedSession,
+      windowLabel: "file-explorer-tab-demo",
+      initialFilePath: "src/index.ts",
+      defaultSidebarCollapsed: true,
+      updatedAt: 6,
+    };
+
+    render(<DetachedFileExplorerWindow />);
+
+    expect(fileExplorerWorkspaceMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        defaultSidebarCollapsed: true,
+        fileViewHeaderLayout: "single-row",
+      }),
+    );
+  });
+
+  it("marks the detached menubar and title copy as window drag regions", () => {
+    render(<DetachedFileExplorerWindow />);
+
+    expect(
+      document.querySelector(".detached-file-explorer-menubar")?.getAttribute(
+        "data-tauri-drag-region",
+      ),
+    ).toBe("true");
+    expect(
+      document.querySelector(".detached-file-explorer-menubar-copy")?.getAttribute(
+        "data-tauri-drag-region",
+      ),
+    ).toBe("true");
+    expect(
+      document.querySelector(".detached-file-explorer-menubar-title")?.getAttribute(
+        "data-tauri-drag-region",
+      ),
+    ).toBe("true");
   });
 
   it("normalizes Windows-style detached restores case-insensitively", () => {

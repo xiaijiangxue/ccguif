@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the conversation-render-surface-stability behavior contract, covering Claude Live Conversation Rendering MUST Degrade Safely On Desktop Surfaces.
-
 ## Requirements
 ### Requirement: Claude Live Conversation Rendering MUST Degrade Safely On Desktop Surfaces
 
@@ -167,4 +166,63 @@ The conversation curtain MUST render deferred Claude history images as explicit 
 - **WHEN** the deferred media descriptor comes from Claude history restore
 - **THEN** the curtain MAY use Claude-specific load actions and diagnostics
 - **AND** Codex, Gemini, and OpenCode image/render contracts MUST remain unchanged unless they explicitly opt into the same deferred media contract
+
+### Requirement: Live Rendering MUST Preserve Long Assistant Paragraph Structure
+
+Live rendering MUST preserve paragraph and newline structure for long assistant text while allowing bounded processing-stage fallback rendering.
+
+#### Scenario: long live text keeps paragraph breaks
+- **WHEN** an active assistant message streams long CJK or Markdown text with paragraph breaks
+- **THEN** the live conversation surface MUST preserve visible paragraph separation
+- **AND** it MUST NOT collapse the text into a single dense paragraph solely because the message exceeded ordinary live-render size
+
+#### Scenario: processing fallback converges to final Markdown
+- **WHEN** a long assistant message used plain, lightweight, chunked, or throttled rendering while processing
+- **AND** the turn completes with final assistant text
+- **THEN** the rendered surface MUST converge to final Markdown semantics
+- **AND** headings, paragraphs, lists, code fences, links, and emphasis MUST NOT require thread switching or history replay to recover
+
+#### Scenario: display truncation does not contaminate canonical render source
+- **WHEN** the renderer uses a shortened preview, summary, or degraded display for a long assistant message
+- **THEN** that display text MUST remain separate from the canonical message text used for later deltas and final rendering
+- **AND** the shortened display text MUST NOT become the source of truth for the active assistant body
+
+### Requirement: Assistant Message Tail Actions MUST Expose Copy And Latest Branch Actions
+
+Completed assistant replies MUST expose compact tail actions that reuse existing message/session behavior without changing conversation content.
+
+#### Scenario: assistant replies show copy actions
+
+- **WHEN** the conversation timeline renders an assistant message
+- **THEN** the message tail MUST expose a copy icon action
+- **AND** copy MUST copy the rendered assistant text when a rendered value is available
+
+#### Scenario: latest final assistant reply shows fork action
+
+- **WHEN** an assistant message is the latest final assistant reply in the active thread
+- **AND** it has a valid previous user-message anchor
+- **THEN** the message tail MUST expose a fork icon action
+- **AND** fork MUST open a shared confirmation dialog explaining the fork purpose and usage
+- **AND** fork MUST route through the existing composer fork flow only after the user confirms
+
+#### Scenario: latest final assistant reply shows rewind action
+
+- **WHEN** an assistant message is the latest final assistant reply in the active thread
+- **AND** it has a valid previous user-message anchor
+- **THEN** the message tail MUST expose a rewind icon action
+- **AND** rewind MUST open the existing rewind confirmation dialog using that previous user-message anchor
+- **AND** rewind MUST execute only after the user confirms the dialog
+
+#### Scenario: older assistant replies do not show fork or rewind
+
+- **WHEN** an assistant message is not the latest final assistant reply
+- **THEN** the message tail MUST NOT expose the fork icon
+- **AND** the message tail MUST NOT expose the rewind icon
+- **AND** copy availability MUST remain independent of the latest-final visibility rule
+
+#### Scenario: unsupported action anchors are hidden
+
+- **WHEN** an assistant message cannot be mapped to a previous user-message anchor
+- **THEN** fork and rewind actions MUST be hidden for that message
+- **AND** the copy action MUST remain available when the message has copyable text
 

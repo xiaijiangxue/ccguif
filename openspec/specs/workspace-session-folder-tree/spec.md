@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the workspace-session-folder-tree behavior contract, covering Project Sessions SHALL Support A Folder Tree Organization Layer.
-
 ## Requirements
 ### Requirement: Project Sessions SHALL Support A Folder Tree Organization Layer
 
@@ -92,11 +91,11 @@ Defines the workspace-session-folder-tree behavior contract, covering Project Se
 
 ### Requirement: Sessions SHALL Be Movable Through Menu
 
-系统 MUST 提供菜单或等价显式控件，使用户可以把 session 移动到同 project folder/root。
+系统 MUST 提供菜单或等价显式控件，使用户可以把 session 移动到同 project folder/root。该能力 MUST 覆盖 root list、folder list、worktree/child workspace list 等共享 strict project session surface；只要当前 project/workspace 有合法 folder/root move targets，行菜单就不得因为渲染路径不同而丢失移动入口。
 
 #### Scenario: move session through menu
 - **WHEN** 用户打开某条 session 的操作菜单并选择 `Move to folder`
-- **THEN** 系统 MUST 展示当前 project 内可选 folder/root
+- **THEN** 系统 MUST 通过右侧 flyout、submenu 或等价不会撑开主菜单的分层 UI 展示当前 project 内可选 folder/root
 - **AND** 用户 MUST 能完成同 project session folder assignment
 
 #### Scenario: menu move excludes other projects
@@ -104,24 +103,120 @@ Defines the workspace-session-folder-tree behavior contract, covering Project Se
 - **THEN** 系统 MUST 只展示当前 project 的 folder/root
 - **AND** MUST NOT 提供其它 project folder 作为可选目标
 
+#### Scenario: worktree session row exposes move menu when targets exist
+- **WHEN** 用户在 worktree 或 child workspace session row 上打开操作菜单
+- **AND** 当前 worktree/project 存在合法 folder/root move targets
+- **THEN** 系统 MUST 展示 `Move to folder` 或等价入口
+- **AND** 该入口 MUST 使用该 worktree/project 的 move targets，而不是 parent 或 sibling project 的 targets
+- **AND** 系统 MUST NOT 在缺少该 worktree/project targets 时静默回退到 parent workspace targets
+
 #### Scenario: large folder target list remains searchable
 - **WHEN** 当前 project 内 folder/root move target 数量超过可扫描阈值
-- **THEN** 系统 SHOULD 提供搜索、过滤或等价快速定位入口
+- **THEN** 系统 SHOULD 在 `Move to folder` 的分层 UI 内提供搜索、过滤或等价快速定位入口
+- **AND** 搜索入口 MUST NOT 替代分层 UI 内可见的 folder/root targets
 - **AND** root target MUST 始终可见或可通过固定入口选择
 - **AND** 搜索结果 MUST 仍只包含当前 project 的 folder/root
 
 ### Requirement: Folder Tree Assignment SHALL Preserve Projection Semantics
 
-Folder tree assignment MUST 只改变组织层 metadata，不得扩大或缩小当前 project session projection 的 membership。
+Folder tree assignment MUST 只改变组织层 metadata，不得扩大或缩小当前 project session projection 的 membership。对启动阶段只有 pending identity 的 session，UI MAY 暂存 folder intent；但 durable folder assignment MUST 等到真实 canonical session id 已知后写入。
 
 #### Scenario: same-project menu move does not alter strict membership
 - **WHEN** 用户在同一 project 内通过菜单移动 session 到 folder
 - **THEN** strict project session membership MUST 保持不变
 - **AND** 变化范围 MUST 仅限 folder assignment 和 UI 位置
 
+#### Scenario: pending session folder intent waits for real identity
+- **WHEN** 用户从 folder 或 child workspace 创建 engine session
+- **AND** engine 先返回 pending session identity
+- **THEN** 系统 MAY 在 UI 中保留该 pending session 的 folder intent
+- **AND** MUST NOT 将 durable folder assignment 写入一个猜测出来的真实 session id
+
+#### Scenario: pending folder intent migrates on identity transition
+- **WHEN** 系统确认 `pendingSessionId` 已被真实 canonical session id 替换
+- **AND** 该 pending session 存在 folder intent
+- **THEN** 系统 MUST 将 folder intent 迁移到真实 canonical session id
+- **AND** durable folder assignment MUST 使用真实 canonical session id 写入
+- **AND** MUST NOT 把 intent 写入同 engine 的其它旧 session
+
+#### Scenario: retryable assignment failure keeps pending intent
+- **WHEN** pending folder intent 已经迁移到真实 canonical session id
+- **AND** durable assignment 因 catalog-not-ready 或等价 retryable 原因失败
+- **THEN** 系统 MUST 保留 pending intent 或等价 retry state
+- **AND** MUST NOT 把 session 静默移动回 root
+
+#### Scenario: non-retryable assignment failure is visible before intent cleanup
+- **WHEN** pending folder intent 已经迁移到真实 canonical session id
+- **AND** durable assignment 因 non-retryable 原因失败
+- **THEN** 系统 MUST 保持或恢复可解释的本地 UI 状态
+- **AND** MUST 向用户暴露失败
+- **AND** 才能清理该 pending intent
+
 #### Scenario: filtered and paged catalogs remain stable after folder move
 - **WHEN** 当前 session catalog 存在 keyword、engine、status filter 或 cursor pagination
 - **AND** 用户移动某条 session 到 folder
 - **THEN** 系统 MUST 保持 filter/pagination 语义稳定
 - **AND** MUST NOT 用当前可见窗口冒充完整 folder/project total
+
+### Requirement: Session Folder Tree SHALL Participate In Management Navigation
+
+The project session folder tree MUST be usable from the Session Management hierarchy as an organization and filtering surface.
+
+#### Scenario: folder appears under selected project
+- **WHEN** a project has persisted session folders
+- **THEN** the Session Management left hierarchy SHOULD render those folders under the project/worktree scope
+- **AND** folder rows MUST remain scoped to their owner workspace
+
+#### Scenario: folder cleanup follows delete cleanup
+- **WHEN** a session is physically deleted or cleaned as already missing
+- **THEN** any folder assignment metadata for that session MUST be removed
+- **AND** the folder itself MUST remain unless explicitly deleted
+
+#### Scenario: missing session does not make folder non-empty forever
+- **GIVEN** a folder only contains assignments to sessions missing on disk
+- **WHEN** those missing assignments are cleaned
+- **THEN** the folder SHOULD become deletable if it has no child folders or live session assignments
+
+### Requirement: Workspace Session Folder Commands Shall Follow Active Backend Location
+Workspace session folder list, mutation, deletion, and assignment commands SHALL execute against the active backend location. In remote backend mode, desktop Tauri commands MUST forward to daemon RPCs instead of reading or mutating desktop-local session folder metadata.
+
+#### Scenario: remote session folder list uses daemon state
+- **WHEN** backend mode is remote
+- **AND** the client lists workspace session folders
+- **THEN** the desktop command SHALL request `list_workspace_session_folders` from the daemon
+- **AND** it MUST NOT read desktop-local catalog metadata as fallback
+
+#### Scenario: remote session folder mutations use daemon state
+- **WHEN** backend mode is remote
+- **AND** the client creates, renames, moves, deletes, or assigns workspace session folders
+- **THEN** the desktop command SHALL forward the matching daemon RPC with equivalent parameters
+- **AND** daemon errors SHALL surface through the existing command error path
+
+#### Scenario: local backend behavior remains unchanged
+- **WHEN** backend mode is local
+- **THEN** workspace session folder commands SHALL continue using local workspace state and catalog metadata
+- **AND** frontend service API shape SHALL remain unchanged
+
+### Requirement: Workspace Session Folder Tree SHALL Expose Reserved System-Auto Grouping
+The workspace session folder tree SHALL expose `system-auto` sessions through a reserved system-owned grouping that is separate from user-created folders and root rows.
+
+#### Scenario: System-auto group is stable and reserved
+- **WHEN** a workspace has one or more `system-auto` sessions
+- **THEN** the folder tree SHALL expose a stable reserved group for those sessions
+- **AND** user-created folders SHALL NOT be allowed to reuse the reserved system group identity
+
+#### Scenario: System-auto group does not change owner
+- **WHEN** a session appears under the reserved system-auto group
+- **THEN** the session SHALL retain its true owner workspace and stable session key
+- **AND** archive, delete, unarchive, and open actions SHALL route by that true owner
+
+#### Scenario: Empty system-auto group is not noisy
+- **WHEN** a workspace has no active `system-auto` sessions
+- **THEN** the folder tree SHALL NOT render an empty system-auto group as if user sessions are missing
+- **AND** root user sessions SHALL continue to render normally
+
+#### Scenario: User organization cannot move hidden helpers into root
+- **WHEN** a session is classified as `hidden`
+- **THEN** folder tree projection SHALL NOT expose it as a movable user session
+- **AND** existing folder metadata SHALL NOT force it back into root or a user folder
 

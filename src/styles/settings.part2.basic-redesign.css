@@ -594,6 +594,37 @@
   grid-template-columns: minmax(0, 1fr) minmax(320px, 520px);
 }
 
+.settings-section-basic .settings-field.settings-basic-item.settings-window-transparency-item {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "label"
+    "control";
+  gap: 10px;
+}
+
+.settings-section-basic .settings-window-transparency-toggle {
+  grid-area: label;
+  min-height: 0;
+  padding: 0;
+  gap: 16px;
+}
+
+.settings-section-basic .settings-window-transparency-help {
+  margin-top: 4px;
+}
+
+.settings-section-basic .settings-window-transparency-control {
+  grid-area: control;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.settings-section-basic .settings-window-transparency-control .settings-input--range {
+  flex: 1 1 auto;
+  min-width: 120px;
+}
+
 .settings-section-basic .settings-field.settings-basic-item > .settings-basic-field-header,
 .settings-section-basic .settings-field.settings-basic-item > .settings-field-label {
   grid-area: label;

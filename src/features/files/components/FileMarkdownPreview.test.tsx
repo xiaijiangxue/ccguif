@@ -225,6 +225,126 @@ describe("FileMarkdownPreview render budget", () => {
     expect(screen.getByText("\\definitelyinvalid{")).toBeTruthy();
   });
 
+  it("preserves common markdown block rendering semantics", async () => {
+    await loadKatexAssets();
+
+    const { container } = render(
+      <FileMarkdownPreview
+        documentKey="docs:correctness"
+        value={[
+          "| Metric | Value |",
+          "| :--- | ---: |",
+          "| **Speed** | $42$ |",
+          "",
+          "1. First",
+          "   - Nested",
+          "   - [x] Done",
+          "",
+          "$$E=mc^2$$",
+          "",
+          "```ts",
+          "const answer = 42;",
+          "```",
+        ].join("\n")}
+      />,
+    );
+
+    const table = container.querySelector(".fvp-file-markdown-table-wrap table");
+    expect(table).toBeTruthy();
+    expect(table?.querySelectorAll("thead th")).toHaveLength(2);
+    expect(table?.querySelector("strong")?.textContent).toBe("Speed");
+    expect(container.querySelector("ol ul")).toBeTruthy();
+    expect(container.querySelector('input[type="checkbox"]:checked')).toBeTruthy();
+    expect(container.querySelector(".katex-display")).toBeTruthy();
+    expect(container.querySelector("code.language-ts")?.textContent).toContain("const answer = 42;");
+  });
+
+  it("renders flowchart fenced blocks through the Mermaid lifecycle", async () => {
+    render(
+      <FileMarkdownPreview
+        documentKey="docs:flowchart"
+        value={[
+          "```flowchart",
+          "flowchart TD",
+          "Start-->End",
+          "```",
+        ].join("\n")}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: /render|渲染/i }));
+
+    const renderedFlowchart = await screen.findByTestId("file-markdown-mermaid-preview");
+    expect(renderedFlowchart.innerHTML).toContain("flowchart TD");
+    expect(renderedFlowchart.innerHTML).toContain("Start-->End");
+  });
+
+  it("restores wide table horizontal scroll after same-document remounts", () => {
+    const markdown = [
+      "| C1 | C2 | C3 | C4 | C5 |",
+      "| --- | --- | --- | --- | --- |",
+      "| a | b | c | d | e |",
+    ].join("\n");
+    const { container, unmount } = render(
+      <FileMarkdownPreview
+        documentKey="docs:wide-table"
+        value={markdown}
+      />,
+    );
+
+    const tableWrap = container.querySelector(".fvp-file-markdown-table-wrap") as HTMLDivElement;
+    tableWrap.scrollLeft = 240;
+    fireEvent.scroll(tableWrap);
+    unmount();
+
+    const remounted = render(
+      <FileMarkdownPreview
+        documentKey="docs:wide-table"
+        value={markdown}
+      />,
+    );
+    const restoredTableWrap = remounted.container.querySelector(
+      ".fvp-file-markdown-table-wrap",
+    ) as HTMLDivElement;
+
+    expect(restoredTableWrap.scrollLeft).toBe(240);
+  });
+
+  it("keeps wide table horizontal scroll during unrelated annotation rerenders", () => {
+    const markdown = [
+      "| C1 | C2 | C3 | C4 | C5 |",
+      "| --- | --- | --- | --- | --- |",
+      "| a | b | c | d | e |",
+      "",
+      "paragraph outside the table",
+    ].join("\n");
+    const { container, rerender } = render(
+      <FileMarkdownPreview
+        documentKey="docs:wide-table-annotation"
+        value={markdown}
+      />,
+    );
+
+    const tableWrap = container.querySelector(".fvp-file-markdown-table-wrap") as HTMLDivElement;
+    tableWrap.scrollLeft = 180;
+    fireEvent.scroll(tableWrap);
+
+    rerender(
+      <FileMarkdownPreview
+        documentKey="docs:wide-table-annotation"
+        value={markdown}
+        annotationDraft={{ lineRange: { startLine: 5, endLine: 5 }, body: "draft" }}
+        renderAnnotationDraft={() => <div>annotation draft</div>}
+      />,
+    );
+
+    const tableWrapAfterRerender = container.querySelector(
+      ".fvp-file-markdown-table-wrap",
+    ) as HTMLDivElement;
+    expect(tableWrapAfterRerender.scrollLeft).toBe(180);
+    expect(screen.getByText("annotation draft")).toBeTruthy();
+  });
+
   it("keeps Mermaid source/render switching inside a stable body", async () => {
     render(
       <FileMarkdownPreview

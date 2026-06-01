@@ -1193,15 +1193,30 @@ fn resolve_web_assets_root() -> Option<PathBuf> {
         cfg!(target_os = "linux"),
     );
 
-    for candidate in candidates {
-        if !candidate.is_dir() {
-            continue;
-        }
-        if candidate.join("index.html").is_file() {
-            return Some(candidate);
-        }
+    resolve_web_assets_root_from_candidates(candidates)
+}
+
+fn resolve_web_assets_root_from_candidates(candidates: Vec<PathBuf>) -> Option<PathBuf> {
+    candidates
+        .into_iter()
+        .find(|candidate| is_valid_web_assets_root(candidate))
+}
+
+fn is_valid_web_assets_root(candidate: &Path) -> bool {
+    if !candidate.is_dir() {
+        return false;
     }
-    None
+
+    let index_path = candidate.join("index.html");
+    let Ok(index_html) = std::fs::read_to_string(index_path) else {
+        return false;
+    };
+
+    let has_react_root = index_html.contains("id=\"root\"") || index_html.contains("id='root'");
+    let has_entry_asset = index_html.contains("/assets/")
+        || index_html.contains("type=\"module\"")
+        || index_html.contains("type='module'");
+    has_react_root && has_entry_asset
 }
 
 fn collect_web_asset_candidates_for_platform(
@@ -1347,7 +1362,10 @@ fn resolve_lan_ip() -> Option<IpAddr> {
 
 #[cfg(test)]
 mod tests {
-    use super::{collect_web_asset_candidates_for_platform, parse_bearer_token, validate_port};
+    use super::{
+        collect_web_asset_candidates_for_platform, is_valid_web_assets_root, parse_bearer_token,
+        resolve_web_assets_root_from_candidates, validate_port,
+    };
     use axum::http::{HeaderMap, HeaderValue};
     use std::path::Path;
 
@@ -1422,5 +1440,51 @@ mod tests {
 
         assert!(!candidates
             .contains(&Path::new("/tmp/.mount_ccgui_abc/usr/lib/ccgui/dist").to_path_buf()));
+    }
+
+    #[test]
+    fn web_assets_root_rejects_empty_shell_index() {
+        let root = unique_test_dir("empty-shell-web-assets");
+        let dist = root.join("dist");
+        std::fs::create_dir_all(&dist).expect("create test dist");
+        std::fs::write(
+            dist.join("index.html"),
+            "<!doctype html><html><body></body></html>",
+        )
+        .expect("write empty index");
+
+        assert!(!is_valid_web_assets_root(&dist));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn web_assets_root_skips_empty_shell_and_uses_valid_dist() {
+        let root = unique_test_dir("web-assets-candidates");
+        let empty_dist = root.join("src-tauri/dist");
+        let valid_dist = root.join("dist");
+        std::fs::create_dir_all(&empty_dist).expect("create empty dist");
+        std::fs::create_dir_all(&valid_dist).expect("create valid dist");
+        std::fs::write(
+            empty_dist.join("index.html"),
+            "<!doctype html><html><body></body></html>",
+        )
+        .expect("write empty index");
+        std::fs::write(
+            valid_dist.join("index.html"),
+            r#"<!doctype html><html><head><script type="module" src="/assets/index.js"></script></head><body><div id="root"></div></body></html>"#,
+        )
+        .expect("write valid index");
+
+        let selected =
+            resolve_web_assets_root_from_candidates(vec![empty_dist, valid_dist.clone()]);
+
+        assert_eq!(selected.as_deref(), Some(valid_dist.as_path()));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    fn unique_test_dir(prefix: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!("{prefix}-{}", uuid::Uuid::new_v4().as_simple()))
     }
 }

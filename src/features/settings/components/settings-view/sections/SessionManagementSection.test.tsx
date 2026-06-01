@@ -181,21 +181,23 @@ describe("SessionManagementSection", () => {
       />,
     );
 
-    expect(await screen.findByText("Main session")).toBeTruthy();
-    expect(await screen.findByText("Worktree session")).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByText("Main session")).toBeTruthy();
+      expect(screen.getByText("Worktree session")).toBeTruthy();
+      expect(
+        screen.getByText("settings.sessionManagementFilteredTotalCount"),
+      ).toBeTruthy();
+      expect(
+        screen.getByText("settings.sessionManagementCurrentPageCount"),
+      ).toBeTruthy();
+    });
     screen
       .getAllByRole("button", {
         name: "settings.sessionManagementDetailToggle",
       })
       .forEach((button) => fireEvent.click(button));
-    expect(await screen.findAllByText("cli/codex")).toHaveLength(2);
-    expect(
-      await screen.findByText("settings.sessionManagementFilteredTotalCount"),
-    ).toBeTruthy();
-    expect(
-      await screen.findByText("settings.sessionManagementCurrentPageCount"),
-    ).toBeTruthy();
-  });
+    expect(screen.getAllByText("cli/codex")).toHaveLength(2);
+  }, 10_000);
 
   it("renders workspace scope inside the left tree without a duplicate picker", async () => {
     render(

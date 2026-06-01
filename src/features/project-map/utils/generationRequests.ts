@@ -8,6 +8,7 @@ import type {
   ProjectMapNodePatch,
   ProjectMapPreferredLanguage,
   ProjectMapRunMetadata,
+  ProjectMapRunOwnership,
   ProjectMapSource,
   ProjectMapStorageLocation,
 } from "../types";
@@ -126,6 +127,9 @@ function inferGenerationIntent(input: {
   if (input.kind === "auto" || input.scope.kind === "auto") {
     return "autoIngestion";
   }
+  if (input.scope.kind === "organizer") {
+    return "organizeUnassigned";
+  }
   return input.scope.kind === "node" ? "completeNode" : "global";
 }
 
@@ -177,6 +181,7 @@ export function createProjectMapGenerationRequest(input: {
   generationIntent?: ProjectMapGenerationIntent;
   preferredLanguage?: ProjectMapPreferredLanguage | null;
   storageLocation: ProjectMapStorageLocation;
+  ownership?: ProjectMapRunOwnership;
   writePath: string;
   node?: ProjectMapNode | null;
   readSources?: ProjectMapSource[];
@@ -205,6 +210,7 @@ export function createProjectMapGenerationRequest(input: {
     preferredLanguage: input.preferredLanguage ?? "zh",
     readSources: derivedReadSources,
     storageLocation: input.storageLocation,
+    ownership: input.ownership,
     writePath: input.writePath,
     createdAt: nowIso(),
     autoIngestion: input.autoIngestion,
@@ -229,6 +235,7 @@ export function createRunMetadataFromRequest(
     preferredLanguage: request.preferredLanguage ?? "zh",
     readSources: request.readSources,
     storageLocation: request.storageLocation,
+    ownership: request.ownership,
     writePath: request.writePath,
     autoIngestion: request.autoIngestion,
     phase: status === "pending" ? "queued" : undefined,

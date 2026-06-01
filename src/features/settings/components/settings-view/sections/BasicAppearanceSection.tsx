@@ -29,6 +29,7 @@ import PanelsLeftRight from "lucide-react/dist/esm/icons/panels-left-right";
 import Play from "lucide-react/dist/esm/icons/play";
 import RotateCcw from "lucide-react/dist/esm/icons/rotate-ccw";
 import Search from "lucide-react/dist/esm/icons/search";
+import Sparkles from "lucide-react/dist/esm/icons/sparkles";
 import Sun from "lucide-react/dist/esm/icons/sun";
 import TerminalSquare from "lucide-react/dist/esm/icons/terminal-square";
 import Type from "lucide-react/dist/esm/icons/type";
@@ -71,6 +72,10 @@ import { SettingsFontArkSelect } from "./SettingsFontArkSelect";
 type BasicAppearanceSectionProps = {
   appSettings: AppSettings;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
+  windowTransparencyEnabled: boolean;
+  onToggleWindowTransparency: (enabled: boolean) => void;
+  windowOpacity: number;
+  onWindowOpacityChange: (next: number) => void;
   activeThemePresetId: ThemePresetId;
   resolvedAppearanceTheme: "light" | "dark";
   themePresetOptions: ReadonlyArray<{ id: ThemePresetId; label: string }>;
@@ -169,6 +174,10 @@ function ClientUiVisibilityIcon({
 export function BasicAppearanceSection({
   appSettings,
   onUpdateAppSettings,
+  windowTransparencyEnabled,
+  onToggleWindowTransparency,
+  windowOpacity,
+  onWindowOpacityChange,
   activeThemePresetId,
   resolvedAppearanceTheme,
   themePresetOptions,
@@ -349,6 +358,47 @@ export function BasicAppearanceSection({
             </div>
           </div>
         ) : null}
+        <div className="settings-field settings-basic-item settings-window-transparency-item">
+          <div className="settings-toggle-row settings-window-transparency-toggle">
+            <div className="settings-basic-field-header">
+              <Sparkles className="settings-basic-field-icon" aria-hidden />
+              <div>
+                <span className="settings-basic-field-label">
+                  {t("settings.windowTransparency")}
+                </span>
+                <div className="settings-help settings-window-transparency-help">
+                  {t("settings.windowTransparencyDesc")}
+                </div>
+              </div>
+            </div>
+            <Switch
+              checked={windowTransparencyEnabled}
+              aria-label={t("settings.windowTransparency")}
+              onCheckedChange={(checked) => onToggleWindowTransparency(checked)}
+            />
+          </div>
+          {windowTransparencyEnabled ? (
+            <div className="settings-control settings-window-transparency-control">
+              <input
+                type="range"
+                min={55}
+                max={100}
+                step={1}
+                className="settings-input settings-input--range"
+                aria-label={t("settings.windowOpacity")}
+                value={windowOpacity}
+                onChange={(event) =>
+                  onWindowOpacityChange(Number(event.target.value))
+                }
+              />
+              <span className="settings-scale-value">
+                {t("settings.windowOpacityValue", {
+                  value: windowOpacity,
+                })}
+              </span>
+            </div>
+          ) : null}
+        </div>
         <LanguageSelector rowClassName="settings-basic-item" />
         <div className="settings-field settings-basic-item">
           <div className="settings-basic-field-header">

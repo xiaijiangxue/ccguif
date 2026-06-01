@@ -18,6 +18,8 @@ mod codex_doctor;
 mod codex_home;
 #[path = "../codex/installer.rs"]
 mod codex_installer;
+#[path = "../codex/launch_profile.rs"]
+mod codex_launch_profile;
 #[path = "../codex/rewind.rs"]
 mod codex_rewind;
 #[path = "../codex/thread_mode_state.rs"]
@@ -61,6 +63,25 @@ mod state {
         pub(crate) settings_path: PathBuf,
         pub(crate) runtime_manager: RuntimeManager,
         pub(crate) engine_manager: EngineManager,
+    }
+}
+mod remote_backend {
+    use serde_json::Value;
+    use tauri::AppHandle;
+
+    use crate::state::AppState;
+
+    pub(crate) async fn is_remote_mode(_state: &AppState) -> bool {
+        false
+    }
+
+    pub(crate) async fn call_remote(
+        _state: &AppState,
+        _app: AppHandle,
+        _method: &str,
+        _params: Value,
+    ) -> Result<Value, String> {
+        Err("remote backend is not available in daemon".to_string())
     }
 }
 #[allow(dead_code)]
@@ -121,6 +142,9 @@ mod codex {
     }
     pub(crate) mod home {
         pub(crate) use crate::codex_home::*;
+    }
+    pub(crate) mod launch_profile {
+        pub(crate) use crate::codex_launch_profile::*;
     }
     pub(crate) mod rewind {
         pub(crate) use crate::codex_rewind::*;
@@ -340,6 +364,7 @@ struct DaemonState {
     codex_login_cancels: Mutex<HashMap<String, oneshot::Sender<()>>>,
     engine_manager: engine::EngineManager,
     active_engine: Mutex<engine::EngineType>,
+    runtime_manager: Arc<runtime::RuntimeManager>,
 }
 
 fn default_data_dir() -> PathBuf {
@@ -1319,6 +1344,23 @@ async fn handle_rpc_request(
             let codex_args = parse_optional_string(&params, "codexArgs");
             state.codex_doctor(codex_bin, codex_args).await
         }
+        "codex_preview_launch_profile" => {
+            let codex_bin = parse_optional_string(&params, "codexBin");
+            let codex_args = parse_optional_string(&params, "codexArgs");
+            let workspace_id = parse_optional_string(&params, "workspaceId");
+            let use_workspace_draft = params
+                .get("useWorkspaceDraft")
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            state
+                .codex_preview_launch_profile(
+                    codex_bin,
+                    codex_args,
+                    workspace_id,
+                    use_workspace_draft,
+                )
+                .await
+        }
         "claude_doctor" => {
             let claude_bin = parse_optional_string(&params, "claudeBin");
             state.claude_doctor(claude_bin).await
@@ -1418,6 +1460,11 @@ async fn handle_rpc_request(
             let agent = parse_optional_string(&params, "agent");
             let variant = parse_optional_string(&params, "variant");
             let custom_spec_root = parse_optional_string(&params, "customSpecRoot");
+            let auto_session =
+                serde_json::from_value::<Option<session_management::AutoSessionMetadata>>(
+                    params.get("autoSession").cloned().unwrap_or(Value::Null),
+                )
+                .map_err(|err| err.to_string())?;
             state
                 .engine_send_message(
                     workspace_id,
@@ -1435,6 +1482,7 @@ async fn handle_rpc_request(
                     agent,
                     variant,
                     custom_spec_root,
+                    auto_session,
                 )
                 .await
         }
@@ -1455,6 +1503,11 @@ async fn handle_rpc_request(
             let agent = parse_optional_string(&params, "agent");
             let variant = parse_optional_string(&params, "variant");
             let custom_spec_root = parse_optional_string(&params, "customSpecRoot");
+            let auto_session =
+                serde_json::from_value::<Option<session_management::AutoSessionMetadata>>(
+                    params.get("autoSession").cloned().unwrap_or(Value::Null),
+                )
+                .map_err(|err| err.to_string())?;
             state
                 .engine_send_message_sync(
                     workspace_id,
@@ -1471,6 +1524,7 @@ async fn handle_rpc_request(
                     agent,
                     variant,
                     custom_spec_root,
+                    auto_session,
                 )
                 .await
         }
@@ -1507,7 +1561,12 @@ async fn handle_rpc_request(
         }
         "start_thread" => {
             let workspace_id = parse_string(&params, "workspaceId")?;
-            state.start_thread(workspace_id).await
+            let auto_session =
+                serde_json::from_value::<Option<session_management::AutoSessionMetadata>>(
+                    params.get("autoSession").cloned().unwrap_or(Value::Null),
+                )
+                .map_err(|err| err.to_string())?;
+            state.start_thread(workspace_id, auto_session).await
         }
         "list_claude_sessions" => {
             let workspace_path = parse_string(&params, "workspacePath")?;

@@ -8,6 +8,7 @@ import {
   useState,
   type MouseEvent,
   type ReactNode,
+  type UIEvent,
 } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -114,6 +115,7 @@ const ANNOTATABLE_MARKDOWN_NODE_TAGS = new Set<string>([
 const MAX_CACHED_MERMAID_DOCUMENTS = 50;
 const MAX_CACHED_MERMAID_RENDERS = 80;
 const MAX_CACHED_KATEX_RENDERS = 120;
+const MAX_CACHED_TABLE_SCROLL_POSITIONS = 160;
 const MAX_REVEALED_HEAVY_BLOCKS = 800;
 const PROGRESSIVE_INITIAL_LINES = 360;
 const PROGRESSIVE_CHUNK_LINES = 720;
@@ -127,7 +129,24 @@ const HEAVY_CODE_BLOCK_BYTE_THRESHOLD = 12_000;
 const mermaidTabSessionCache = new Map<string, Record<string, MermaidBlockTab>>();
 const mermaidRenderCache = new Map<string, string>();
 const katexRenderCache = new Map<string, string | null>();
+const tableScrollPositionCache = new Map<string, number>();
 const revealedHeavyBlockCache = new Set<string>();
+
+function readCachedTableScrollPosition(cacheKey: string) {
+  return tableScrollPositionCache.get(cacheKey) ?? 0;
+}
+
+function writeCachedTableScrollPosition(cacheKey: string, scrollLeft: number) {
+  tableScrollPositionCache.delete(cacheKey);
+  tableScrollPositionCache.set(cacheKey, Math.max(0, Math.round(scrollLeft)));
+  while (tableScrollPositionCache.size > MAX_CACHED_TABLE_SCROLL_POSITIONS) {
+    const oldestKey = tableScrollPositionCache.keys().next().value;
+    if (!oldestKey) {
+      break;
+    }
+    tableScrollPositionCache.delete(oldestKey);
+  }
+}
 
 function markHeavyBlockRevealed(revealKey: string | null) {
   if (!revealKey) {
@@ -274,6 +293,10 @@ function extractLanguageTag(className?: string) {
   }
   const match = className.match(/language-([\w-]+)/i);
   return match?.[1] ?? null;
+}
+
+function isMermaidCodeLanguage(languageTag: string | null) {
+  return languageTag === "mermaid" || languageTag === "flowchart";
 }
 
 function extractCodeFromPre(node?: PreviewPreNode) {
@@ -585,6 +608,56 @@ function LazyMarkdownHeavyBlock({
 
 function isMathCodeLanguage(languageTag: string | null) {
   return languageTag === "math" || languageTag === "latex" || languageTag === "tex";
+}
+
+function FileMarkdownTableBlock({
+  children,
+  defer,
+  label,
+  revealKey,
+  scrollCacheKey,
+}: {
+  children: ReactNode;
+  defer: boolean;
+  label: string;
+  revealKey: string | null;
+  scrollCacheKey: string;
+}) {
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) {
+      return;
+    }
+    const cachedScrollLeft = readCachedTableScrollPosition(scrollCacheKey);
+    if (cachedScrollLeft > 0 && wrapper.scrollLeft !== cachedScrollLeft) {
+      wrapper.scrollLeft = cachedScrollLeft;
+    }
+  }, [scrollCacheKey]);
+
+  const handleScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      writeCachedTableScrollPosition(scrollCacheKey, event.currentTarget.scrollLeft);
+    },
+    [scrollCacheKey],
+  );
+
+  return (
+    <div
+      ref={wrapperRef}
+      className="fvp-file-markdown-table-wrap"
+      onScroll={handleScroll}
+    >
+      <LazyMarkdownHeavyBlock
+        defer={defer}
+        label={label}
+        revealKey={revealKey}
+      >
+        <table>{children}</table>
+      </LazyMarkdownHeavyBlock>
+    </div>
+  );
 }
 
 function FileMarkdownMathBlock({
@@ -1080,25 +1153,29 @@ export function FileMarkdownPreview({
       ol: ({ node, children }) => renderAnnotatableBlock("ol", node, children, blockStartLine),
       p: ({ node, children }) => renderAnnotatableBlock("p", node, children, blockStartLine),
       ul: ({ node, children }) => renderAnnotatableBlock("ul", node, children, blockStartLine),
-      table: ({ node, children }) => renderAnnotatableBlock(
-        "div",
-        node,
-        <LazyMarkdownHeavyBlock
-        defer={shouldUsePassiveCadence || renderProjection.kind !== "rich"}
-        label={t("files.markdownHeavyBlockDeferred")}
-        revealKey={createHeavyBlockRevealKey({
+      table: ({ node, children }) => {
+        const tableRevealKey = createHeavyBlockRevealKey({
           blockKey,
           blockStartLine,
           documentKey: mermaidDocumentKey,
           kind: "table",
           node,
-        })}
-      >
-        <table>{children}</table>
-        </LazyMarkdownHeavyBlock>,
-        blockStartLine,
-        { className: "fvp-file-markdown-table-wrap" },
-    ),
+        });
+        const tableScrollCacheKey = `${mermaidDocumentKey}:${blockKey}:table-scroll:${node?.position?.start.line ?? 0}:${node?.position?.end.line ?? 0}`;
+        return renderAnnotatableBlock(
+          "div",
+          node,
+          <FileMarkdownTableBlock
+            defer={shouldUsePassiveCadence || renderProjection.kind !== "rich"}
+            label={t("files.markdownHeavyBlockDeferred")}
+            revealKey={tableRevealKey}
+            scrollCacheKey={tableScrollCacheKey}
+          >
+            {children}
+          </FileMarkdownTableBlock>,
+          blockStartLine,
+        );
+      },
     pre: ({ node, children }) => {
       const { className: codeClassName, value: codeValue } = extractCodeFromPre(
         node as PreviewPreNode,
@@ -1107,15 +1184,15 @@ export function FileMarkdownPreview({
         return renderAnnotatableBlock("div", node, <pre>{children}</pre>, blockStartLine);
       }
       const languageTag = extractLanguageTag(codeClassName);
-      if (languageTag === "mermaid") {
+      if (isMermaidCodeLanguage(languageTag)) {
         const mermaidBlockKey = createMermaidBlockKey(node, codeValue, blockStartLine);
         return renderAnnotatableBlock(
           "div",
           node,
           <LazyMarkdownHeavyBlock
             defer={shouldUsePassiveCadence || renderProjection.kind !== "rich"}
-            label="Mermaid"
-            revealKey={`${mermaidDocumentKey}:${mermaidBlockKey}:mermaid`}
+            label={languageTag ?? "mermaid"}
+            revealKey={`${mermaidDocumentKey}:${mermaidBlockKey}:${languageTag ?? "mermaid"}`}
           >
             <FileMarkdownMermaidBlock
               blockKey={mermaidBlockKey}
@@ -1236,5 +1313,6 @@ export function clearFileMarkdownPreviewRuntimeCachesForTests() {
   mermaidTabSessionCache.clear();
   mermaidRenderCache.clear();
   katexRenderCache.clear();
+  tableScrollPositionCache.clear();
   revealedHeavyBlockCache.clear();
 }

@@ -53,6 +53,7 @@ type FileExplorerWorkspaceProps = {
   externalChangeMonitoringEnabled?: boolean;
   externalChangeTransportMode?: "watcher" | "polling";
   fileViewHeaderLayout?: "stacked" | "single-row";
+  defaultSidebarCollapsed?: boolean;
 };
 
 export function FileExplorerWorkspace({
@@ -83,11 +84,12 @@ export function FileExplorerWorkspace({
   externalChangeMonitoringEnabled = false,
   externalChangeTransportMode = "polling",
   fileViewHeaderLayout = "stacked",
+  defaultSidebarCollapsed = false,
 }: FileExplorerWorkspaceProps) {
   const { t } = useTranslation();
   const workspaceRef = useRef<HTMLDivElement | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultSidebarCollapsed);
   const [sidebarWidth, setSidebarWidth] = useState(() =>
     clampSidebarWidth(
       getClientStoreSync<number>("layout", DETACHED_EXPLORER_SIDEBAR_WIDTH_KEY) ??
@@ -98,6 +100,13 @@ export function FileExplorerWorkspace({
   useEffect(() => {
     writeClientStoreValue("layout", DETACHED_EXPLORER_SIDEBAR_WIDTH_KEY, sidebarWidth);
   }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!defaultSidebarCollapsed) {
+      return;
+    }
+    setSidebarCollapsed((current) => (current ? current : true));
+  }, [defaultSidebarCollapsed]);
 
   useEffect(() => {
     return () => {
@@ -239,6 +248,7 @@ export function FileExplorerWorkspace({
         {activeFilePath ? (
           <FileViewPanel
             workspaceId={workspaceId}
+            workspaceName={workspaceName}
             workspacePath={workspacePath}
             gitRoot={gitRoot}
             filePath={activeFilePath}

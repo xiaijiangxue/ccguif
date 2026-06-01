@@ -27,6 +27,7 @@ import ShieldCheck from "lucide-react/dist/esm/icons/shield-check";
 import SquarePlus from "lucide-react/dist/esm/icons/square-plus";
 import TerminalSquare from "lucide-react/dist/esm/icons/terminal-square";
 import UsersRound from "lucide-react/dist/esm/icons/users-round";
+import X from "lucide-react/dist/esm/icons/x";
 import ZoomIn from "lucide-react/dist/esm/icons/zoom-in";
 import ZoomOut from "lucide-react/dist/esm/icons/zoom-out";
 import FolderOpen from "lucide-react/dist/esm/icons/folder-open";
@@ -52,6 +53,7 @@ const shortcutIconByActionId: Record<string, LucideIcon> = {
   "new-worktree-agent": GitBranchPlus,
   "new-clone-agent": CopyPlus,
   "archive-active-thread": Archive,
+  "close-current-session": X,
   "cycle-open-session-prev": ChevronLeft,
   "cycle-open-session-next": ChevronRight,
   "toggle-left-conversation-sidebar": PanelLeftOpen,

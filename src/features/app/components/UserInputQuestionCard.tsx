@@ -38,6 +38,7 @@ type UserInputQuestionCardProps = {
   onToggleSecret: (questionId: string) => void;
   onBack?: () => void;
   onNext?: () => void;
+  onClose?: () => void;
   onDismiss: () => void;
   onSubmit: () => void;
 };
@@ -98,6 +99,7 @@ export function UserInputQuestionCard({
   onToggleSecret,
   onBack,
   onNext,
+  onClose,
   onDismiss,
   onSubmit,
 }: UserInputQuestionCardProps) {
@@ -114,7 +116,14 @@ export function UserInputQuestionCard({
     flavor === "ask"
       ? "ask-user-question-close-btn"
       : "request-user-input-close";
-  const dismissLabel = t("approval.dismissUserInputRequest");
+  const closeLabel =
+    flavor === "ask"
+      ? t("askUserQuestion.cancel")
+      : t("approval.collapseUserInputRequest");
+  const dismissLabel =
+    flavor === "ask"
+      ? t("askUserQuestion.cancel")
+      : t("approval.skipUserInputRequest");
 
   const dataProps = Object.fromEntries(
     Object.entries(dataAttributes ?? {})
@@ -174,10 +183,10 @@ export function UserInputQuestionCard({
         <button
           className={cx("user-input-question-close", closeClass)}
           type="button"
-          onClick={onDismiss}
+          onClick={onClose ?? onDismiss}
           disabled={isSubmitting}
-          aria-label={flavor === "ask" ? dismissLabel : t("approval.close")}
-          title={dismissLabel}
+          aria-label={closeLabel}
+          title={closeLabel}
         >
           ×
         </button>
@@ -358,7 +367,7 @@ export function UserInputQuestionCard({
           aria-label={dismissLabel}
           title={dismissLabel}
         >
-          {flavor === "ask" ? t("askUserQuestion.cancel") : t("approval.dismiss")}
+          {flavor === "ask" ? t("askUserQuestion.cancel") : t("approval.skipAndContinue")}
         </button>
         <div className={cx("user-input-question-actions-right", getFlavorClass(flavor, "actions-right"))}>
           {usesStepActions && safeQuestionIndex > 0 ? (

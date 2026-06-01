@@ -119,6 +119,7 @@ export type ConversationItem =
       collaborationMode?: "plan" | "code" | null;
       selectedAgentName?: string | null;
       selectedAgentIcon?: string | null;
+      browserContextAttachment?: BrowserContextSendAttachment | null;
     }
   | {
       id: string;
@@ -187,6 +188,18 @@ export type ConversationItem =
       agentStatus?: Record<string, { status?: string } | string>;
     };
 
+export type AutoSessionVisibility = "hidden" | "system-auto" | "user-visible";
+
+export type AutoSessionCreatedBy = "system" | "user";
+
+export type AutoSessionMetadata = {
+  sessionPurpose: string;
+  visibility: AutoSessionVisibility;
+  ownerFeature: string;
+  autoArchive?: boolean | null;
+  createdBy: AutoSessionCreatedBy;
+};
+
 export type ThreadSummary = {
   id: string;
   name: string;
@@ -203,6 +216,7 @@ export type ThreadSummary = {
   isDegraded?: boolean;
   degradedReason?: string;
   folderId?: string | null;
+  autoSession?: AutoSessionMetadata | null;
   nativeThreadIds?: string[];
   parentThreadId?: string | null;
 };
@@ -747,6 +761,7 @@ export type AppSettings = {
   newWorktreeAgentShortcut: string | null;
   newCloneAgentShortcut: string | null;
   archiveThreadShortcut: string | null;
+  closeCurrentSessionShortcut: string | null;
   openChatShortcut: string | null;
   openKanbanShortcut: string | null;
   cycleOpenSessionPrevShortcut: string | null;
@@ -830,6 +845,9 @@ export type AppSettings = {
   codexWarmTtlSeconds: number;
   codexAutoCompactionEnabled: boolean;
   codexAutoCompactionThresholdPercent: number;
+  browserAgentEnabled: boolean;
+  browserAgentPreferBuiltIn: boolean;
+  browserAgentAllowExternalProviderFallback: boolean;
   streamingEnabled?: boolean;
   autoOpenFileEnabled?: boolean;
   diffExpandedByDefault?: boolean;
@@ -993,9 +1011,73 @@ export type RuntimePoolSnapshot = {
   engineObservability: RuntimeEngineObservability[];
 };
 
+export type TurnReconciliationRuntimeStatus =
+  | "completed"
+  | "running"
+  | "failed"
+  | "stalled"
+  | "runtime-ended"
+  | "unknown"
+  | "query-failed";
+
+export type TurnReconciliationStatusSource =
+  | "runtime"
+  | "runtime-end-context"
+  | "backend-cache"
+  | "session-summary"
+  | "recovery-state";
+
+export type TurnReconciliationStatusRequest = {
+  workspaceId: string;
+  engine: "claude" | "codex" | "gemini" | "opencode";
+  threadId: string;
+  turnId: string | null;
+  runtimeSessionId: string | null;
+  runtimeLeaseId: string | null;
+  requestSource: "three-evidence-reconciliation";
+  requestedAtMs: number;
+};
+
+export type TurnReconciliationStatusResponse = {
+  workspaceId: string;
+  engine: "claude" | "codex" | "gemini" | "opencode";
+  threadId: string;
+  turnId: string | null;
+  runtimeSessionId: string | null;
+  runtimeLeaseId: string | null;
+  status: TurnReconciliationRuntimeStatus;
+  statusSource: TurnReconciliationStatusSource;
+  observedAtMs: number | null;
+  boundedReason: string;
+};
+
 export type DiagnosticsBundleExportResult = {
   filePath: string;
   generatedAt: string;
+};
+
+export type CodexDoctorEnvironmentDiagnosis = {
+  category: string;
+  message?: string | null;
+  configuredPath?: string | null;
+  configuredPathMissing?: boolean;
+  guiPathBinary?: string | null;
+  fallbackBinary?: string | null;
+  resolvedBinaryPath?: string | null;
+  missedByGuiPath?: boolean;
+};
+
+export type CodexDoctorProxyDiagnosis = {
+  category: string;
+  primarySource?: string | null;
+  configuredKeys?: string[];
+  processEnv?: Record<string, string | null>;
+  valuesRedacted?: boolean;
+};
+
+export type CodexDoctorNetworkDiagnosis = {
+  category: string;
+  proxy?: CodexDoctorProxyDiagnosis | null;
 };
 
 export type CodexDoctorResult = {
@@ -1014,6 +1096,9 @@ export type CodexDoctorResult = {
   resolvedBinaryPath?: string | null;
   wrapperKind?: string | null;
   fallbackRetried?: boolean;
+  environmentDiagnosis?: CodexDoctorEnvironmentDiagnosis | null;
+  proxyDiagnosis?: CodexDoctorProxyDiagnosis | null;
+  networkDiagnosis?: CodexDoctorNetworkDiagnosis | null;
   debug?: {
     platform: string;
     arch: string;
@@ -1021,6 +1106,7 @@ export type CodexDoctorResult = {
     wrapperKind?: string | null;
     pathEnvUsed?: string | null;
     proxyEnvSnapshot?: Record<string, string | null>;
+    proxyDiagnosis?: CodexDoctorProxyDiagnosis | null;
     envVars?: Record<string, string | null>;
     extraSearchPaths?: Array<{
       path: string;
@@ -1036,6 +1122,25 @@ export type CodexDoctorResult = {
     customBin: string | null;
     combinedSearchPaths: string;
   };
+};
+
+export type CodexLaunchProfilePreview = {
+  ok: boolean;
+  scope: "global" | "workspace" | string;
+  workspaceId: string | null;
+  executableSource: string;
+  argumentsSource: string;
+  codexBin: string | null;
+  codexArgs: string | null;
+  resolvedExecutable: string;
+  wrapperKind: string;
+  userArguments: string[];
+  injectedArguments: string[];
+  launchArguments: string[];
+  pathEnvUsed: string | null;
+  warnings: string[];
+  details: string | null;
+  nextLaunchOnly: boolean;
 };
 
 export type CliInstallEngine = "codex" | "claude";
@@ -1162,6 +1267,7 @@ export type RequestUserInputAnswer = {
 
 export type RequestUserInputResponse = {
   answers: Record<string, RequestUserInputAnswer>;
+  skippedQuestionIds?: string[];
 };
 
 export type GitFileStatus = {
@@ -1169,13 +1275,17 @@ export type GitFileStatus = {
   status: string;
   additions: number;
   deletions: number;
+  isDiffOnlyFallback?: boolean;
+  mutationDisabled?: boolean;
 };
 
 export type GitFileDiff = {
   path: string;
+  status?: string;
   diff: string;
   isBinary?: boolean;
   isImage?: boolean;
+  isDiffOnlyFallback?: boolean;
   oldImageData?: string | null;
   newImageData?: string | null;
   oldImageMime?: string | null;
@@ -1614,6 +1724,102 @@ export type QueuedMessage = {
 
 export type MemoryContextInjectionMode = "summary" | "detail";
 
+export type BrowserContextSendAttachment = {
+  kind: "browser_snapshot";
+  attachmentId: string;
+  browserSessionId: string;
+  snapshotId: string;
+  workspaceId: string;
+  title: string | null;
+  url: string;
+  capturedAt: number;
+  stale: boolean;
+  freshness?: "fresh" | "stale" | "expired" | "degraded";
+  summary: string;
+  visibleTextExcerpt?: string;
+  pageType?: "article" | "issue" | "docs" | "form" | "dashboard" | "spa" | "unknown";
+  primaryContent?: string;
+  readableBlocks?: Array<{
+    blockId: string;
+    role:
+      | "article"
+      | "issue_body"
+      | "docs_section"
+      | "form"
+      | "dashboard_panel"
+      | "paragraph"
+      | "code"
+      | "other";
+    text: string;
+    score: number;
+    truncated: boolean;
+  }>;
+  noiseDiagnostics?: Array<{
+    diagnosticId: string;
+    kind:
+      | "navigation_noise"
+      | "link_dense_region"
+      | "control_dense_region"
+      | "auth_wall"
+      | "spa_shell"
+      | "low_readability";
+    severity: "info" | "warning";
+    message: string;
+    score: number;
+  }>;
+  visualEvidence?: Array<{
+    evidenceId: string;
+    kind: "image" | "figure" | "attachment" | "video";
+    label: string;
+    altText?: string | null;
+    srcOrigin?: string | null;
+    nearbyText?: string | null;
+    visible: boolean;
+    sensitive: boolean;
+  }>;
+  elementCounts?: {
+    headings: number;
+    links: number;
+    buttons: number;
+    forms: number;
+    landmarks: number;
+    codeCandidates: number;
+    readableBlocks?: number;
+    visualEvidence?: number;
+  };
+  diagnostics?: Array<{
+    diagnosticId: string;
+    kind: string;
+    severity: "info" | "warning" | "error";
+    message: string;
+    source?: string | null;
+    redacted: boolean;
+  }>;
+  budget?: {
+    charLimit: number;
+    visibleTextLimit: number;
+    elementLimit: number;
+    formFieldLimit: number;
+    diagnosticLimit: number;
+    tokenEstimate?: number | null;
+    truncated?: boolean;
+    omittedElementCount?: number;
+  };
+  codeCandidates?: Array<{
+    candidateId: string;
+    filePath: string;
+    symbolName?: string | null;
+    reason: "route_match" | "visible_text_match" | "landmark_match" | "manual_hint";
+    confidence: "high" | "medium" | "low";
+    matchedText?: string | null;
+  }>;
+  privacy: {
+    redactionApplied: boolean;
+    redactedKinds: string[];
+    omittedKinds: string[];
+  };
+};
+
 export type MessageSendOptions = {
   selectedMemoryIds?: string[];
   selectedMemoryInjectionMode?: MemoryContextInjectionMode;
@@ -1628,6 +1834,8 @@ export type MessageSendOptions = {
   resumeTurnId?: string | null;
   skipOptimisticUserBubble?: boolean;
   suppressUserMessageRender?: boolean;
+  autoSession?: AutoSessionMetadata | null;
+  browserContextAttachment?: BrowserContextSendAttachment | null;
 };
 
 export type SelectedAgentOption = {

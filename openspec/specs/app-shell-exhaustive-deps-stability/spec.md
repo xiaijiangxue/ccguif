@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the app-shell-exhaustive-deps-stability behavior contract, covering Search and composer callbacks remain stable after dependency remediation.
-
 ## Requirements
 ### Requirement: Search and composer callbacks remain stable after dependency remediation
 The system SHALL allow `app-shell-parts` search and composer callbacks to include all referenced stable setter dependencies without changing search palette open/close, selection reset, filter toggle, or result-opening behavior.
@@ -38,4 +37,32 @@ app-shell、threads 与 composer 的 dependency remediation 在第一阶段 MUST
 - **WHEN** 某个架构收敛批次同时触及 app-shell dependency remediation 与结构抽取
 - **THEN** 批次 MUST 保留 focused exhaustive-deps evidence
 - **AND** 行为验证 MUST 证明 remediation 与 extraction 共同作用后仍保持稳定
+
+### Requirement: AppShell Typing MUST Be Restored Through Behavior-Preserving Boundaries
+
+`AppShell` typing remediation MUST reduce `ts-nocheck` exposure through explicit boundary objects or equivalent typed section contracts, while preserving visible behavior.
+
+#### Scenario: workspace boundary typing preserves workspace behavior
+
+- **WHEN** workspace selection, workspace actions, worktree actions, or workspace restore callbacks are extracted or typed
+- **THEN** existing workspace selection, group management, worktree management, and restore behavior MUST remain unchanged
+- **AND** type remediation MUST NOT force unrelated feature imports or callback rewiring
+
+#### Scenario: composer and search boundary typing preserves interaction behavior
+
+- **WHEN** composer/search callbacks are extracted or typed
+- **THEN** composer submit, prompt expansion, search palette open/close, result opening, filter toggles, and selection reset MUST preserve existing behavior
+- **AND** the boundary MUST make ownership of state and callbacks explicit
+
+#### Scenario: runtime and thread boundary typing preserves lifecycle visibility
+
+- **WHEN** runtime/thread state and callbacks are extracted or typed
+- **THEN** thread selection, active thread binding, processing status, runtime notices, and recovery surfaces MUST preserve existing behavior
+- **AND** the extraction MUST NOT hide runtime lifecycle regressions behind broader `any` types
+
+#### Scenario: ts-nocheck removal is incremental and evidence-backed
+
+- **WHEN** a batch reduces or removes `// @ts-nocheck` from `src/app-shell.tsx`
+- **THEN** the batch MUST pass `npm run typecheck`
+- **AND** any remaining `ts-nocheck` scope MUST be documented with concrete blocker and follow-up path
 

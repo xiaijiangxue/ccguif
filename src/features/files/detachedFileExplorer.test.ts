@@ -1,4 +1,5 @@
 /** @vitest-environment jsdom */
+import { readFileSync } from "node:fs";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
@@ -12,7 +13,7 @@ const {
 } = vi.hoisted(() => ({
   emitToMock: vi.fn(async () => undefined),
   writeClientStoreValueMock: vi.fn(),
-  getClientStoreSyncMock: vi.fn(() => undefined),
+  getClientStoreSyncMock: vi.fn((_domain: string, _key: string): unknown => undefined),
   getByLabelMock: vi.fn(),
   webviewWindowCtorMock: vi.fn(),
   nextLifecycleEventRef: { current: "tauri://created" as "tauri://created" | "tauri://error" },
@@ -60,7 +61,9 @@ import {
   DETACHED_FILE_EXPLORER_SESSION_EVENT,
   DETACHED_FILE_EXPLORER_SESSION_STORAGE_KEY,
   DETACHED_FILE_EXPLORER_WINDOW_LABEL,
+  DETACHED_FILE_EXPLORER_WINDOW_LABEL_PREFIX,
   buildDetachedFileExplorerSession,
+  openNewDetachedFileExplorerWindow,
   openOrFocusDetachedFileExplorer,
   readDetachedFileExplorerSessionSnapshot,
 } from "./detachedFileExplorer";
@@ -91,7 +94,10 @@ describe("detachedFileExplorer", () => {
     expect(writeClientStoreValueMock).toHaveBeenCalledWith(
       "app",
       DETACHED_FILE_EXPLORER_SESSION_STORAGE_KEY,
-      session,
+      expect.objectContaining({
+        ...session,
+        windowLabel: DETACHED_FILE_EXPLORER_WINDOW_LABEL,
+      }),
       { immediate: true },
     );
     expect(webviewWindowCtorMock).toHaveBeenCalledTimes(1);
@@ -99,8 +105,55 @@ describe("detachedFileExplorer", () => {
     expect(emitToMock).toHaveBeenCalledWith(
       DETACHED_FILE_EXPLORER_WINDOW_LABEL,
       DETACHED_FILE_EXPLORER_SESSION_EVENT,
-      session,
+      expect.objectContaining({
+        ...session,
+        windowLabel: DETACHED_FILE_EXPLORER_WINDOW_LABEL,
+      }),
     );
+  });
+
+  it("creates a new detached window instance for tab detached open", async () => {
+    const session = buildDetachedFileExplorerSession({
+      workspaceId: "ws-tabs",
+      workspacePath: "/tmp/workspace",
+      workspaceName: "workspace",
+      initialFilePath: "src/Foo.ts",
+      defaultSidebarCollapsed: true,
+    });
+
+    const firstResult = await openNewDetachedFileExplorerWindow(session);
+    const secondResult = await openNewDetachedFileExplorerWindow(session);
+
+    expect(firstResult).toBe("created");
+    expect(secondResult).toBe("created");
+    expect(webviewWindowCtorMock).toHaveBeenCalledTimes(2);
+    const firstLabel = String(webviewWindowCtorMock.mock.calls[0]?.[0] ?? "");
+    const secondLabel = String(webviewWindowCtorMock.mock.calls[1]?.[0] ?? "");
+    expect(firstLabel).toMatch(new RegExp(`^${DETACHED_FILE_EXPLORER_WINDOW_LABEL_PREFIX}`));
+    expect(secondLabel).toMatch(new RegExp(`^${DETACHED_FILE_EXPLORER_WINDOW_LABEL_PREFIX}`));
+    expect(firstLabel).not.toBe(secondLabel);
+    expect(getByLabelMock).not.toHaveBeenCalled();
+    expect(writeClientStoreValueMock).toHaveBeenCalledWith(
+      "app",
+      `${DETACHED_FILE_EXPLORER_SESSION_STORAGE_KEY}:${firstLabel}`,
+      expect.objectContaining({
+        initialFilePath: "src/Foo.ts",
+        defaultSidebarCollapsed: true,
+        windowLabel: firstLabel,
+      }),
+      { immediate: true },
+    );
+  });
+
+  it("keeps per-tab detached window labels covered by the Tauri capability glob", () => {
+    const capability = JSON.parse(
+      readFileSync("src-tauri/capabilities/default.json", "utf8"),
+    ) as { windows?: string[]; permissions?: string[] };
+
+    expect(capability.windows).toContain(
+      `${DETACHED_FILE_EXPLORER_WINDOW_LABEL_PREFIX}*`,
+    );
+    expect(capability.permissions).toContain("core:window:allow-start-dragging");
   });
 
   it("focuses and retargets the existing detached window", async () => {
@@ -126,7 +179,10 @@ describe("detachedFileExplorer", () => {
     expect(emitToMock).toHaveBeenCalledWith(
       DETACHED_FILE_EXPLORER_WINDOW_LABEL,
       DETACHED_FILE_EXPLORER_SESSION_EVENT,
-      session,
+      expect.objectContaining({
+        ...session,
+        windowLabel: DETACHED_FILE_EXPLORER_WINDOW_LABEL,
+      }),
     );
     expect(webviewWindowCtorMock).not.toHaveBeenCalled();
   });
@@ -153,7 +209,7 @@ describe("detachedFileExplorer", () => {
   });
 
   it("restores a valid session snapshot from client storage", () => {
-    (getClientStoreSyncMock as any).mockReturnValueOnce({
+    getClientStoreSyncMock.mockReturnValueOnce({
       workspaceId: "ws-3",
       workspacePath: "/tmp/project",
       workspaceName: "project",
@@ -161,12 +217,42 @@ describe("detachedFileExplorer", () => {
     });
 
     expect(readDetachedFileExplorerSessionSnapshot()).toEqual({
+      windowLabel: null,
       workspaceId: "ws-3",
       workspacePath: "/tmp/project",
       workspaceName: "project",
       gitRoot: null,
       initialFilePath: null,
+      defaultSidebarCollapsed: false,
       updatedAt: 123,
+    });
+  });
+
+  it("restores a per-window detached session snapshot", () => {
+    getClientStoreSyncMock.mockImplementation((_domain: string, key: string) => {
+      if (key === `${DETACHED_FILE_EXPLORER_SESSION_STORAGE_KEY}:file-explorer-demo`) {
+        return {
+          windowLabel: "file-explorer-demo",
+          workspaceId: "ws-demo",
+          workspacePath: "/tmp/demo",
+          workspaceName: "demo",
+          initialFilePath: "README.md",
+          defaultSidebarCollapsed: true,
+          updatedAt: 456,
+        };
+      }
+      return null;
+    });
+
+    expect(readDetachedFileExplorerSessionSnapshot("file-explorer-demo")).toEqual({
+      windowLabel: "file-explorer-demo",
+      workspaceId: "ws-demo",
+      workspacePath: "/tmp/demo",
+      workspaceName: "demo",
+      gitRoot: null,
+      initialFilePath: "README.md",
+      defaultSidebarCollapsed: true,
+      updatedAt: 456,
     });
   });
 });

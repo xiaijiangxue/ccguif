@@ -22,8 +22,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset", "macos-private-api"] }
-tauri-plugin-liquid-glass = "0.1"
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "unstable"] }
 tauri-plugin-opener = "2"
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
@@ -66,9 +65,12 @@ tauri-plugin-notification = "2"
 cpal = "0.15"
 whisper-rs = "0.12"
 
+[target."cfg(target_os = \"windows\")".dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+
 [target."cfg(target_os = \"macos\")".dependencies]
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", features = ["NSAppearance", "NSResponder", "NSWindow"] }
+objc2-app-kit = { version = "0.3", features = ["NSAppearance", "NSResponder", "NSWindow", "objc2-core-foundation"] }
 objc2-foundation = { version = "0.3", features = ["NSString"] }
 objc2-av-foundation = { version = "0.3", features = ["AVCaptureDevice", "AVMediaFormat"] }
 block2 = "0.6"

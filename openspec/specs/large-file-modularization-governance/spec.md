@@ -3,7 +3,6 @@
 ## Purpose
 
 Defines the large-file-modularization-governance behavior contract, covering Oversized File Detection Baseline.
-
 ## Requirements
 ### Requirement: Oversized File Detection Baseline
 The system SHALL maintain version-traceable baseline artifacts for large-file governance, including a human-readable report and a machine-readable debt ledger keyed by the matched governance policy.
@@ -69,37 +68,33 @@ The system SHALL require incremental extraction behind compatibility facades for
 - **AND** the validation evidence MUST include public symbol or selector checks when a facade is expected to preserve compatibility
 
 ### Requirement: Large-File Regression Sentry
-The system SHALL provide CI sentry checks that enforce domain-aware hard gates and baseline-aware debt growth controls, while keeping near-threshold watch output non-blocking.
+
+The system SHALL provide CI sentry checks that enforce domain-aware hard gates and baseline-aware debt growth controls, while keeping near-threshold watch output visible for triage.
 
 #### Scenario: Hard gate for new oversized debt
+
 - **WHEN** a pull request introduces a new file whose line count exceeds the matched policy fail threshold
 - **THEN** CI sentry MUST fail the check
 - **AND** remediation guidance MUST be shown in logs
 
 #### Scenario: Hard gate for growing legacy debt
+
 - **WHEN** a file already tracked in the baseline exceeds the matched policy fail threshold and its current line count is greater than the baseline line count
 - **THEN** CI sentry MUST fail the check
 - **AND** the failure output MUST show both the baseline line count and the current line count
 
-#### Scenario: Legacy debt at or below baseline is visible but non-blocking
-- **WHEN** a file exceeds the matched policy fail threshold but its current line count is equal to or lower than the recorded baseline
-- **THEN** CI sentry MUST NOT fail solely because of that retained debt
-- **AND** the scan output MUST still report the file as retained hard debt
+#### Scenario: stabilization extraction does not create replacement hubs
 
-#### Scenario: changed governance script must include parser tests
-- **WHEN** `scripts/check-large-files.mjs` or related governance policy logic changes
-- **THEN** corresponding automated tests SHALL be updated in the same change
-- **AND** the gate SHALL prove both new hard-debt failure and retained baseline acceptance paths
+- **WHEN** this core runtime/realtime stabilization change extracts AppShell, realtime, runtime, bridge, fixture, or test code
+- **THEN** new modules MUST be split by responsibility rather than becoming replacement hub files
+- **AND** the change MUST keep `node --test scripts/check-large-files.test.mjs`, `npm run check:large-files:near-threshold`, and `npm run check:large-files:gate` passing
+- **AND** touched near-threshold files MUST be reduced, kept stable, or documented with explicit follow-up rationale
 
-#### Scenario: Near-threshold observation is non-blocking
-- **WHEN** a pull request introduces or grows a file beyond the matched policy warn threshold but not beyond its fail threshold
-- **THEN** CI sentry MAY emit informational warning/report
-- **AND** the merge decision MUST NOT be blocked solely by near-threshold status
+#### Scenario: large-file sentry remains cross-platform
 
-#### Scenario: documentation-only changes may skip runtime large-file scan
-- **WHEN** a change only touches OpenSpec, Trellis, Markdown, or other documentation files
-- **THEN** runtime large-file gate MAY be skipped with an explicit note
-- **AND** code or stylesheet changes SHALL still run the appropriate large-file checks
+- **WHEN** large-file governance checks run in CI
+- **THEN** parser tests, near-threshold watch, and hard-debt gate MUST run on ubuntu-latest, macos-latest, and windows-latest
+- **AND** file matching and path output MUST remain platform-neutral
 
 ### Requirement: Completion Criteria for Governance Milestones
 The system SHALL define measurable completion criteria for the Deferred + JIT governance mode and for staged P0/P1 modularization batches.
@@ -128,4 +123,18 @@ The system SHALL define measurable completion criteria for the Deferred + JIT go
 - **WHEN** large-file 模块被拆成多个子模块
 - **THEN** 新模块 MUST 以职责分片而不是复制原 hub 结构
 - **AND** 若某个新模块接近阈值，批次 MUST 记录继续拆分的 follow-up rationale
+
+### Requirement: Near-Threshold Cleanup Recommendations MUST Be Risk-Ordered
+
+Large-file cleanup recommendations MUST rank near-threshold files by hot-path risk, fail-threshold headroom, and compatibility boundary before proposing extraction.
+
+#### Scenario: runtime hot paths outrank passive debt
+- **WHEN** near-threshold files are summarized for optimization planning
+- **THEN** runtime hot paths MUST be ranked before passive docs, i18n, or test-only debt
+- **AND** the report MUST include remaining fail-threshold headroom
+
+#### Scenario: split candidates preserve facades
+- **WHEN** a near-threshold file is recommended for splitting
+- **THEN** the recommendation MUST state the public facade or compatibility boundary to preserve
+- **AND** unrelated hot paths MUST NOT be grouped into one split solely because they are near threshold
 

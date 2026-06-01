@@ -231,3 +231,38 @@ Codex streaming and liveness handling are considered mature. Refactors MUST pres
 - **WHEN** a Codex turn has settled as stalled, abandoned, interrupted, failed, or completed
 - **THEN** late stale progress for that old turn identity MUST remain quarantined
 - **AND** refactors MUST NOT let stale evidence revive processing state unless a verified successor turn identity is active
+
+### Requirement: First-Turn Draft Replacement MUST Cover Recovery Entrypoints
+
+Codex first-turn draft replacement MUST apply to every user-visible entrypoint that attempts to continue the current first prompt before `turn/start` acceptance, including direct send retry, runtime resume, and recovery-card resend.
+
+#### Scenario: recovery card does not bypass empty draft replacement
+- **WHEN** a newly created Codex draft has no accepted user turn and no durable local activity
+- **AND** the provisional thread identity fails with `thread not found` before the current first prompt is accepted
+- **THEN** the primary continuation path MUST create or acquire a fresh Codex thread and replay the current prompt there
+- **AND** the UI MUST NOT require stale old-session recovery as the primary action for that first prompt
+
+#### Scenario: durable boundary keeps recovery card semantics
+- **WHEN** the Codex thread has accepted user work, durable local activity, or unknown accepted-turn facts
+- **AND** the thread identity fails with `thread not found`
+- **THEN** the system MUST keep durable-safe stale recovery semantics
+- **AND** it MUST NOT silently replace the conversation as an empty draft
+
+### Requirement: Codex Liveness Diagnostics MUST Preserve Settlement Source Without Changing Suspicion Semantics
+Codex foreground liveness diagnostics MUST record why a turn did or did not settle while preserving the existing separation between frontend suspicion and authoritative terminal settlement.
+
+#### Scenario: progress evidence records latest source
+- **WHEN** a Codex foreground turn receives stream delta, heartbeat, status-active event, item update, tool update, file-change update, approval update, user-input request, or equivalent progress evidence
+- **THEN** diagnostics MUST record the latest progress evidence source and timestamp for the active turn
+- **AND** this record MUST NOT itself mark the turn terminal or clear active-turn state
+
+#### Scenario: suspected silent remains non-terminal in diagnostics
+- **WHEN** a Codex foreground turn enters suspected-silent because frontend no-progress observation expires
+- **THEN** diagnostics MUST identify the source as frontend no-progress suspicion
+- **AND** diagnostics MUST NOT report this as completed, stalled, runtime-ended, or otherwise authoritative terminal settlement
+
+#### Scenario: authoritative settlement includes previous suspicion and progress evidence
+- **WHEN** a Codex foreground turn later receives `turn/completed`, `turn/error`, `turn/stalled`, `runtime/ended`, user stop, or equivalent authoritative terminal evidence
+- **THEN** diagnostics MUST include the authoritative settlement source
+- **AND** diagnostics MUST preserve whether the same turn was previously suspected-silent and the latest known progress evidence source when available
+

@@ -62,7 +62,7 @@ describe('useResizableChatInputBox', () => {
     });
 
     act(() => {
-      window.dispatchEvent(new MouseEvent('pointermove', { clientY: 180 }));
+      window.dispatchEvent(new MouseEvent('pointermove', { clientY: 230 }));
     });
 
     expect(result.current.isCollapsed).toBe(false);
@@ -98,7 +98,7 @@ describe('useResizableChatInputBox', () => {
       } as unknown as Parameters<NonNullable<typeof handleProps.onPointerDown>>[0]);
     });
     act(() => {
-      window.dispatchEvent(new MouseEvent('pointermove', { clientY: 190 }));
+      window.dispatchEvent(new MouseEvent('pointermove', { clientY: 230 }));
       vi.advanceTimersByTime(400);
       window.dispatchEvent(new MouseEvent('pointerup'));
     });
@@ -124,7 +124,7 @@ describe('useResizableChatInputBox', () => {
     expect(result.current.isCollapsed).toBe(false);
 
     const expandedHeight = getHeightPx(result.current.editableWrapperStyle.height);
-    expect(expandedHeight).toBe(112);
+    expect(expandedHeight).toBe(66);
 
     act(() => {
       window.dispatchEvent(new MouseEvent('pointerup'));
@@ -132,7 +132,7 @@ describe('useResizableChatInputBox', () => {
     });
 
     const heightAfterRelease = getHeightPx(result.current.editableWrapperStyle.height);
-    expect(heightAfterRelease).toBe(112);
+    expect(heightAfterRelease).toBe(66);
   });
 
   it('keeps dragging up for 1s to unlock height growth after expand', () => {
@@ -153,7 +153,7 @@ describe('useResizableChatInputBox', () => {
         stopPropagation: vi.fn(),
         clientY: 120,
       } as unknown as Parameters<NonNullable<typeof handleProps.onPointerDown>>[0]);
-      window.dispatchEvent(new MouseEvent('pointermove', { clientY: 190 }));
+      window.dispatchEvent(new MouseEvent('pointermove', { clientY: 230 }));
       vi.advanceTimersByTime(400);
       window.dispatchEvent(new MouseEvent('pointerup'));
     });
@@ -170,17 +170,57 @@ describe('useResizableChatInputBox', () => {
       vi.advanceTimersByTime(400);
     });
     expect(result.current.isCollapsed).toBe(false);
-    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(112);
+    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(66);
 
     act(() => {
       window.dispatchEvent(new MouseEvent('pointermove', { clientY: 110 }));
       vi.advanceTimersByTime(999);
     });
-    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(112);
+    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(66);
 
     act(() => {
       vi.advanceTimersByTime(1);
     });
-    expect((getHeightPx(result.current.editableWrapperStyle.height) ?? 0) > 112).toBe(true);
+    expect((getHeightPx(result.current.editableWrapperStyle.height) ?? 0) > 66).toBe(true);
+  });
+
+  it('migrates the persisted v2 height two lines shorter', () => {
+    localStorage.setItem(
+      'chat-input-box:size-v2',
+      JSON.stringify({ wrapperHeightPx: 180, isCollapsed: false }),
+    );
+
+    const editableWrapperRef = { current: createWrapperElement(140) };
+    const containerRef = { current: document.createElement('div') };
+
+    const { result } = renderHook(() =>
+      useResizableChatInputBox({
+        containerRef,
+        editableWrapperRef,
+      })
+    );
+
+    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(134);
+  });
+
+  it('collapses from the explicit collapse control', () => {
+    const editableWrapperRef = { current: createWrapperElement(140) };
+    const containerRef = { current: document.createElement('div') };
+
+    const { result } = renderHook(() =>
+      useResizableChatInputBox({
+        containerRef,
+        editableWrapperRef,
+      })
+    );
+
+    expect(result.current.isCollapsed).toBe(false);
+
+    act(() => {
+      result.current.collapse();
+    });
+
+    expect(result.current.isCollapsed).toBe(true);
+    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBeNull();
   });
 });

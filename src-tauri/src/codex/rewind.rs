@@ -179,7 +179,7 @@ fn resolve_target_message_id(
         .map(|candidate| candidate.id.clone())
         .ok_or_else(|| {
             format!(
-                "target user message ordinal {} not found for codex session {}",
+                "[FORK_TARGET_NOT_FOUND] target user message ordinal {} not found for codex session {}",
                 target_user_turn_index + 1,
                 thread_id
             )
@@ -295,6 +295,25 @@ mod tests {
 
         assert!(error.contains("failed to archive source runtime thread"));
         assert!(error.contains("archive failed"));
+    }
+
+    #[test]
+    fn resolve_target_message_id_returns_typed_error_for_missing_target() {
+        let runtime_user_messages = vec![user_message("u1", "first")];
+
+        let error = resolve_target_message_id(
+            &runtime_user_messages,
+            Some("missing-local-id"),
+            2,
+            None,
+            None,
+            Some(2),
+            "thread-1",
+        )
+        .expect_err("missing fork target should be typed");
+
+        assert!(error.contains("[FORK_TARGET_NOT_FOUND]"));
+        assert!(error.contains("target user message ordinal 3"));
     }
 
     #[test]

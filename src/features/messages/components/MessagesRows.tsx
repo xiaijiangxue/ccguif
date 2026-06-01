@@ -28,6 +28,11 @@ import { languageFromPath } from "../../../utils/syntax";
 import type { PresentationProfile } from "../presentation/presentationProfile";
 import { parseAgentTaskNotification } from "../utils/agentTaskNotification";
 import {
+  BrowserContextSummaryCard,
+  parseBrowserContextPrompt,
+  stripBrowserContextPrompt,
+} from "../../browser-agent";
+import {
   CollapsibleUserTextBlock,
   parseUserTextContent,
   UserCodeAnnotationContextBlock,
@@ -102,6 +107,7 @@ type MessageRowProps = {
     threadId: string,
     message: Pick<QueuedMessage, "text" | "images">,
   ) => Promise<RuntimeReconnectRecoveryCallbackResult> | RuntimeReconnectRecoveryCallbackResult;
+  onThreadRecoveryFork?: () => Promise<void> | void;
   retryMessage?: Pick<QueuedMessage, "text" | "images"> | null;
   isCopied: boolean;
   onCopy: (
@@ -251,6 +257,7 @@ function areMessageRowPropsEqual(
     previous.showRuntimeReconnectCard === next.showRuntimeReconnectCard &&
     previous.onRecoverThreadRuntime === next.onRecoverThreadRuntime &&
     previous.onRecoverThreadRuntimeAndResend === next.onRecoverThreadRuntimeAndResend &&
+    previous.onThreadRecoveryFork === next.onThreadRecoveryFork &&
     previous.retryMessage?.text === next.retryMessage?.text &&
     areMessageImagesEqual(previous.retryMessage?.images, next.retryMessage?.images) &&
     previous.isCopied === next.isCopied &&
@@ -783,6 +790,7 @@ export const MessageRow = memo(function MessageRow({
   showRuntimeReconnectCard = false,
   onRecoverThreadRuntime,
   onRecoverThreadRuntimeAndResend,
+  onThreadRecoveryFork,
   retryMessage = null,
   isCopied,
   onCopy,
@@ -868,6 +876,12 @@ export const MessageRow = memo(function MessageRow({
     () => parseAgentTaskNotification(item.text),
     [item.text],
   );
+  const browserContextSummary = useMemo(() => {
+    if (item.role !== "user") {
+      return null;
+    }
+    return item.browserContextAttachment ?? parseBrowserContextPrompt(item.text);
+  }, [item]);
   const shouldHideSuppressedInjectedContextText =
     item.role === "user" &&
     !agentTaskNotification &&
@@ -889,7 +903,7 @@ export const MessageRow = memo(function MessageRow({
       ? (
           shouldHideSuppressedInjectedContextText
             ? ""
-            : (userMessagePresentation?.displayText ?? item.text)
+            : stripBrowserContextPrompt(userMessagePresentation?.displayText ?? item.text)
         )
       : resolvedMemorySummary || resolvedNoteCardSummary
         ? ""
@@ -1023,6 +1037,7 @@ export const MessageRow = memo(function MessageRow({
     && imageItems.length === 0
     && deferredImageItems.length === 0
   );
+  const shouldRenderMessageActions = !hideCopyButton && item.role !== "assistant";
   const useCodexCanvasMarkdown = presentationProfile
     ? presentationProfile.codexCanvasMarkdown
     : activeEngine === "codex";
@@ -1297,6 +1312,7 @@ export const MessageRow = memo(function MessageRow({
           onRecoverThreadRuntime={onRecoverThreadRuntime}
           retryMessage={retryMessage}
           onRecoverThreadRuntimeAndResend={onRecoverThreadRuntimeAndResend}
+          onThreadRecoveryFork={onThreadRecoveryFork}
         />
       ) : null}
       {hasText && (
@@ -1339,19 +1355,24 @@ export const MessageRow = memo(function MessageRow({
           onClose={() => setLightboxIndex(null)}
         />
       )}
-      {!hideCopyButton && (
-        <button
-          type="button"
-          className={`ghost message-copy-button${isCopied ? " is-copied" : ""}`}
-          onClick={() => onCopy(item, displayText || item.text)}
-          aria-label={t("messages.copyMessage")}
-          title={t("messages.copyMessage")}
+      {shouldRenderMessageActions && (
+        <div
+          className="message-action-bar message-action-bar-overlay"
+          aria-label={t("messages.messageActions")}
         >
-          <span className="message-copy-icon" aria-hidden>
-            <Copy className="message-copy-icon-copy" size={14} />
-            <Check className="message-copy-icon-check" size={14} />
-          </span>
-        </button>
+          <button
+            type="button"
+            className={`ghost message-action-button message-copy-button${isCopied ? " is-copied" : ""}`}
+            onClick={() => onCopy(item, displayText || item.text)}
+            aria-label={t("messages.copyMessage")}
+            title={t("messages.copyMessage")}
+          >
+            <span className="message-copy-icon" aria-hidden>
+              <Copy className="message-copy-icon-copy" size={12} />
+              <Check className="message-copy-icon-check" size={12} />
+            </span>
+          </button>
+        </div>
       )}
     </div>
   );
@@ -1368,13 +1389,16 @@ export const MessageRow = memo(function MessageRow({
       onOpenFileLinkMenu={onOpenFileLinkMenu}
     />
   ) : null;
+  const browserContextSummaryNode = browserContextSummary ? (
+    <BrowserContextSummaryCard attachment={browserContextSummary} />
+  ) : null;
   const shouldRenderBubble =
     agentTaskNotification
     || imageItems.length > 0
     || deferredImageItems.length > 0
     || (Boolean(runtimeReconnectHint) && showRuntimeReconnectCard)
     || hasText
-    || !hideCopyButton;
+    || shouldRenderMessageActions;
   const memoryPayloadDialogNode =
     memoryPayloadDialogOpen && memorySummaryRawPayload && typeof document !== "undefined"
       ? createPortal(
@@ -1547,13 +1571,14 @@ export const MessageRow = memo(function MessageRow({
       {memoryPayloadDialogNode}
     </>
   ) : null;
-  if (!memorySummaryNode && !noteCardSummaryNode && !codeAnnotationContextNode && !shouldRenderBubble) {
+  if (!memorySummaryNode && !noteCardSummaryNode && !browserContextSummaryNode && !codeAnnotationContextNode && !shouldRenderBubble) {
     return null;
   }
-  const stackedContent = memorySummaryNode || noteCardSummaryNode || codeAnnotationContextNode ? (
+  const stackedContent = memorySummaryNode || noteCardSummaryNode || browserContextSummaryNode || codeAnnotationContextNode ? (
     <div className={`message-context-stack${item.role === "user" ? " is-user" : ""}`}>
       {memorySummaryNode}
       {codeAnnotationContextNode}
+      {browserContextSummaryNode}
       {noteCardSummaryNode}
       {shouldRenderBubble ? bubbleNode : null}
     </div>
