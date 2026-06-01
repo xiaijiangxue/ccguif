@@ -2518,6 +2518,7 @@ const enPart1 = {
     forkConfirmUsage:
       "After confirmation, the new thread opens from the selected message anchor. Continue experimenting there without rewriting the original thread.",
     forkConfirmAction: "Confirm fork",
+    forkConfirmSkipAction: "Don't ask again and fork",
     forkConfirmBusy: "Forking...",
     forkConfirmFailed: "Failed to fork this message: {{reason}}",
     streamingPlainTextCollapsed:

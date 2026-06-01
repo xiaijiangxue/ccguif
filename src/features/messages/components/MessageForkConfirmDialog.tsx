@@ -14,6 +14,7 @@ type MessageForkConfirmDialogProps = {
   userMessageId: string | null;
   onCancel: () => void;
   onConfirm: (userMessageId: string) => void | Promise<void>;
+  onConfirmAndSuppress: (userMessageId: string) => void | Promise<void>;
 };
 
 function normalizeErrorMessage(error: unknown): string {
@@ -24,6 +25,7 @@ export function MessageForkConfirmDialog({
   userMessageId,
   onCancel,
   onConfirm,
+  onConfirmAndSuppress,
 }: MessageForkConfirmDialogProps) {
   const { t } = useTranslation();
   const [isConfirming, setIsConfirming] = useState(false);
@@ -54,6 +56,22 @@ export function MessageForkConfirmDialog({
     }
   };
 
+  const handleConfirmAndSuppress = async () => {
+    if (!userMessageId || isConfirming) {
+      return;
+    }
+    setIsConfirming(true);
+    setErrorMessage(null);
+    try {
+      await onConfirmAndSuppress(userMessageId);
+      onCancel();
+    } catch (error) {
+      setErrorMessage(normalizeErrorMessage(error));
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   return (
     <AlertDialog
       open={isOpen}
@@ -67,12 +85,12 @@ export function MessageForkConfirmDialog({
         className="message-fork-confirm-dialog"
         bottomStickOnMobile={false}
       >
-        <AlertDialogHeader>
+        <AlertDialogHeader className="message-fork-confirm-header">
           <AlertDialogTitle>{t("messages.forkConfirmTitle")}</AlertDialogTitle>
           <AlertDialogDescription>
             {t("messages.forkConfirmDescription")}
           </AlertDialogDescription>
-          <div className="message-fork-confirm-body">
+          <div className="message-fork-confirm-copy">
             <p>{t("messages.forkConfirmPurpose")}</p>
             <p>{t("messages.forkConfirmUsage")}</p>
           </div>
@@ -82,7 +100,22 @@ export function MessageForkConfirmDialog({
             </p>
           ) : null}
         </AlertDialogHeader>
-        <AlertDialogFooter>
+        <AlertDialogFooter
+          variant="bare"
+          className="message-fork-confirm-footer"
+        >
+          <button
+            type="button"
+            className="ghost message-fork-confirm-button message-fork-confirm-button--secondary"
+            onClick={() => {
+              void handleConfirmAndSuppress();
+            }}
+            disabled={isConfirming}
+          >
+            {isConfirming
+              ? t("messages.forkConfirmBusy")
+              : t("messages.forkConfirmSkipAction")}
+          </button>
           <button
             type="button"
             className="ghost message-fork-confirm-button"

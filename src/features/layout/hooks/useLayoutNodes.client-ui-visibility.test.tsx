@@ -707,6 +707,7 @@ function LayoutNodesHarness({
 
 describe("useLayoutNodes client UI visibility", () => {
   afterEach(() => {
+    window.localStorage.clear();
     clientUiVisibilityMock.visiblePanels.clear();
     clientUiVisibilityMock.visibleControls.clear();
     vi.clearAllMocks();

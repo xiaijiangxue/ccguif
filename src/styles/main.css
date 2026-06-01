@@ -1600,6 +1600,13 @@ body[data-panel-resizing="true"] .main {
   grid-row: auto;
 }
 
+.content-layer--chat > .composer {
+  width: min(750px, 100%);
+  margin-inline: auto;
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .browser-agent-center-panel {
   display: flex;
   flex-direction: column;

@@ -2462,6 +2462,7 @@ const zhPart1 = {
     forkConfirmUsage:
       "确认后会打开从该消息锚点派生的新线程。后续实验会在新线程里继续，不会改写原对话。",
     forkConfirmAction: "确认 Fork",
+    forkConfirmSkipAction: "不再提示并 Fork",
     forkConfirmBusy: "正在 Fork...",
     forkConfirmFailed: "Fork 这条消息失败：{{reason}}",
     streamingPlainTextCollapsed:

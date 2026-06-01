@@ -130,19 +130,60 @@
 }
 
 .message-fork-confirm-dialog {
-  max-width: 440px;
+  max-width: 460px;
+  overflow: hidden;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--border-stronger) 68%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card-strong) 92%, transparent) 0%,
+      color-mix(in srgb, var(--surface-card) 88%, transparent) 100%
+    );
+  box-shadow:
+    0 26px 60px rgba(0, 0, 0, 0.24),
+    0 1px 0 color-mix(in srgb, var(--text-primary) 6%, transparent) inset;
+  backdrop-filter: blur(14px) saturate(1.12);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
 }
 
-.message-fork-confirm-body {
+.message-fork-confirm-header {
+  gap: 8px;
+  padding: 20px 22px 14px;
+  text-align: left;
+}
+
+.message-fork-confirm-header [data-slot="alert-dialog-title"] {
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 650;
+  color: var(--text-strong);
+}
+
+.message-fork-confirm-header [data-slot="alert-dialog-description"] {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.message-fork-confirm-copy {
   display: grid;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 4px;
   color: var(--text-secondary);
   font-size: 13px;
   line-height: 1.55;
 }
 
-.message-fork-confirm-body p,
+.message-fork-confirm-footer {
+  gap: 10px;
+  padding: 14px 22px 20px;
+  justify-content: flex-end;
+  border-top: 1px solid color-mix(in srgb, var(--border-muted) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-card-muted) 72%, transparent);
+}
+
+.message-fork-confirm-copy p,
 .message-fork-confirm-error {
   margin: 0;
 }
@@ -155,7 +196,13 @@
 }
 
 .message-fork-confirm-button {
-  min-width: 88px;
+  min-width: 92px;
+  min-height: 34px;
+  border-radius: 10px;
+}
+
+.message-fork-confirm-button--secondary {
+  color: var(--text-primary);
 }
 
 .message-copy-icon {

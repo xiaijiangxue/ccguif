@@ -146,6 +146,8 @@ import {
 } from "./topbarSessionTabs";
 import { buildWorkspaceHeaderGroups } from "./workspaceHeaderGroups";
 
+const FORK_CONFIRM_SUPPRESSED_STORAGE_KEY = "ccgui.messages.forkConfirmSuppressed";
+
 const GitDiffPanel = lazy(() =>
   import("../../git/components/GitDiffPanel").then((m) => ({ default: m.GitDiffPanel })),
 );
@@ -899,6 +901,13 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     useState<ComposerRewindDialogRequest | null>(null);
   const [forkConfirmUserMessageId, setForkConfirmUserMessageId] =
     useState<string | null>(null);
+  const [isForkConfirmSuppressed, setIsForkConfirmSuppressed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return window.localStorage.getItem(FORK_CONFIRM_SUPPRESSED_STORAGE_KEY) === "1";
+  });
   const rewindDialogRequestSerialRef = useRef(0);
   const activeThreadStatus = options.activeThreadId
     ? options.threadStatusById[options.activeThreadId] ?? null
@@ -1629,13 +1638,33 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     onResolvedClaudeThinkingVisibleChange?.(enabled);
   }, [onResolvedClaudeThinkingVisibleChange]);
   const onForkFromMessage = options.onForkFromMessage;
+  const persistForkConfirmSuppressed = useCallback((suppressed: boolean) => {
+    setIsForkConfirmSuppressed(suppressed);
+
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      window.localStorage.setItem(
+        FORK_CONFIRM_SUPPRESSED_STORAGE_KEY,
+        suppressed ? "1" : "0",
+      );
+    } catch {
+      // Ignore storage failures; the confirmation flow can still continue.
+    }
+  }, []);
   const handleOpenForkConfirmFromMessage = useCallback((messageId: string) => {
     const normalizedMessageId = messageId.trim();
     if (!normalizedMessageId) {
       return;
     }
+    if (isForkConfirmSuppressed) {
+      void onForkFromMessage?.(normalizedMessageId);
+      return;
+    }
     setForkConfirmUserMessageId(normalizedMessageId);
-  }, []);
+  }, [isForkConfirmSuppressed, onForkFromMessage]);
   const handleCancelForkConfirm = useCallback(() => {
     setForkConfirmUserMessageId(null);
   }, []);
@@ -1644,6 +1673,13 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
       await onForkFromMessage?.(messageId);
     },
     [onForkFromMessage],
+  );
+  const handleConfirmForkFromMessageAndSuppress = useCallback(
+    async (messageId: string) => {
+      persistForkConfirmSuppressed(true);
+      await onForkFromMessage?.(messageId);
+    },
+    [onForkFromMessage, persistForkConfirmSuppressed],
   );
   const handleOpenRewindDialogFromMessage = useCallback((messageId: string) => {
     const normalizedMessageId = messageId.trim();
@@ -1719,6 +1755,7 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
         userMessageId={forkConfirmUserMessageId}
         onCancel={handleCancelForkConfirm}
         onConfirm={handleConfirmForkFromMessage}
+        onConfirmAndSuppress={handleConfirmForkFromMessageAndSuppress}
       />
     </>
   ), [
@@ -1742,10 +1779,12 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     options.onRecoverThreadRuntimeAndResend,
     options.onThreadRecoveryFork,
     onForkFromMessage,
+    isForkConfirmSuppressed,
     handleOpenForkConfirmFromMessage,
     forkConfirmUserMessageId,
     handleCancelForkConfirm,
     handleConfirmForkFromMessage,
+    handleConfirmForkFromMessageAndSuppress,
     options.onRewind,
     handleOpenRewindDialogFromMessage,
     options.handleApprovalDecision,
