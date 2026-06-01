@@ -45,12 +45,9 @@ jobs:
           # Generate key with the tauri CLI (no password for CI)
           npx tauri signer generate -w "$HOME/.tauri/ccgui.key" -f 2>&1 || true
           ls -la "$HOME/.tauri/"
-          # Base64 encode the entire key file content
-          KEY_B64=$(python3 -c "
-import base64
-with open('$HOME/.tauri/ccgui.key') as f:
-    print(base64.b64encode(f.read().encode()).decode())
-")
+
+          # base64 encode the key file content and export to env
+          KEY_B64=$(base64 < "$HOME/.tauri/ccgui.key" | tr -d '\n')
           echo "TAURI_SIGNING_PRIVATE_KEY_B64=$KEY_B64" >> "$GITHUB_ENV"
           echo "Keystore ready"
 
