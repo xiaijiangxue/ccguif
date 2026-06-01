@@ -42,14 +42,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$HOME/.tauri"
-          # Generate raw key to temp location
-          npx tauri signer generate -w /tmp/ccgui_raw.key -f 2>&1 || true
-          # Tauri expects the key file content to be base64-encoded
-          export KEY_B64=$(base64 < /tmp/ccgui_raw.key | tr -d '\n')
-          printf '%s' "$KEY_B64" > "$HOME/.tauri/ccgui.key"
-          # Also set the env var for the build step
-          echo "TAURI_SIGNING_PRIVATE_KEY=$KEY_B64" >> "$GITHUB_ENV"
-          echo "Keystore ready"
+          npx tauri signer generate --ci -w "$HOME/.tauri/ccgui.key" -f 2>&1
+          echo "CI signing key generated ($(wc -c < "$HOME/.tauri/ccgui.key") bytes)"
 
       - name: Build Tauri app
         run: |
@@ -104,14 +98,8 @@ jobs:
         run: |
           $keyDir = "$env:USERPROFILE\.tauri"
           New-Item -ItemType Directory -Force -Path $keyDir | Out-Null
-          # Generate raw key to temp
-          npx tauri signer generate -w "$env:TEMP\ccgui_raw.key" -f 2>&1
-          # Read key, base64 encode it, write to final location
-          $keyContent = Get-Content "$env:TEMP\ccgui_raw.key" -Raw
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($keyContent)
-          $b64 = [Convert]::ToBase64String($bytes)
-          $b64 | Out-File -FilePath "$keyDir\ccgui.key" -Encoding ascii -NoNewline
-          Add-Content -Path $env:GITHUB_ENV -Value "TAURI_SIGNING_PRIVATE_KEY=$b64"
+          $keyPath = "$keyDir\ccgui.key"
+          npx tauri signer generate --ci -w $keyPath -f 2>&1
           Write-Host "CI signing key generated"
 
       - name: Build Windows installer
