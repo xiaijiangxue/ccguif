@@ -94,6 +94,27 @@ describe("status panel theme colors", () => {
     );
   });
 
+  it("keeps checkpoint hero content from colliding with verdict badges", () => {
+    expect(statusPanelCss).toMatch(
+      /\.sp-checkpoint-hero-row\s*\{[^}]*display:\s*grid/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-checkpoint-hero-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-checkpoint-headline\s*\{[^}]*overflow:\s*hidden/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-checkpoint-headline\s*\{[^}]*text-overflow:\s*ellipsis/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /@media \(max-width:\s*720px\)\s*\{[\s\S]*\.sp-checkpoint-hero-row\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /@media \(max-width:\s*720px\)\s*\{[\s\S]*\.sp-checkpoint-headline\s*\{[^}]*white-space:\s*normal/s,
+    );
+  });
+
   it("keeps governance evidence compact and theme-token driven", () => {
     expect(statusPanelCss).toMatch(
       /\.sp-governance-evidence\s*\{[^}]*--sp-governance-chip-bg:\s*color-mix\([^}]*var\(--surface-item\)/s,

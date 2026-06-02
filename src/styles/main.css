@@ -1392,6 +1392,7 @@ body[data-panel-resizing="true"] .main {
   min-height: 0;
   min-width: 0;
   isolation: isolate;
+  transition: opacity 160ms ease, visibility 160ms ease;
 }
 
 .workspace-chat-stack {
@@ -1409,6 +1410,7 @@ body[data-panel-resizing="true"] .main {
   min-width: 0;
   min-height: 0;
   display: flex;
+  transition: opacity 160ms ease, visibility 160ms ease;
 }
 
 .workspace-chat-layer.is-hidden,
@@ -2403,3 +2405,11 @@ body.editor-horizontal-split-resizing * {
   }
 }
 */
+
+@media (prefers-reduced-motion: reduce) {
+  .content-layer,
+  .workspace-chat-layer,
+  .workspace-spec-layer {
+    transition: none;
+  }
+}

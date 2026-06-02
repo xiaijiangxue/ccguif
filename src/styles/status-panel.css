@@ -115,7 +115,7 @@
   margin: 0 -2px 0 -14px;
   padding: 0;
   border: none;
-  border-right: none;
+  border-right: 1px solid var(--sp-dock-tab-border);
   border-bottom: 2px solid transparent;
   border-radius: 0;
   background: transparent;
@@ -1070,9 +1070,10 @@ button.sp-subagent-main:focus-visible,
 }
 
 .sp-checkpoint-hero-row {
-  display: flex;
-  align-items: center;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 7px 10px;
   min-width: 0;
 }
 
@@ -1094,10 +1095,10 @@ button.sp-subagent-main:focus-visible,
 
 .sp-checkpoint-hero-copy {
   min-width: 0;
-  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
 
 .sp-checkpoint-kicker,
@@ -1114,30 +1115,54 @@ button.sp-subagent-main:focus-visible,
 }
 
 .sp-checkpoint-headline {
+  min-width: 0;
   font-size: var(--sp-checkpoint-emphasis-size);
   line-height: 1.12;
   font-weight: 600;
   color: var(--text-strong);
-  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .sp-checkpoint-headline-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   min-width: 0;
+  width: 100%;
 }
 
 .sp-checkpoint-summary {
   margin: 0;
+  width: 100%;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--text-muted);
+  text-align: left;
+  cursor: pointer;
   font-size: var(--sp-checkpoint-copy-size);
   line-height: 1.18;
-  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+.sp-checkpoint-summary-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sp-checkpoint-summary-toggle:hover {
+  color: var(--text-strong);
+}
+
+.sp-checkpoint-summary-toggle.is-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
 }
 
 .sp-checkpoint-notice-strip {
@@ -1196,6 +1221,7 @@ button.sp-subagent-main:focus-visible,
   text-transform: uppercase;
   background: color-mix(in srgb, var(--surface-item) 88%, transparent);
   color: var(--text-muted);
+  align-self: start;
 }
 
 .sp-checkpoint-badge-running {
@@ -2225,10 +2251,21 @@ button.sp-subagent-main:focus-visible,
 }
 
 @media (max-width: 720px) {
+  .sp-checkpoint-hero-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sp-checkpoint-badge {
+    justify-self: start;
+  }
+
   .sp-checkpoint-hero-copy {
     align-items: flex-start;
-    flex-direction: column;
-    gap: 2px;
+    gap: 3px;
+  }
+
+  .sp-checkpoint-headline {
+    white-space: normal;
   }
 
   .sp-checkpoint-evidence-summary-badges {

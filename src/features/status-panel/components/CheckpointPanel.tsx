@@ -114,6 +114,7 @@ export const CheckpointPanel = memo(function CheckpointPanel({
   const [expandedSuggestedActionId, setExpandedSuggestedActionId] = useState<
     string | null
   >(null);
+  const [isInlineSummaryExpanded, setIsInlineSummaryExpanded] = useState(false);
   const wasCommitLoadingRef = useRef(false);
   const VerdictIcon = VERDICT_ICON[checkpoint.verdict];
   const displayFiles = fileChanges;
@@ -262,6 +263,10 @@ export const CheckpointPanel = memo(function CheckpointPanel({
   }, [blockedNotice, checkpoint.verdict]);
 
   useEffect(() => {
+    setIsInlineSummaryExpanded(false);
+  }, [inlineSummary, checkpoint.verdict]);
+
+  useEffect(() => {
     if (
       expandedSuggestedActionId &&
       !checkpointSections.suggestedActions.some(
@@ -321,9 +326,23 @@ export const CheckpointPanel = memo(function CheckpointPanel({
               </span>
             </div>
             {shouldShowInlineSummary && inlineSummary ? (
-              <span className="sp-checkpoint-summary">
+              <button
+                type="button"
+                className={`sp-checkpoint-summary sp-checkpoint-summary-toggle${
+                  isInlineSummaryExpanded ? " is-expanded" : ""
+                }`}
+                aria-expanded={isInlineSummaryExpanded}
+                title={
+                  isInlineSummaryExpanded
+                    ? t("common.collapse")
+                    : t("common.expand")
+                }
+                onClick={() =>
+                  setIsInlineSummaryExpanded((current) => !current)
+                }
+              >
                 {renderToken(t, inlineSummary)}
-              </span>
+              </button>
             ) : null}
           </div>
           <span
