@@ -627,7 +627,7 @@
 }
 
 .home-chat-composer-host .input-editable-wrapper {
-  padding: 4px 12px 8px;
+  padding: 4px 9px 8px 15px;
   min-height: 56px;
   max-height: 252px;
   overflow: hidden;
@@ -1078,7 +1078,7 @@
   }
 
   .home-chat-composer-host .input-editable-wrapper {
-    padding: 3px 10px 7px;
+    padding: 3px 7px 7px 13px;
     min-height: 50px;
   }
 
@@ -1142,7 +1142,7 @@
   }
 
   .home-chat-composer-host .input-editable-wrapper {
-    padding: 18px 14px 10px;
+    padding: 18px 11px 10px 17px;
     min-height: 74px;
     max-height: 240px;
   }
