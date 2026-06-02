@@ -735,9 +735,21 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
 
       // Ensure height is auto, expanded by content
       el.style.height = 'auto';
+      const homeComposerHost = el.closest('.home-chat-composer-host');
+      if (homeComposerHost) {
+        const wrapper = editableWrapperRef.current;
+        const wrapperHeight = wrapper?.clientHeight ?? 0;
+        if (wrapperHeight > 0) {
+          el.style.maxHeight = `${wrapperHeight}px`;
+        }
+        el.style.overflowY = 'auto';
+        return;
+      }
+
+      el.style.maxHeight = '';
       // Hide inner scrollbar, completely rely on outer container scrolling
       el.style.overflowY = 'hidden';
-    }, []);
+    }, [editableWrapperRef]);
 
     const renderFileTagsWithHistory = useCallback(() => {
       if (!INCREMENTAL_UNDO_REDO_ENABLED) {

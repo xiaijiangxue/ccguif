@@ -57,6 +57,24 @@ describe("status panel theme colors", () => {
     );
   });
 
+  it("keeps dock content scrollable when the status panel grows taller", () => {
+    expect(statusPanelCss).toMatch(
+      /\.sp-dock-shell\s*\{[^}]*display:\s*flex/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-dock-content\s*\{[^}]*flex:\s*1 1 auto/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-dock-content\s*\{[^}]*min-height:\s*0/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-dock-content\s*\{[^}]*overflow-y:\s*auto/s,
+    );
+    expect(statusPanelCss).toMatch(
+      /\.sp-dock-content\s*\{[^}]*scrollbar-gutter:\s*stable/s,
+    );
+  });
+
   it("keeps checkpoint commit dialog colors derived from theme tokens", () => {
     expect(statusPanelCss).toContain("--sp-commit-surface:");
     expect(statusPanelCss).toContain("--sp-commit-text:");

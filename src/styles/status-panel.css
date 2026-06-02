@@ -31,6 +31,7 @@
 .sp-dock-shell {
   min-height: 0;
   flex: 1 1 auto;
+  display: flex;
   order: 2;
 }
 
@@ -331,9 +332,12 @@
 }
 
 .sp-dock-content {
-  min-height: 112px;
+  flex: 1 1 auto;
+  min-height: 0;
   max-height: none;
-  height: 100%;
+  height: auto;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 0 12px 8px;
 }
 

@@ -630,13 +630,39 @@
   padding: 4px 12px 8px;
   min-height: 56px;
   max-height: 252px;
+  overflow: hidden;
 }
 
 .home-chat-composer-host .input-editable {
+  display: block;
   min-height: calc(1.3em * 1);
+  max-height: inherit;
   color: var(--text-primary);
   font-size: 15px;
   line-height: 1.32;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-muted) 34%, transparent) transparent;
+}
+
+.home-chat-composer-host .input-editable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.home-chat-composer-host .input-editable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.home-chat-composer-host .input-editable::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-muted) 30%, transparent);
+  border-radius: 999px;
+}
+
+.home-chat-composer-host .input-editable:hover::-webkit-scrollbar-thumb,
+.home-chat-composer-host .input-editable:focus::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-secondary) 42%, transparent);
 }
 
 .home-chat-composer-host .input-editable:empty::before {
