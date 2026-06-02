@@ -69,6 +69,19 @@ import {
 import { LanguageSelector } from "../../LanguageSelector";
 import { SettingsFontArkSelect } from "./SettingsFontArkSelect";
 
+function getRangeStyle(
+  min: number,
+  max: number,
+  value: number,
+): React.CSSProperties {
+  const span = max - min;
+  const progress =
+    span <= 0 ? 0 : Math.min(100, Math.max(0, ((value - min) / span) * 100));
+  return {
+    "--settings-range-progress": `${progress}%`,
+  } as React.CSSProperties;
+}
+
 type BasicAppearanceSectionProps = {
   appSettings: AppSettings;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
@@ -376,28 +389,29 @@ export function BasicAppearanceSection({
               aria-label={t("settings.windowTransparency")}
               onCheckedChange={(checked) => onToggleWindowTransparency(checked)}
             />
+            {windowTransparencyEnabled ? (
+              <div className="settings-control settings-window-transparency-control">
+                <input
+                  type="range"
+                  min={55}
+                  max={100}
+                  step={1}
+                  className="settings-input settings-input--range"
+                  aria-label={t("settings.windowOpacity")}
+                  value={windowOpacity}
+                  style={getRangeStyle(55, 100, windowOpacity)}
+                  onChange={(event) =>
+                    onWindowOpacityChange(Number(event.target.value))
+                  }
+                />
+                <span className="settings-scale-value">
+                  {t("settings.windowOpacityValue", {
+                    value: windowOpacity,
+                  })}
+                </span>
+              </div>
+            ) : null}
           </div>
-          {windowTransparencyEnabled ? (
-            <div className="settings-control settings-window-transparency-control">
-              <input
-                type="range"
-                min={55}
-                max={100}
-                step={1}
-                className="settings-input settings-input--range"
-                aria-label={t("settings.windowOpacity")}
-                value={windowOpacity}
-                onChange={(event) =>
-                  onWindowOpacityChange(Number(event.target.value))
-                }
-              />
-              <span className="settings-scale-value">
-                {t("settings.windowOpacityValue", {
-                  value: windowOpacity,
-                })}
-              </span>
-            </div>
-          ) : null}
         </div>
         <LanguageSelector rowClassName="settings-basic-item" />
         <div className="settings-field settings-basic-item">
@@ -496,6 +510,7 @@ export function BasicAppearanceSection({
               className="settings-input settings-input--range"
               aria-label={t("settings.interfaceScaleAriaLabel")}
               value={uiScaleDraft}
+              style={getRangeStyle(0.8, 2.6, uiScaleDraft)}
               onChange={(event) => {
                 const parsed = Number(event.target.value);
                 if (!Number.isFinite(parsed)) {
@@ -784,6 +799,11 @@ export function BasicAppearanceSection({
               step={1}
               className="settings-input settings-input--range"
               value={codeFontSizeDraft}
+              style={getRangeStyle(
+                CODE_FONT_SIZE_MIN,
+                CODE_FONT_SIZE_MAX,
+                codeFontSizeDraft,
+              )}
               onChange={(event) => {
                 const nextValue = Number(event.target.value);
                 setCodeFontSizeDraft(nextValue);

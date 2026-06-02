@@ -3,14 +3,14 @@
 .settings-section-tabbed {
   --settings-basic-text: var(--text-strong);
   --settings-basic-text-muted: var(--text-muted);
-  --settings-basic-surface: color-mix(in srgb, var(--surface-card-strong) 84%, var(--surface-messages) 16%);
-  --settings-basic-surface-strong: color-mix(in srgb, var(--surface-card) 88%, var(--surface-messages) 12%);
-  --settings-basic-border: color-mix(in srgb, var(--border-strong) 72%, transparent);
-  --settings-basic-divider: color-mix(in srgb, var(--border-muted) 88%, transparent);
-  --settings-basic-control: color-mix(in srgb, var(--surface-control) 94%, var(--surface-card) 6%);
-  --settings-basic-control-hover: color-mix(in srgb, var(--surface-control-hover) 92%, var(--surface-card) 8%);
-  --settings-basic-control-border: color-mix(in srgb, var(--border-strong) 80%, transparent);
-  width: min(100%, 980px);
+  --settings-basic-surface: color-mix(in srgb, var(--surface-card-strong) 90%, var(--surface-messages) 10%);
+  --settings-basic-surface-strong: color-mix(in srgb, var(--surface-card) 94%, var(--surface-messages) 6%);
+  --settings-basic-border: color-mix(in srgb, var(--border-strong) 62%, transparent);
+  --settings-basic-divider: color-mix(in srgb, var(--border-muted) 82%, transparent);
+  --settings-basic-control: color-mix(in srgb, var(--surface-control) 92%, var(--surface-card) 8%);
+  --settings-basic-control-hover: color-mix(in srgb, var(--surface-control-hover) 90%, var(--surface-card) 10%);
+  --settings-basic-control-border: color-mix(in srgb, var(--border-strong) 68%, transparent);
+  width: min(100%, 1060px);
   color: var(--settings-basic-text);
 }
 
@@ -32,17 +32,21 @@
 .settings-section-basic > .settings-basic-tabs,
 .settings-section-tabbed > .settings-basic-tabs {
   margin-bottom: 12px;
-  padding: 4px;
-  border-radius: 12px;
+  padding: 5px;
+  border-radius: 18px;
   border: 1px solid var(--settings-basic-border);
-  background: color-mix(in srgb, var(--settings-basic-surface-strong) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-basic-surface-strong) 92%, transparent) 0%, color-mix(in srgb, var(--settings-basic-surface) 96%, transparent) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.48),
+    0 10px 22px rgba(15, 23, 42, 0.04);
   max-width: none;
 }
 
 .settings-section-basic > .settings-basic-tabs > .settings-basic-tab,
 .settings-section-tabbed > .settings-basic-tabs > .settings-basic-tab {
-  min-height: 38px;
-  border-radius: 8px;
+  min-height: 40px;
+  border-radius: 999px;
   border: 1px solid transparent;
   color: color-mix(in srgb, var(--settings-basic-text-muted) 88%, #fff 12%);
   font-size: 13px;
@@ -57,10 +61,13 @@
 
 .settings-section-basic > .settings-basic-tabs > .settings-basic-tab.active,
 .settings-section-tabbed > .settings-basic-tabs > .settings-basic-tab.active {
-  color: #eef2ff;
-  border-color: color-mix(in srgb, var(--primary) 42%, #8898b8 58%);
-  background: color-mix(in srgb, var(--primary) 24%, var(--settings-basic-control));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent) inset;
+  color: #13233f;
+  border-color: color-mix(in srgb, var(--primary) 36%, #92a6cf 64%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 20%, #dfe7f8 80%) 0%, color-mix(in srgb, var(--primary) 12%, #edf2fb 88%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.62) inset,
+    0 8px 18px rgba(77, 102, 160, 0.12);
 }
 
 .settings-section-basic .settings-basic-surface {
@@ -70,23 +77,24 @@
 }
 
 .settings-section-basic .settings-basic-group-card {
-  border-radius: 14px;
-  border: 1px solid var(--settings-basic-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--settings-basic-surface) 96%, transparent) 0%,
-    color-mix(in srgb, var(--settings-basic-surface-strong) 98%, transparent) 100%
-  );
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-border) 86%, transparent);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--settings-basic-surface) 96%, transparent) 0%,
+      color-mix(in srgb, var(--settings-basic-surface-strong) 98%, transparent) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 14px 28px rgba(15, 23, 42, 0.05);
   overflow: hidden;
 }
 
 .settings-section-basic .settings-basic-shadcn-card {
-  border-color: var(--settings-basic-border);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--settings-basic-surface) 94%, transparent) 0%,
-    color-mix(in srgb, var(--settings-basic-surface-strong) 99%, transparent) 100%
-  );
+  border-color: color-mix(in srgb, var(--settings-basic-border) 88%, transparent);
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--settings-basic-surface) 95%, transparent) 0%,
+      color-mix(in srgb, var(--settings-basic-surface-strong) 99%, transparent) 100%);
 }
 
 .settings-section-basic .settings-basic-shadcn-card[data-slot="card"]::before {
@@ -179,10 +187,14 @@
   align-items: center;
   margin: 0;
   min-height: 68px;
-  border-radius: 12px;
-  border: 1px solid var(--settings-basic-divider);
-  background: color-mix(in srgb, var(--settings-basic-control) 58%, transparent);
-  padding: 14px 14px 14px 16px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-divider) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-basic-control) 66%, transparent) 0%, color-mix(in srgb, var(--settings-basic-control) 48%, transparent) 100%);
+  padding: 14px 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.44),
+    0 8px 20px rgba(15, 23, 42, 0.04);
 }
 
 .settings-section-basic .settings-sound-hint-shadcn {
@@ -190,9 +202,9 @@
   align-items: flex-start;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px dashed color-mix(in srgb, var(--settings-basic-divider) 82%, transparent);
-  background: color-mix(in srgb, var(--settings-basic-control) 38%, transparent);
+  border-radius: 12px;
+  border: 1px dashed color-mix(in srgb, var(--settings-basic-divider) 78%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control) 34%, transparent);
   margin-top: 0;
 }
 
@@ -201,7 +213,7 @@
   align-items: center;
   gap: 6px;
   border-color: color-mix(in srgb, var(--settings-basic-control-border) 92%, transparent);
-  background: color-mix(in srgb, var(--settings-basic-control) 68%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control) 74%, transparent);
   color: var(--settings-basic-text-muted);
   font-size: 11px;
   line-height: 1;
@@ -218,9 +230,10 @@
 .settings-section-basic .settings-sound-config-shadcn {
   margin: 0;
   padding: 14px 14px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--settings-basic-divider);
-  background: color-mix(in srgb, var(--settings-basic-control) 54%, transparent);
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-divider) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-basic-control) 58%, transparent) 0%, color-mix(in srgb, var(--settings-basic-control) 42%, transparent) 100%);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -332,7 +345,7 @@
 .settings-section-basic .settings-basic-group-card--list > .settings-row.settings-basic-item,
 .settings-section-basic .settings-basic-group-card--list > .settings-help,
 .settings-section-basic .settings-basic-group-card--list > .settings-sound-config {
-  border-top: 1px solid var(--settings-basic-divider);
+  border-top: 1px solid color-mix(in srgb, var(--settings-basic-divider) 90%, transparent);
 }
 
 .settings-section-basic .settings-basic-group-card--plain > :first-child {
@@ -349,21 +362,26 @@
 
 .settings-section-basic .settings-shortcut-card {
   padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--settings-basic-control-border);
-  background: color-mix(in srgb, var(--settings-basic-control) 86%, transparent);
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 90%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-basic-control) 88%, transparent) 0%, color-mix(in srgb, var(--settings-basic-control) 74%, transparent) 100%);
   color: var(--settings-basic-text);
 }
 
 .settings-section-basic .settings-shortcut-card:hover {
   border-color: color-mix(in srgb, var(--settings-basic-control-border) 75%, #b9c5df 25%);
-  background: color-mix(in srgb, var(--settings-basic-control-hover) 84%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control-hover) 82%, transparent);
 }
 
 .settings-section-basic .settings-shortcut-card.active {
   border-color: color-mix(in srgb, var(--primary) 48%, #97a9cc 52%);
   border-width: 1px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent) inset;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 16%, #e5ecfb 84%) 0%, color-mix(in srgb, var(--primary) 8%, #f6f8fd 92%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.64) inset,
+    0 8px 18px rgba(79, 106, 160, 0.1);
 }
 
 .settings-section-basic .settings-shortcut-card-title {
@@ -377,7 +395,7 @@
 .settings-section-basic .settings-toggle-row {
   min-height: 70px;
   margin: 0;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border: none;
   border-radius: 0;
   background: transparent;
@@ -446,9 +464,11 @@
 }
 
 .settings-section-basic .settings-toggle-row [data-slot="switch"] [data-slot="switch-thumb"] {
-  background: #f6f7fa;
-  box-shadow: none;
-  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
+  box-shadow:
+    0 1px 1px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.56) inset;
+  border: 1px solid rgba(15, 23, 42, 0.06);
 }
 
 .settings-section-basic .settings-cli-engine-toggle-row {
@@ -596,10 +616,8 @@
 
 .settings-section-basic .settings-field.settings-basic-item.settings-window-transparency-item {
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas:
-    "label"
-    "control";
-  gap: 10px;
+  grid-template-areas: "label";
+  gap: 0;
 }
 
 .settings-section-basic .settings-window-transparency-toggle {
@@ -607,6 +625,11 @@
   min-height: 0;
   padding: 0;
   gap: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 420px) auto;
+  grid-template-areas:
+    "title control switch";
+  align-items: center;
 }
 
 .settings-section-basic .settings-window-transparency-help {
@@ -618,11 +641,26 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  min-width: 0;
+  width: min(100%, 520px);
+  justify-self: end;
 }
 
 .settings-section-basic .settings-window-transparency-control .settings-input--range {
   flex: 1 1 auto;
   min-width: 120px;
+  width: 100%;
+}
+
+.settings-section-basic .settings-window-transparency-toggle > .settings-basic-field-header {
+  grid-area: title;
+}
+
+.settings-section-basic .settings-window-transparency-toggle > [data-slot="switch"] {
+  grid-area: switch;
+  justify-self: end;
+  align-self: center;
 }
 
 .settings-section-basic .settings-field.settings-basic-item > .settings-basic-field-header,
@@ -671,46 +709,60 @@
 }
 
 .settings-section-basic .settings-scale-control .settings-input--range::-webkit-slider-runnable-track {
-  height: 6px;
+  height: 9px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 48%, transparent);
-  background: color-mix(in srgb, var(--settings-basic-control) 82%, transparent);
-  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 56%, transparent);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--primary) 50%, #d0ddf6 50%) 0%,
+    color-mix(in srgb, var(--primary) 50%, #d0ddf6 50%) var(--settings-range-progress),
+    color-mix(in srgb, var(--settings-basic-control) 84%, transparent) var(--settings-range-progress),
+    color-mix(in srgb, var(--settings-basic-control) 84%, transparent) 100%
+  );
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.48),
+    inset 0 -1px 1px rgba(15, 23, 42, 0.04);
 }
 
 .settings-section-basic .settings-scale-control .settings-input--range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
-  margin-top: -7px;
+  width: 20px;
+  height: 20px;
+  margin-top: -6px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--settings-basic-control-border) 74%);
-  background: color-mix(in srgb, #ffffff 88%, var(--settings-basic-surface) 12%);
-  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--settings-basic-control-border) 70%);
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.62) inset;
 }
 
 .settings-section-basic .settings-scale-control .settings-input--range::-moz-range-track {
-  height: 6px;
+  height: 9px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 48%, transparent);
-  background: color-mix(in srgb, var(--settings-basic-control) 82%, transparent);
-  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 56%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control) 84%, transparent);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.48),
+    inset 0 -1px 1px rgba(15, 23, 42, 0.04);
 }
 
 .settings-section-basic .settings-scale-control .settings-input--range::-moz-range-progress {
-  height: 6px;
+  height: 9px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 44%, #c9d8f6 56%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 50%, #d0ddf6 50%), color-mix(in srgb, var(--primary) 34%, #aac1ea 66%));
 }
 
 .settings-section-basic .settings-scale-control .settings-input--range::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--settings-basic-control-border) 74%);
-  background: color-mix(in srgb, #ffffff 88%, var(--settings-basic-surface) 12%);
-  box-shadow: none;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--settings-basic-control-border) 70%);
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  box-shadow:
+    0 2px 6px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(255, 255, 255, 0.62) inset;
 }
 
 .settings-section-basic .settings-scale-control .settings-scale-save {
@@ -728,6 +780,7 @@
   font-size: 12px;
   color: var(--settings-basic-text-muted);
   font-variant-numeric: tabular-nums;
+  padding: 0 2px;
 }
 
 .settings-section-basic .settings-field.settings-basic-item > .settings-help {
@@ -785,13 +838,14 @@
 }
 
 .settings-section-basic .settings-basic-theme-option {
-  min-height: 36px;
+  min-height: 38px;
   min-width: 0;
-  padding: 5px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
   border-width: 1px;
-  border-color: var(--settings-basic-control-border);
-  background: color-mix(in srgb, var(--settings-basic-control) 90%, transparent);
+  border-color: color-mix(in srgb, var(--settings-basic-control-border) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-basic-control) 92%, transparent) 0%, color-mix(in srgb, var(--settings-basic-control) 82%, transparent) 100%);
   color: var(--settings-basic-text-muted);
   font-size: 13px;
   gap: 6px;
@@ -799,24 +853,28 @@
 
 .settings-section-basic .settings-basic-theme-option:hover {
   border-color: color-mix(in srgb, var(--settings-basic-control-border) 70%, #b8c5de 30%);
-  background: color-mix(in srgb, var(--settings-basic-control-hover) 84%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control-hover) 82%, transparent);
   color: var(--settings-basic-text);
 }
 
 .settings-section-basic .settings-basic-theme-option.active {
-  color: #ffffff;
-  border-color: color-mix(in srgb, var(--primary) 46%, #8fa7df 54%);
-  background: color-mix(in srgb, var(--primary) 18%, var(--settings-basic-control));
-  box-shadow: none;
+  color: #13233f;
+  border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.62) inset,
+    0 8px 18px rgba(77, 102, 160, 0.12);
 }
 
 .settings-section-basic .settings-basic-language-option {
-  min-height: 36px;
+  min-height: 38px;
   min-width: 0;
-  padding: 5px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
-  border: 1px solid var(--settings-basic-control-border);
-  background: color-mix(in srgb, var(--settings-basic-control) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--settings-basic-control-border) 92%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--settings-basic-control) 92%, transparent) 0%, color-mix(in srgb, var(--settings-basic-control) 82%, transparent) 100%);
   color: var(--settings-basic-text-muted);
   font-size: 13px;
   display: inline-flex;
@@ -826,14 +884,18 @@
 
 .settings-section-basic .settings-basic-language-option:hover {
   border-color: color-mix(in srgb, var(--settings-basic-control-border) 70%, #b8c5de 30%);
-  background: color-mix(in srgb, var(--settings-basic-control-hover) 84%, transparent);
+  background: color-mix(in srgb, var(--settings-basic-control-hover) 82%, transparent);
   color: var(--settings-basic-text);
 }
 
 .settings-section-basic .settings-basic-language-option.active {
-  color: #ffffff;
-  border-color: color-mix(in srgb, var(--primary) 46%, #8fa7df 54%);
-  background: color-mix(in srgb, var(--primary) 18%, var(--settings-basic-control));
+  color: #13233f;
+  border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.62) inset,
+    0 8px 18px rgba(77, 102, 160, 0.12);
 }
 
 .settings-section-basic .settings-basic-theme-icon {

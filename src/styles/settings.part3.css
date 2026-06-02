@@ -64,21 +64,33 @@
 
 :root[data-theme="light"] .settings-section-basic > .settings-basic-tabs > .settings-basic-tab.active,
 :root[data-theme="light"] .settings-section-tabbed > .settings-basic-tabs > .settings-basic-tab.active {
-  color: #12213e;
-  border-color: color-mix(in srgb, var(--primary) 45%, #8ba0c8 55%);
-  background: color-mix(in srgb, var(--primary) 26%, #d9e3f8);
+  color: #13233f;
+  border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.62) inset,
+    0 8px 18px rgba(77, 102, 160, 0.12);
 }
 
 :root[data-theme="light"] .settings-section-basic .settings-basic-theme-option.active {
   color: #13243f;
-  border-color: color-mix(in srgb, var(--primary) 45%, #8ca1ca 55%);
-  background: color-mix(in srgb, var(--primary) 20%, #dee6f8);
+  border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.62) inset,
+    0 8px 18px rgba(77, 102, 160, 0.12);
 }
 
 :root[data-theme="light"] .settings-section-basic .settings-basic-language-option.active {
   color: #13243f;
-  border-color: color-mix(in srgb, var(--primary) 45%, #8ca1ca 55%);
-  background: color-mix(in srgb, var(--primary) 20%, #dee6f8);
+  border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.62) inset,
+    0 8px 18px rgba(77, 102, 160, 0.12);
 }
 
 :root[data-theme="light"] .settings-section-basic .settings-basic-theme-icon-system {
@@ -100,8 +112,10 @@
 }
 
 :root[data-theme="light"] .settings-section-basic .settings-toggle-row [data-slot="switch"] [data-slot="switch-thumb"] {
-  background: #ffffff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+  background: linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
+  box-shadow:
+    0 1px 1px rgba(15, 23, 42, 0.08),
+    0 0 0 1px rgba(255, 255, 255, 0.56) inset;
 }
 
 @media (prefers-color-scheme: light) {
@@ -120,21 +134,33 @@
 
   :root:not([data-theme]) .settings-section-basic > .settings-basic-tabs > .settings-basic-tab.active,
   :root:not([data-theme]) .settings-section-tabbed > .settings-basic-tabs > .settings-basic-tab.active {
-    color: #12213e;
-    border-color: color-mix(in srgb, var(--primary) 45%, #8ba0c8 55%);
-    background: color-mix(in srgb, var(--primary) 26%, #d9e3f8);
+    color: #13233f;
+    border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.62) inset,
+      0 8px 18px rgba(77, 102, 160, 0.12);
   }
 
   :root:not([data-theme]) .settings-section-basic .settings-basic-theme-option.active {
     color: #13243f;
-    border-color: color-mix(in srgb, var(--primary) 45%, #8ca1ca 55%);
-    background: color-mix(in srgb, var(--primary) 20%, #dee6f8);
+    border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.62) inset,
+      0 8px 18px rgba(77, 102, 160, 0.12);
   }
 
   :root:not([data-theme]) .settings-section-basic .settings-basic-language-option.active {
     color: #13243f;
-    border-color: color-mix(in srgb, var(--primary) 45%, #8ca1ca 55%);
-    background: color-mix(in srgb, var(--primary) 20%, #dee6f8);
+    border-color: color-mix(in srgb, var(--primary) 36%, #91a8d2 64%);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--primary) 18%, #dfe7f8 82%) 0%, color-mix(in srgb, var(--primary) 10%, #edf2fb 90%) 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.62) inset,
+      0 8px 18px rgba(77, 102, 160, 0.12);
   }
 
   :root:not([data-theme]) .settings-section-basic .settings-basic-theme-icon-system {
@@ -156,8 +182,10 @@
   }
 
   :root:not([data-theme]) .settings-section-basic .settings-toggle-row [data-slot="switch"] [data-slot="switch-thumb"] {
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14);
+    background: linear-gradient(180deg, #ffffff 0%, #eef3fa 100%);
+    box-shadow:
+      0 1px 1px rgba(15, 23, 42, 0.08),
+      0 0 0 1px rgba(255, 255, 255, 0.56) inset;
   }
 }
 
