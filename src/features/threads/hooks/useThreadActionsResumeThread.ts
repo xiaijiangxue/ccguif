@@ -268,65 +268,6 @@ export function useThreadActionsResumeThreadForWorkspace(
               engine: "codex",
             });
           });
-          const pendingRelatedThreadIds = relatedThreadIds.filter(
-            (relatedThreadId) =>
-              Boolean(relatedThreadId) &&
-              relatedThreadId !== effectiveThreadId &&
-              !loadedThreadsRef.current[relatedThreadId],
-          );
-          await mapWithConcurrency(
-            pendingRelatedThreadIds,
-            RELATED_THREAD_LOAD_CONCURRENCY,
-            async (relatedThreadId) => {
-              try {
-                const relatedSnapshot =
-                  await createHistoryLoader(relatedThreadId).load(
-                    relatedThreadId,
-                  );
-                const relatedAssembledSnapshot =
-                  hydrateHistory(relatedSnapshot);
-                const relatedSnapshotItems = relatedAssembledSnapshot.items;
-                if (relatedSnapshotItems.length > 0) {
-                  dispatch({
-                    type: "setThreadItems",
-                    threadId: relatedThreadId,
-                    items: relatedSnapshotItems,
-                  });
-                }
-                dispatch({
-                  type: "setThreadPlan",
-                  threadId: relatedThreadId,
-                  plan: relatedAssembledSnapshot.plan,
-                });
-                dispatch({
-                  type: "setThreadHistoryRestoredAt",
-                  threadId: relatedThreadId,
-                  timestamp: relatedAssembledSnapshot.meta.historyRestoredAtMs,
-                });
-                restoreThreadParentLinksFromSnapshot(
-                  relatedThreadId,
-                  relatedSnapshotItems,
-                  updateThreadParent,
-                );
-                loadedThreadsRef.current[relatedThreadId] = true;
-              } catch (error) {
-                onDebug?.({
-                  id: `${Date.now()}-history-loader-related-error`,
-                  timestamp: Date.now(),
-                  source: "error",
-                  label: "thread/history related loader error",
-                  payload: {
-                    workspaceId,
-                    threadId: effectiveThreadId,
-                    relatedThreadId,
-                    error:
-                      error instanceof Error ? error.message : String(error),
-                  },
-                });
-              }
-              return relatedThreadId;
-            },
-          );
           assembledSnapshot.userInputQueue.forEach((request) => {
             dispatch({ type: "addUserInputRequest", request });
           });
@@ -351,6 +292,79 @@ export function useThreadActionsResumeThreadForWorkspace(
             });
           }
           loadedThreadsRef.current[effectiveThreadId] = true;
+          const pendingRelatedThreadIds = relatedThreadIds.filter(
+            (relatedThreadId) =>
+              Boolean(relatedThreadId) &&
+              relatedThreadId !== effectiveThreadId &&
+              !loadedThreadsRef.current[relatedThreadId],
+          );
+          if (pendingRelatedThreadIds.length > 0) {
+            void mapWithConcurrency(
+              pendingRelatedThreadIds,
+              RELATED_THREAD_LOAD_CONCURRENCY,
+              async (relatedThreadId) => {
+                try {
+                  const relatedSnapshot =
+                    await createHistoryLoader(relatedThreadId).load(
+                      relatedThreadId,
+                    );
+                  const relatedAssembledSnapshot =
+                    hydrateHistory(relatedSnapshot);
+                  const relatedSnapshotItems = relatedAssembledSnapshot.items;
+                  if (relatedSnapshotItems.length > 0) {
+                    dispatch({
+                      type: "setThreadItems",
+                      threadId: relatedThreadId,
+                      items: relatedSnapshotItems,
+                    });
+                  }
+                  dispatch({
+                    type: "setThreadPlan",
+                    threadId: relatedThreadId,
+                    plan: relatedAssembledSnapshot.plan,
+                  });
+                  dispatch({
+                    type: "setThreadHistoryRestoredAt",
+                    threadId: relatedThreadId,
+                    timestamp: relatedAssembledSnapshot.meta.historyRestoredAtMs,
+                  });
+                  restoreThreadParentLinksFromSnapshot(
+                    relatedThreadId,
+                    relatedSnapshotItems,
+                    updateThreadParent,
+                  );
+                  loadedThreadsRef.current[relatedThreadId] = true;
+                } catch (error) {
+                  onDebug?.({
+                    id: `${Date.now()}-history-loader-related-error`,
+                    timestamp: Date.now(),
+                    source: "error",
+                    label: "thread/history related loader error",
+                    payload: {
+                      workspaceId,
+                      threadId: effectiveThreadId,
+                      relatedThreadId,
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                    },
+                  });
+                }
+                return relatedThreadId;
+              },
+            ).catch((error) => {
+              onDebug?.({
+                id: `${Date.now()}-history-loader-related-batch-error`,
+                timestamp: Date.now(),
+                source: "error",
+                label: "thread/history related loader batch error",
+                payload: {
+                  workspaceId,
+                  threadId: effectiveThreadId,
+                  error: error instanceof Error ? error.message : String(error),
+                },
+              });
+            });
+          }
         };
         const recoverReplacementThread = async (): Promise<{
           threadId: string;
