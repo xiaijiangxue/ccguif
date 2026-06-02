@@ -220,8 +220,8 @@ export const ButtonArea = ({
       width: popoverWidth,
       maxWidth: `calc(100vw - ${MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN * 2}px)`,
       maxHeight: `calc(100vh - ${MEMORY_REFERENCE_POPOVER_VIEWPORT_MARGIN * 2}px)`,
-      ['--memory-reference-arrow-left' as '--memory-reference-arrow-left']: `${arrowLeft}px`,
-    });
+      ['--memory-reference-arrow-left' as string]: `${arrowLeft}px`,
+    } as React.CSSProperties);
     setMemoryReferencePopoverPlacement(isPlacedAbove ? 'top' : 'bottom');
   }, [isMemoryReferencePopoverOpen]);
 
