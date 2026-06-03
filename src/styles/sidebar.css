@@ -511,6 +511,11 @@
   cursor: grabbing;
 }
 
+.workspace-row.is-dragging {
+  cursor: grabbing;
+  opacity: 0.72;
+}
+
 .workspace-row::before {
   content: none;
 }

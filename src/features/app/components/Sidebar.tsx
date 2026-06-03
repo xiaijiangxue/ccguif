@@ -633,6 +633,7 @@ export function Sidebar({
   const workspacePointerDragRef = useRef<WorkspacePointerDragState | null>(null);
   const workspacePointerDragCompletedRef = useRef(false);
   const [workspaceDropPreview, setWorkspaceDropPreview] = useState<WorkspaceDropPreview | null>(null);
+  const workspaceDropPreviewRef = useRef<WorkspaceDropPreview | null>(null);
   const [pendingWorkspaceGroupPrompt, setPendingWorkspaceGroupPrompt] =
     useState<PendingWorkspaceGroupPrompt | null>(null);
   const [workspaceGroupDraft, setWorkspaceGroupDraft] = useState("");
@@ -1254,6 +1255,24 @@ export function Sidebar({
     });
     return names;
   }, [namedGroupedWorkspaces]);
+
+  const updateWorkspaceDropPreview = useCallback((preview: WorkspaceDropPreview | null) => {
+    workspaceDropPreviewRef.current = preview;
+    setWorkspaceDropPreview(preview);
+  }, []);
+
+  const clearWorkspaceDropPreviewIf = useCallback(
+    (predicate: (preview: WorkspaceDropPreview) => boolean) => {
+      setWorkspaceDropPreview((current) => {
+        if (!current || !predicate(current)) {
+          return current;
+        }
+        workspaceDropPreviewRef.current = null;
+        return null;
+      });
+    },
+    [],
+  );
 
   const isSearchActive = Boolean(normalizedQuery);
 
@@ -1943,17 +1962,17 @@ export function Sidebar({
       setDraggingWorkspaceId(dragState.sourceWorkspaceId);
       const target = getWorkspaceCardAtPoint(event.clientX, event.clientY);
       if (!target || target.targetWorkspaceId === dragState.sourceWorkspaceId) {
-        setWorkspaceDropPreview(null);
+        updateWorkspaceDropPreview(null);
         return;
       }
       const intent = resolveWorkspaceDropIntentFromPoint(target.card, event.clientY);
-      setWorkspaceDropPreview({
+      updateWorkspaceDropPreview({
         targetKind: "workspace",
         targetId: target.targetWorkspaceId,
         intent,
       });
     },
-    [getWorkspaceCardAtPoint, resolveWorkspaceDropIntentFromPoint],
+    [getWorkspaceCardAtPoint, resolveWorkspaceDropIntentFromPoint, updateWorkspaceDropPreview],
   );
 
   const finishWorkspacePointerDrag = useCallback(
@@ -1969,15 +1988,16 @@ export function Sidebar({
               intent: resolveWorkspaceDropIntentFromPoint(pointTarget.card, event.clientY),
             }
           : null;
+      const latestPreview = workspaceDropPreviewRef.current;
       const statePreview =
-        workspaceDropPreview?.targetKind === "workspace"
+        latestPreview?.targetKind === "workspace"
           ? {
-              targetId: workspaceDropPreview.targetId,
-              intent: workspaceDropPreview.intent,
+              targetId: latestPreview.targetId,
+              intent: latestPreview.intent,
             }
           : null;
       const preview = pointPreview ?? statePreview;
-      setWorkspaceDropPreview(null);
+      updateWorkspaceDropPreview(null);
       if (!dragState?.active) {
         return;
       }
@@ -2003,32 +2023,12 @@ export function Sidebar({
       applyWorkspaceDropPreview,
       getWorkspaceCardAtPoint,
       resolveWorkspaceDropIntentFromPoint,
-      workspaceDropPreview,
+      updateWorkspaceDropPreview,
     ],
   );
 
   const shouldSuppressWorkspaceRowClick = useCallback(() => {
     return workspacePointerDragCompletedRef.current;
-  }, []);
-
-  const handleWorkspaceDragStart = useCallback(
-    (event: React.DragEvent<HTMLElement>, workspace: WorkspaceInfo) => {
-      if (isDefaultWorkspacePath(workspace.path)) {
-        event.preventDefault();
-        return;
-      }
-      event.dataTransfer.effectAllowed = "move";
-      event.dataTransfer.setData(WORKSPACE_DND_DATA_TYPE, workspace.id);
-      event.dataTransfer.setData("text/plain", workspace.id);
-      setDraggingWorkspaceId(workspace.id);
-      setWorkspaceDropPreview(null);
-    },
-    [],
-  );
-
-  const handleWorkspaceDragEnd = useCallback(() => {
-    setDraggingWorkspaceId(null);
-    setWorkspaceDropPreview(null);
   }, []);
 
   const handleWorkspaceDragOverCard = useCallback(
@@ -2048,7 +2048,7 @@ export function Sidebar({
       event.stopPropagation();
       event.dataTransfer.dropEffect = "move";
       const intent = resolveWorkspaceDropIntent(event);
-      setWorkspaceDropPreview({
+      updateWorkspaceDropPreview({
         targetKind: "workspace",
         targetId: targetWorkspace.id,
         intent,
@@ -2059,6 +2059,7 @@ export function Sidebar({
       getWorkspaceDragSourceId,
       onApplyWorkspaceSidebarOrganization,
       resolveWorkspaceDropIntent,
+      updateWorkspaceDropPreview,
       workspaces,
     ],
   );
@@ -2072,12 +2073,12 @@ export function Sidebar({
       event.stopPropagation();
       const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
       const previewIntent =
-        workspaceDropPreview?.targetKind === "workspace" &&
-        workspaceDropPreview.targetId === targetWorkspace.id
-          ? workspaceDropPreview.intent
+        workspaceDropPreviewRef.current?.targetKind === "workspace" &&
+        workspaceDropPreviewRef.current.targetId === targetWorkspace.id
+          ? workspaceDropPreviewRef.current.intent
           : null;
       setDraggingWorkspaceId(null);
-      setWorkspaceDropPreview(null);
+      updateWorkspaceDropPreview(null);
       if (!sourceWorkspaceId || sourceWorkspaceId === targetWorkspace.id) {
         return;
       }
@@ -2118,7 +2119,7 @@ export function Sidebar({
       getWorkspaceDragSourceId,
       onApplyWorkspaceSidebarOrganization,
       resolveWorkspaceDropIntent,
-      workspaceDropPreview,
+      updateWorkspaceDropPreview,
       workspaces,
     ],
   );
@@ -2128,12 +2129,11 @@ export function Sidebar({
     if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
       return;
     }
-    setWorkspaceDropPreview((current) =>
-      current?.targetKind === "workspace" && current.targetId === event.currentTarget.dataset.workspaceId
-        ? null
-        : current,
+    const targetId = event.currentTarget.dataset.workspaceId;
+    clearWorkspaceDropPreviewIf((current) =>
+      current.targetKind === "workspace" && current.targetId === targetId
     );
-  }, []);
+  }, [clearWorkspaceDropPreviewIf]);
 
   const handleWorkspaceGroupDragOver = useCallback(
     (event: React.DragEvent<HTMLElement>, groupId: string) => {
@@ -2151,13 +2151,19 @@ export function Sidebar({
       event.preventDefault();
       event.stopPropagation();
       event.dataTransfer.dropEffect = "move";
-      setWorkspaceDropPreview({
+      updateWorkspaceDropPreview({
         targetKind: "group",
         targetId: groupId,
         intent: "move-to-group",
       });
     },
-    [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization, workspaces],
+    [
+      draggingWorkspaceId,
+      getWorkspaceDragSourceId,
+      onApplyWorkspaceSidebarOrganization,
+      updateWorkspaceDropPreview,
+      workspaces,
+    ],
   );
 
   const handleWorkspaceGroupDrop = useCallback(
@@ -2169,7 +2175,7 @@ export function Sidebar({
       event.stopPropagation();
       const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
       setDraggingWorkspaceId(null);
-      setWorkspaceDropPreview(null);
+      updateWorkspaceDropPreview(null);
       if (!sourceWorkspaceId) {
         return;
       }
@@ -2183,7 +2189,13 @@ export function Sidebar({
         targetGroupId: groupId,
       });
     },
-    [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization, workspaces],
+    [
+      draggingWorkspaceId,
+      getWorkspaceDragSourceId,
+      onApplyWorkspaceSidebarOrganization,
+      updateWorkspaceDropPreview,
+      workspaces,
+    ],
   );
 
   const handleWorkspaceGroupDragLeave = useCallback((event: React.DragEvent<HTMLElement>) => {
@@ -2191,12 +2203,11 @@ export function Sidebar({
     if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
       return;
     }
-    setWorkspaceDropPreview((current) =>
-      current?.targetKind === "group" && current.targetId === event.currentTarget.dataset.groupId
-        ? null
-        : current,
+    const targetId = event.currentTarget.dataset.groupId;
+    clearWorkspaceDropPreviewIf((current) =>
+      current.targetKind === "group" && current.targetId === targetId
     );
-  }, []);
+  }, [clearWorkspaceDropPreviewIf]);
 
   const handleUngroupedDragOver = useCallback((event: React.DragEvent<HTMLElement>) => {
     if (!onApplyWorkspaceSidebarOrganization) {
@@ -2213,22 +2224,26 @@ export function Sidebar({
     event.preventDefault();
     event.stopPropagation();
     event.dataTransfer.dropEffect = "move";
-    setWorkspaceDropPreview({
+    updateWorkspaceDropPreview({
       targetKind: "ungrouped",
       targetId: "__ungrouped__",
       intent: "move-to-group",
     });
-  }, [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization, workspaces]);
+  }, [
+    draggingWorkspaceId,
+    getWorkspaceDragSourceId,
+    onApplyWorkspaceSidebarOrganization,
+    updateWorkspaceDropPreview,
+    workspaces,
+  ]);
 
   const handleUngroupedDragLeave = useCallback((event: React.DragEvent<HTMLElement>) => {
     const relatedTarget = event.relatedTarget;
     if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
       return;
     }
-    setWorkspaceDropPreview((current) =>
-      current?.targetKind === "ungrouped" ? null : current,
-    );
-  }, []);
+    clearWorkspaceDropPreviewIf((current) => current.targetKind === "ungrouped");
+  }, [clearWorkspaceDropPreviewIf]);
 
   const handleUngroupedDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
     if (!onApplyWorkspaceSidebarOrganization) {
@@ -2238,7 +2253,7 @@ export function Sidebar({
     event.stopPropagation();
     const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
     setDraggingWorkspaceId(null);
-    setWorkspaceDropPreview(null);
+    updateWorkspaceDropPreview(null);
     if (!sourceWorkspaceId) {
       return;
     }
@@ -2246,7 +2261,12 @@ export function Sidebar({
       kind: "move-to-ungrouped",
       sourceWorkspaceId,
     });
-  }, [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization]);
+  }, [
+    draggingWorkspaceId,
+    getWorkspaceDragSourceId,
+    onApplyWorkspaceSidebarOrganization,
+    updateWorkspaceDropPreview,
+  ]);
 
   const closeWorkspaceGroupPrompt = useCallback(() => {
     setPendingWorkspaceGroupPrompt(null);
@@ -2407,11 +2427,8 @@ export function Sidebar({
         onSelectWorkspace={onSelectWorkspace}
         onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
         onToggleExitedSessions={toggleExitedSessionsHidden}
-        dragHandleProps={onApplyWorkspaceSidebarOrganization && !isDefaultWorkspacePath(entry.path) ? {
-          draggable: true,
-          onDragStart: (event) => handleWorkspaceDragStart(event, entry),
-          onDragEnd: handleWorkspaceDragEnd,
-        } : undefined}
+        canDragWorkspace={Boolean(onApplyWorkspaceSidebarOrganization && !isDefaultWorkspacePath(entry.path))}
+        isDragging={draggingWorkspaceId === entry.id}
         pointerDragProps={onApplyWorkspaceSidebarOrganization && !isDefaultWorkspacePath(entry.path) ? {
           onPointerDown: (event) => handleWorkspacePointerDown(event, entry),
           onPointerMove: handleWorkspacePointerMove,
@@ -2580,10 +2597,8 @@ export function Sidebar({
     handleRenameSessionFolder,
     handleDeleteSessionFolder,
     handleToggleSessionFolderCollapsed,
-    handleWorkspaceDragEnd,
     handleWorkspaceDragLeaveCard,
     handleWorkspaceDragOverCard,
-    handleWorkspaceDragStart,
     handleWorkspaceDropOnCard,
     handleWorkspacePointerDown,
     handleWorkspacePointerMove,

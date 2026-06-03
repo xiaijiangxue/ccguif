@@ -1,6 +1,5 @@
 import type {
   DragEvent,
-  DragEventHandler,
   MouseEvent,
   PointerEventHandler,
 } from "react";
@@ -19,12 +18,6 @@ function isActivationKey(key: string) {
 }
 
 type WorkspaceCardDropState = "before" | "after" | "group" | "move-to-group" | null;
-
-type WorkspaceCardDragHandleProps = {
-  draggable: true;
-  onDragStart: DragEventHandler<HTMLElement>;
-  onDragEnd: DragEventHandler<HTMLElement>;
-};
 
 type WorkspaceCardPointerDragProps = {
   onPointerDown: PointerEventHandler<HTMLElement>;
@@ -53,8 +46,9 @@ type WorkspaceCardProps = {
   onSelectWorkspace: (workspaceId: string) => void;
   onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
   onToggleExitedSessions?: (workspacePath: string) => void;
-  dragHandleProps?: WorkspaceCardDragHandleProps;
+  canDragWorkspace?: boolean;
   pointerDragProps?: WorkspaceCardPointerDragProps;
+  isDragging?: boolean;
   dropState?: WorkspaceCardDropState;
   onWorkspaceDragOver?: (event: DragEvent<HTMLElement>) => void;
   onWorkspaceDragLeave?: (event: DragEvent<HTMLElement>) => void;
@@ -82,8 +76,9 @@ export function WorkspaceCard({
   onSelectWorkspace,
   onToggleWorkspaceCollapse,
   onToggleExitedSessions,
-  dragHandleProps,
+  canDragWorkspace = false,
   pointerDragProps,
+  isDragging = false,
   dropState = null,
   onWorkspaceDragOver,
   onWorkspaceDragLeave,
@@ -113,11 +108,17 @@ export function WorkspaceCard({
 
   return (
     <div
-      className={`workspace-card${isActive ? " is-active" : ""}${dragHandleProps ? " is-draggable" : ""}${dropState ? ` is-drop-${dropState}` : ""}`}
+      className={`workspace-card${isActive ? " is-active" : ""}${canDragWorkspace ? " is-draggable" : ""}${dropState ? ` is-drop-${dropState}` : ""}`}
       data-workspace-id={workspace.id}
       onDragOver={onWorkspaceDragOver}
       onDragLeave={onWorkspaceDragLeave}
       onDrop={onWorkspaceDrop}
+      onDragStart={(event) => {
+        if (canDragWorkspace) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      }}
     >
       <div
         className={`workspace-row ${
@@ -126,7 +127,7 @@ export function WorkspaceCard({
               ? "context-active"
               : "active"
             : ""
-        }`}
+        }${isDragging ? " is-dragging" : ""}`}
         role="button"
         tabIndex={0}
         aria-expanded={!isCollapsed}
@@ -146,6 +147,13 @@ export function WorkspaceCard({
         }}
         onContextMenu={(event) => onShowWorkspaceMenu(event, workspace)}
         {...pointerDragProps}
+        draggable={false}
+        onDragStart={(event) => {
+          if (canDragWorkspace) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -155,7 +163,7 @@ export function WorkspaceCard({
       >
         <div className="workspace-header-content">
           <div className="workspace-leading-icons">
-            {dragHandleProps ? (
+            {canDragWorkspace ? (
               <span
                 className="workspace-drag-handle"
                 role="button"
@@ -173,7 +181,11 @@ export function WorkspaceCard({
                     event.stopPropagation();
                   }
                 }}
-                {...dragHandleProps}
+                draggable={false}
+                onDragStart={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
               >
                 <span className="codicon codicon-gripper" aria-hidden />
               </span>
