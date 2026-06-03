@@ -740,6 +740,8 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
         const wrapper = editableWrapperRef.current;
         const wrapperHeight = wrapper?.clientHeight ?? 0;
         if (wrapperHeight > 0) {
+          const nextHeight = Math.min(el.scrollHeight, wrapperHeight);
+          el.style.height = `${nextHeight}px`;
           el.style.maxHeight = `${wrapperHeight}px`;
         }
         el.style.overflowY = 'auto';
