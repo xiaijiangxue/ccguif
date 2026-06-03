@@ -51,6 +51,15 @@ vi.mock("react-i18next", () => ({
         "sidebar.sessionFolderCrossProjectBlocked": "Sessions cannot be moved across projects.",
         "sidebar.sessionFolderCount": "session count",
         "sidebar.sessionFolderLoadFailed": "Session folders unavailable.",
+        "sidebar.dragWorkspace": "Drag project",
+        "sidebar.workspaceDropBefore": "Move before",
+        "sidebar.workspaceDropAfter": "Move after",
+        "sidebar.workspaceDropCreateGroup": "Create group",
+        "sidebar.workspaceDropMoveToGroup": "Move to group",
+        "sidebar.workspaceGroupCreateTitle": "Create project group",
+        "sidebar.workspaceGroupCreateSummary": "Group {{source}} with {{target}}.",
+        "sidebar.workspaceGroupNameRequired": "Group name is required.",
+        "sidebar.workspaceGroupNameDuplicate": "Group name already exists.",
         "sidebar.quickNewThread": "Home",
         "sidebar.quickAutomation": "Automation",
         "sidebar.quickSearch": "Search",
@@ -70,7 +79,6 @@ vi.mock("react-i18next", () => ({
         "sidebar.releaseNotes": "Release Notes",
         "sidebar.comingSoon": "Coming soon",
         "sidebar.comingSoonMessage": "This feature is coming soon",
-        "sidebar.threadsSection": "Threads",
         "threads.degradedWorkspaceRefreshAriaLabel": "Refresh incomplete thread list",
         "threads.degradedWorkspaceRefreshTooltip":
           "This project's thread list is not fully refreshed yet and may be missing some conversations. Click to refresh it again.",
@@ -93,6 +101,8 @@ vi.mock("react-i18next", () => ({
         "workspace.engineGemini": "Gemini",
         "sidebar.cliNotInstalled": "CLI not installed",
         "settings.title": "Settings",
+        "settings.newGroupPlaceholder": "Group name",
+        "common.create": "Create",
         "tabbar.primaryNavigation": "Primary navigation",
       };
       return translations[key] ?? key;

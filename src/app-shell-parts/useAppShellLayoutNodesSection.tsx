@@ -72,7 +72,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     activeTerminalId, activeThreadId, activeThreadIdForModeRef, activeThreadIdRef, activeTokenUsage, activeWorkspace, activeWorkspaceId, activeWorkspaceIdRef,
     activeWorkspaceKanbanTasks, activeWorkspaceRef, activeWorkspaceThreads, addCloneAgent, addDebugEntry, addWorkspace, addWorkspaceFromPath, addWorktreeAgent,
     agent, alertError, appClassName, appMode, appRoot, appRootRef, appSettings, appSettingsLoading,
-    applySelectedCollaborationMode, approvals, assignWorkspaceGroup, attachImages, baseWorkspaceRef, branches, canFuseActiveQueue, canInterrupt, cancelClonePrompt,
+    applySelectedCollaborationMode, approvals, assignWorkspaceGroup, applyWorkspaceSidebarOrganization, attachImages, baseWorkspaceRef, branches, canFuseActiveQueue, canInterrupt, cancelClonePrompt,
     cancelWorktreePrompt, cancelled, centerMode, checkoutBranch, chooseCloneCopiesFolder, choosePreset, claudeAccessModeRef, claudeThinkingVisible, clearActiveImages,
     clearCloneCopiesFolder, clearDebugEntries, clearDictationError, clearDictationHint, clearDictationTranscript, clearDraftForThread, clearGitRootCandidates, clonePrompt,
     closePlanPanel, closeReleaseNotes, closeReviewPrompt, closeSearchPalette, closeSettings, closeTerminalPanel, closeWorktreeCreateResult, codexComposerModeRef,
@@ -406,6 +406,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     workspaces,
     groupedWorkspaces,
     hasWorkspaceGroups: workspaceGroups.length > 0,
+    onApplyWorkspaceSidebarOrganization: applyWorkspaceSidebarOrganization,
     deletingWorktreeIds,
     threadsByWorkspace,
     threadParentById,
@@ -658,6 +659,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     onDeleteWorktree: (workspaceId) => {
       void removeWorktree(workspaceId);
     },
+    onApplyWorkspaceSidebarOrganization: applyWorkspaceSidebarOrganization,
     onRenameWorkspaceAlias: handleRenameWorkspaceAlias,
     onLoadOlderThreads: (workspaceId) => {
       const workspace = workspacesById.get(workspaceId);

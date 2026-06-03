@@ -1,4 +1,9 @@
-import type { MouseEvent } from "react";
+import type {
+  DragEvent,
+  DragEventHandler,
+  MouseEvent,
+  PointerEventHandler,
+} from "react";
 import { useTranslation } from "react-i18next";
 import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
 import Eye from "lucide-react/dist/esm/icons/eye";
@@ -12,6 +17,22 @@ import { isDefaultWorkspacePath } from "../../workspaces/utils/defaultWorkspace"
 function isActivationKey(key: string) {
   return key === "Enter" || key === " " || key === "Space" || key === "Spacebar";
 }
+
+type WorkspaceCardDropState = "before" | "after" | "group" | "move-to-group" | null;
+
+type WorkspaceCardDragHandleProps = {
+  draggable: true;
+  onDragStart: DragEventHandler<HTMLElement>;
+  onDragEnd: DragEventHandler<HTMLElement>;
+};
+
+type WorkspaceCardPointerDragProps = {
+  onPointerDown: PointerEventHandler<HTMLElement>;
+  onPointerMove: PointerEventHandler<HTMLElement>;
+  onPointerUp: PointerEventHandler<HTMLElement>;
+  onPointerCancel: PointerEventHandler<HTMLElement>;
+  onLostPointerCapture: PointerEventHandler<HTMLElement>;
+};
 
 type WorkspaceCardProps = {
   workspace: WorkspaceInfo;
@@ -32,6 +53,13 @@ type WorkspaceCardProps = {
   onSelectWorkspace: (workspaceId: string) => void;
   onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
   onToggleExitedSessions?: (workspacePath: string) => void;
+  dragHandleProps?: WorkspaceCardDragHandleProps;
+  pointerDragProps?: WorkspaceCardPointerDragProps;
+  dropState?: WorkspaceCardDropState;
+  onWorkspaceDragOver?: (event: DragEvent<HTMLElement>) => void;
+  onWorkspaceDragLeave?: (event: DragEvent<HTMLElement>) => void;
+  onWorkspaceDrop?: (event: DragEvent<HTMLElement>) => void;
+  shouldSuppressWorkspaceRowClick?: () => boolean;
   children?: React.ReactNode;
 };
 
@@ -54,6 +82,13 @@ export function WorkspaceCard({
   onSelectWorkspace,
   onToggleWorkspaceCollapse,
   onToggleExitedSessions,
+  dragHandleProps,
+  pointerDragProps,
+  dropState = null,
+  onWorkspaceDragOver,
+  onWorkspaceDragLeave,
+  onWorkspaceDrop,
+  shouldSuppressWorkspaceRowClick,
   children,
 }: WorkspaceCardProps) {
   const { t } = useTranslation();
@@ -77,7 +112,13 @@ export function WorkspaceCard({
   };
 
   return (
-    <div className={`workspace-card ${isActive ? "is-active" : ""}`}>
+    <div
+      className={`workspace-card${isActive ? " is-active" : ""}${dragHandleProps ? " is-draggable" : ""}${dropState ? ` is-drop-${dropState}` : ""}`}
+      data-workspace-id={workspace.id}
+      onDragOver={onWorkspaceDragOver}
+      onDragLeave={onWorkspaceDragLeave}
+      onDrop={onWorkspaceDrop}
+    >
       <div
         className={`workspace-row ${
           isActive
@@ -90,12 +131,21 @@ export function WorkspaceCard({
         tabIndex={0}
         aria-expanded={!isCollapsed}
         onClick={(event) => {
+          if (shouldSuppressWorkspaceRowClick?.()) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
+          if (event.defaultPrevented) {
+            return;
+          }
           if (event.detail > 1) {
             return;
           }
           handleToggleCollapse();
         }}
         onContextMenu={(event) => onShowWorkspaceMenu(event, workspace)}
+        {...pointerDragProps}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -105,9 +155,37 @@ export function WorkspaceCard({
       >
         <div className="workspace-header-content">
           <div className="workspace-leading-icons">
+            {dragHandleProps ? (
+              <span
+                className="workspace-drag-handle"
+                role="button"
+                tabIndex={0}
+                aria-label={t("sidebar.dragWorkspace")}
+                title={t("sidebar.dragWorkspace")}
+                data-tauri-drag-region="false"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
+                onDoubleClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => {
+                  if (isActivationKey(event.key)) {
+                    event.stopPropagation();
+                  }
+                }}
+                {...dragHandleProps}
+              >
+                <span className="codicon codicon-gripper" aria-hidden />
+              </span>
+            ) : null}
             <button
               type="button"
               className={`workspace-folder-btn${hasRunningSession ? " is-session-running" : ""}`}
+              draggable={false}
+              onDragStart={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
             >
               {!isCollapsed ? (
                 <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -121,6 +199,18 @@ export function WorkspaceCard({
               )}
             </button>
           </div>
+
+          {dropState ? (
+            <span className="workspace-drop-hint" aria-hidden>
+              {dropState === "group"
+                ? t("sidebar.workspaceDropCreateGroup")
+                : dropState === "move-to-group"
+                  ? t("sidebar.workspaceDropMoveToGroup")
+                  : dropState === "before"
+                    ? t("sidebar.workspaceDropBefore")
+                    : t("sidebar.workspaceDropAfter")}
+            </span>
+          ) : null}
 
           <span className="workspace-name-text">{workspaceName ?? workspace.name}</span>
           {workspaceAliasOriginalName ? (
@@ -155,6 +245,10 @@ export function WorkspaceCard({
                   event.stopPropagation();
                   onToggleExitedSessions(workspace.path);
                 }}
+                onDragStart={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
                 onDoubleClick={(event) => {
                   event.stopPropagation();
                 }}
@@ -183,6 +277,10 @@ export function WorkspaceCard({
                 onClick={(event) => {
                   event.stopPropagation();
                   onQuickReloadWorkspaceThreads(workspace.id);
+                }}
+                onDragStart={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
                 }}
                 onDoubleClick={(event) => {
                   event.stopPropagation();
@@ -213,6 +311,10 @@ export function WorkspaceCard({
                 event.stopPropagation();
                 onSelectWorkspace(workspace.id);
               }}
+              onDragStart={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
               onDoubleClick={(event) => {
                 event.stopPropagation();
               }}
@@ -229,6 +331,10 @@ export function WorkspaceCard({
                   event.stopPropagation();
                   onCreateSessionFolder(workspace.id);
                 }}
+                onDragStart={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                }}
                 onDoubleClick={(event) => {
                   event.stopPropagation();
                 }}
@@ -243,6 +349,10 @@ export function WorkspaceCard({
               onClick={(event) => {
                 event.stopPropagation();
                 onShowWorkspaceMenu(event, workspace);
+              }}
+              onDragStart={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
               }}
               onDoubleClick={(event) => {
                 event.stopPropagation();

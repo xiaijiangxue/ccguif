@@ -17,7 +17,9 @@ use super::external_changes::{
 use super::files::{
     copy_workspace_item_inner, create_workspace_directory_inner,
     list_external_absolute_directory_children_inner, list_external_spec_tree_inner,
-    list_workspace_directory_children_inner, list_workspace_files_inner,
+    list_workspace_directory_children_ignored_inner,
+    list_workspace_directory_children_inner, list_workspace_directory_children_visible_inner,
+    list_workspace_files_inner,
     read_external_absolute_file_inner, read_external_spec_file_inner, read_workspace_file_inner,
     resolve_external_absolute_preview_handle_inner, resolve_external_spec_preview_handle_inner,
     resolve_workspace_preview_handle_inner, search_workspace_text_inner,
@@ -1942,6 +1944,60 @@ pub(crate) async fn list_workspace_files(
 }
 
 #[tauri::command]
+pub(crate) async fn list_workspace_directory_children_visible(
+    workspace_id: String,
+    path: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<WorkspaceFilesResponse, String> {
+    const MAX_WORKSPACE_DIRECTORY_CHILDREN: usize = 2_000;
+    if remote_backend::is_remote_mode(&*state).await {
+        let response = remote_backend::call_remote(
+            &*state,
+            app,
+            "list_workspace_directory_children_visible",
+            json!({ "workspaceId": workspace_id, "path": path }),
+        )
+        .await?;
+        return serde_json::from_value(response).map_err(|err| err.to_string());
+    }
+
+    let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
+    tokio::task::spawn_blocking(move || {
+        list_workspace_directory_children_visible_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
+    })
+    .await
+    .map_err(|err| format!("failed to join workspace directory scan task: {err}"))?
+}
+
+#[tauri::command]
+pub(crate) async fn list_workspace_directory_children_ignored(
+    workspace_id: String,
+    path: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<WorkspaceFilesResponse, String> {
+    const MAX_WORKSPACE_DIRECTORY_CHILDREN: usize = 2_000;
+    if remote_backend::is_remote_mode(&*state).await {
+        let response = remote_backend::call_remote(
+            &*state,
+            app,
+            "list_workspace_directory_children_ignored",
+            json!({ "workspaceId": workspace_id, "path": path }),
+        )
+        .await?;
+        return serde_json::from_value(response).map_err(|err| err.to_string());
+    }
+
+    let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
+    tokio::task::spawn_blocking(move || {
+        list_workspace_directory_children_ignored_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
+    })
+    .await
+    .map_err(|err| format!("failed to join deferred ignored directory scan task: {err}"))?
+}
+
+#[tauri::command]
 pub(crate) async fn list_workspace_directory_children(
     workspace_id: String,
     path: String,
@@ -1961,11 +2017,7 @@ pub(crate) async fn list_workspace_directory_children(
     }
 
     let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
-    tokio::task::spawn_blocking(move || {
-        list_workspace_directory_children_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
-    })
-    .await
-    .map_err(|err| format!("failed to join workspace directory scan task: {err}"))?
+    list_workspace_directory_children_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
 }
 
 #[tauri::command]

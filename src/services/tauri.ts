@@ -1506,6 +1506,20 @@ export async function getWorkspaceDirectoryChildren(workspaceId: string, path: s
   });
 }
 
+export async function getWorkspaceDirectoryChildrenVisible(workspaceId: string, path: string) {
+  return invoke<WorkspaceFilesResponse>("list_workspace_directory_children_visible", {
+    workspaceId,
+    path,
+  });
+}
+
+export async function getWorkspaceDirectoryChildrenIgnored(workspaceId: string, path: string) {
+  return invoke<WorkspaceFilesResponse>("list_workspace_directory_children_ignored", {
+    workspaceId,
+    path,
+  });
+}
+
 export async function listExternalAbsoluteDirectoryChildren(workspaceId: string, path: string) {
   return invoke<WorkspaceFilesResponse>("list_external_absolute_directory_children", {
     workspaceId,

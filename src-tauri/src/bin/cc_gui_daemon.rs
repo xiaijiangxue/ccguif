@@ -860,6 +860,22 @@ async fn handle_rpc_request(
                 .await?;
             serde_json::to_value(files).map_err(|err| err.to_string())
         }
+        "list_workspace_directory_children_visible" => {
+            let workspace_id = parse_string(&params, "workspaceId")?;
+            let path = parse_string(&params, "path")?;
+            let files = state
+                .list_workspace_directory_children_visible(workspace_id, path)
+                .await?;
+            serde_json::to_value(files).map_err(|err| err.to_string())
+        }
+        "list_workspace_directory_children_ignored" => {
+            let workspace_id = parse_string(&params, "workspaceId")?;
+            let path = parse_string(&params, "path")?;
+            let files = state
+                .list_workspace_directory_children_ignored(workspace_id, path)
+                .await?;
+            serde_json::to_value(files).map_err(|err| err.to_string())
+        }
         "list_external_absolute_directory_children" => {
             let workspace_id = parse_string(&params, "workspaceId")?;
             let path = parse_string(&params, "path")?;

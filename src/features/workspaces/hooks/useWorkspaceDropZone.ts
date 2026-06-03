@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { DragEvent } from "react";
 import { subscribeWindowDragDrop } from "../../../services/dragDrop";
 
+function isInternalWorkspaceTransfer(types: readonly string[] | undefined) {
+  if (!types || types.length === 0) {
+    return false;
+  }
+  return types.includes("application/x-ccgui-workspace-id");
+}
+
 function isDragFileTransfer(types: readonly string[] | undefined) {
   if (!types || types.length === 0) {
     return false;
@@ -145,6 +152,9 @@ export function useWorkspaceDropZone({
     if (disabled) {
       return;
     }
+    if (isInternalWorkspaceTransfer(event.dataTransfer?.types)) {
+      return;
+    }
     if (isDragFileTransfer(event.dataTransfer?.types)) {
       lastClientPositionRef.current = { x: event.clientX, y: event.clientY };
       event.preventDefault();
@@ -164,6 +174,9 @@ export function useWorkspaceDropZone({
     if (disabled) {
       return;
     }
+    if (isInternalWorkspaceTransfer(event.dataTransfer?.types)) {
+      return;
+    }
     const relatedTarget = event.relatedTarget as Node | null;
     if (relatedTarget && event.currentTarget.contains(relatedTarget)) {
       return;
@@ -177,6 +190,9 @@ export function useWorkspaceDropZone({
 
   const handleDrop = (event: DragEvent<HTMLElement>) => {
     if (disabled) {
+      return;
+    }
+    if (isInternalWorkspaceTransfer(event.dataTransfer?.types)) {
       return;
     }
     dragDepthRef.current = 0;

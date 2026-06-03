@@ -187,6 +187,8 @@ pub(crate) fn invoke_handler(
         crate::workspaces::connect_workspace,
         crate::workspaces::list_workspace_files,
         crate::workspaces::list_workspace_directory_children,
+        crate::workspaces::list_workspace_directory_children_visible,
+        crate::workspaces::list_workspace_directory_children_ignored,
         crate::workspaces::list_external_absolute_directory_children,
         crate::workspaces::search_workspace_text,
         crate::workspaces::list_external_spec_tree,

@@ -21,12 +21,14 @@ import type { PanelTabId } from "../../layout/components/PanelTabs";
 import {
   createWorkspaceDirectory,
   copyWorkspaceItem,
-  getWorkspaceDirectoryChildren,
+  getWorkspaceDirectoryChildrenIgnored,
+  getWorkspaceDirectoryChildrenVisible,
   readWorkspaceFile,
   trashWorkspaceItem,
   writeWorkspaceFile,
   type WorkspaceDirectoryEntry,
   type WorkspaceDirectoryChildState,
+  type WorkspaceFilesResponse,
 } from "../../../services/tauri";
 import type { GitFileStatus, OpenAppTarget } from "../../../types";
 import { languageFromPath } from "../../../utils/syntax";
@@ -749,6 +751,91 @@ function createWindowsFileTreeDragImage(
   };
 }
 
+function areStringArraysEqual(a: string[], b: string[]) {
+  if (a === b) {
+    return true;
+  }
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areStringSetsEqual(a: Set<string>, b: Set<string>) {
+  if (a === b) {
+    return true;
+  }
+  if (a.size !== b.size) {
+    return false;
+  }
+  for (const value of a) {
+    if (!b.has(value)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function areDirectoryEntriesEqual(a: WorkspaceDirectoryEntry[], b: WorkspaceDirectoryEntry[]) {
+  if (a === b) {
+    return true;
+  }
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let index = 0; index < a.length; index += 1) {
+    const left = a[index];
+    const right = b[index];
+    if (
+      left?.path !== right?.path ||
+      left?.child_state !== right?.child_state ||
+      left?.has_more !== right?.has_more ||
+      left?.special_kind !== right?.special_kind
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function didRootSnapshotChange(
+  previous: {
+    workspaceId: string;
+    files: string[];
+    directories: string[];
+    directoryMetadata: WorkspaceDirectoryEntry[];
+    ignoredFiles: Set<string>;
+    ignoredDirectories: Set<string>;
+  } | null,
+  next: {
+    workspaceId: string;
+    files: string[];
+    directories: string[];
+    directoryMetadata: WorkspaceDirectoryEntry[];
+    ignoredFiles: Set<string>;
+    ignoredDirectories: Set<string>;
+  },
+) {
+  if (!previous) {
+    return false;
+  }
+  if (previous.workspaceId !== next.workspaceId) {
+    return true;
+  }
+  return !(
+    areStringArraysEqual(previous.files, next.files) &&
+    areStringArraysEqual(previous.directories, next.directories) &&
+    areDirectoryEntriesEqual(previous.directoryMetadata, next.directoryMetadata) &&
+    areStringSetsEqual(previous.ignoredFiles, next.ignoredFiles) &&
+    areStringSetsEqual(previous.ignoredDirectories, next.ignoredDirectories)
+  );
+}
+
 export function FileTreePanel({
   workspaceId,
   workspaceName,
@@ -836,6 +923,270 @@ export function FileTreePanel({
   );
   const loadedLazyDirectoriesRef = useRef<Set<string>>(new Set());
   const loadingLazyDirectoriesRef = useRef<Set<string>>(new Set());
+  const expandedFoldersRef = useRef<Set<string>>(new Set());
+  const activeWorkspaceIdRef = useRef(workspaceId);
+  const lazyLoadEpochRef = useRef(0);
+  const pendingIgnoredDirectoryLoadsRef = useRef<string[]>([]);
+  const inFlightIgnoredDirectoryLoadRef = useRef<string | null>(null);
+  const pendingPrefetchDirectoryLoadsRef = useRef<string[]>([]);
+  const inFlightPrefetchDirectoryLoadRef = useRef<string | null>(null);
+  const previousRootSnapshotRef = useRef<{
+    workspaceId: string;
+    files: string[];
+    directories: string[];
+    directoryMetadata: WorkspaceDirectoryEntry[];
+    ignoredFiles: Set<string>;
+    ignoredDirectories: Set<string>;
+  } | null>(null);
+
+  const applyLazyDirectoryResponse = useCallback(
+    (
+      path: string,
+      response: WorkspaceFilesResponse,
+      options?: { allowParentStateOverride?: boolean },
+    ) => {
+      const allowParentStateOverride = options?.allowParentStateOverride ?? true;
+      const nextFiles = Array.isArray(response.files) ? response.files : [];
+      const nextDirectories = Array.isArray(response.directories) ? response.directories : [];
+      const nextGitignoredFiles = Array.isArray(response.gitignored_files)
+        ? response.gitignored_files
+        : [];
+      const nextGitignoredDirectories = Array.isArray(response.gitignored_directories)
+        ? response.gitignored_directories
+        : [];
+      const nextDirectoryMetadata = Array.isArray(response.directory_entries)
+        ? response.directory_entries
+            .filter((entry): entry is WorkspaceDirectoryEntry =>
+              Boolean(entry && typeof entry.path === "string" && typeof entry.child_state === "string"),
+            )
+            .filter((entry) => allowParentStateOverride || entry.path !== path)
+        : [];
+
+      setLazyFiles((prev) => {
+        const next = new Set(prev);
+        nextFiles.forEach((entry) => next.add(entry));
+        return next;
+      });
+      setLazyDirectories((prev) => {
+        const next = new Set(prev);
+        nextDirectories.forEach((entry) => next.add(entry));
+        return next;
+      });
+      setLazyLoadableDirectories((prev) => {
+        const next = new Set(prev);
+        nextDirectories.forEach((entry) => next.add(entry));
+        nextDirectoryMetadata.forEach((entry) => {
+          if (entry.child_state === "unknown" || entry.child_state === "partial") {
+            next.add(entry.path);
+          }
+          if (entry.child_state === "empty" || entry.child_state === "loaded") {
+            next.delete(entry.path);
+          }
+        });
+        return next;
+      });
+      setLazyDirectoryMetadata((prev) => {
+        const next = new Map(prev);
+        if (nextDirectoryMetadata.length === 0) {
+          if (allowParentStateOverride) {
+            const childState =
+              nextFiles.length === 0 && nextDirectories.length === 0 ? "empty" : "loaded";
+            next.set(path, { path, child_state: childState });
+          }
+        } else {
+          nextDirectoryMetadata.forEach((entry) => next.set(entry.path, entry));
+        }
+        return next;
+      });
+      setLazyGitignoredFiles((prev) => {
+        const next = new Set(prev);
+        nextGitignoredFiles.forEach((entry) => next.add(entry));
+        return next;
+      });
+      setLazyGitignoredDirectories((prev) => {
+        const next = new Set(prev);
+        nextGitignoredDirectories.forEach((entry) => next.add(entry));
+        return next;
+      });
+    },
+    [],
+  );
+
+  const resetLazyTreeState = useCallback(() => {
+    setLazyFiles(new Set());
+    setLazyDirectories(new Set());
+    setLazyGitignoredFiles(new Set());
+    setLazyGitignoredDirectories(new Set());
+    setLazyLoadableDirectories(new Set());
+    setLazyDirectoryMetadata(new Map());
+    setLoadedLazyDirectories(new Set());
+    setLoadingLazyDirectories(new Set());
+    setLazyDirectoryLoadErrors(new Map());
+    loadedLazyDirectoriesRef.current = new Set();
+    loadingLazyDirectoriesRef.current = new Set();
+    pendingIgnoredDirectoryLoadsRef.current = [];
+    inFlightIgnoredDirectoryLoadRef.current = null;
+    pendingPrefetchDirectoryLoadsRef.current = [];
+    inFlightPrefetchDirectoryLoadRef.current = null;
+    lazyLoadEpochRef.current += 1;
+  }, []);
+
+  const clearLazyDirectoryLoading = useCallback((path: string) => {
+    loadingLazyDirectoriesRef.current = new Set(loadingLazyDirectoriesRef.current);
+    loadingLazyDirectoriesRef.current.delete(path);
+    setLoadingLazyDirectories((prev) => {
+      const next = new Set(prev);
+      next.delete(path);
+      return next;
+    });
+  }, []);
+
+  const finalizeLazyDirectoryLoad = useCallback((path: string) => {
+    clearLazyDirectoryLoading(path);
+    loadedLazyDirectoriesRef.current = new Set(loadedLazyDirectoriesRef.current).add(path);
+    setLoadedLazyDirectories((prev) => {
+      const next = new Set(prev);
+      next.add(path);
+      return next;
+    });
+  }, [clearLazyDirectoryLoading]);
+
+  const queueIgnoredDirectoryLoad = useCallback((path: string) => {
+    const pending = pendingIgnoredDirectoryLoadsRef.current.filter((entry) => entry !== path);
+    pending.push(path);
+    pendingIgnoredDirectoryLoadsRef.current = pending;
+  }, []);
+
+  const queuePrefetchDirectoryLoad = useCallback((path: string) => {
+    if (!path) {
+      return;
+    }
+    if (
+      loadedLazyDirectoriesRef.current.has(path) ||
+      loadingLazyDirectoriesRef.current.has(path) ||
+      inFlightPrefetchDirectoryLoadRef.current === path ||
+      pendingPrefetchDirectoryLoadsRef.current.includes(path)
+    ) {
+      return;
+    }
+    pendingPrefetchDirectoryLoadsRef.current = [...pendingPrefetchDirectoryLoadsRef.current, path];
+  }, []);
+
+  const flushIgnoredDirectoryLoadQueue = useCallback(async () => {
+    if (inFlightIgnoredDirectoryLoadRef.current) {
+      return;
+    }
+    const nextPath = pendingIgnoredDirectoryLoadsRef.current.shift();
+    if (!nextPath) {
+      return;
+    }
+    const requestWorkspaceId = workspaceId;
+    const requestEpoch = lazyLoadEpochRef.current;
+    inFlightIgnoredDirectoryLoadRef.current = nextPath;
+    try {
+      const response = await getWorkspaceDirectoryChildrenIgnored(requestWorkspaceId, nextPath);
+      if (
+        activeWorkspaceIdRef.current !== requestWorkspaceId ||
+        lazyLoadEpochRef.current !== requestEpoch
+      ) {
+        return;
+      }
+      applyLazyDirectoryResponse(nextPath, response, {
+        allowParentStateOverride: false,
+      });
+      setLazyDirectoryLoadErrors((prev) => {
+        const next = new Map(prev);
+        next.delete(nextPath);
+        return next;
+      });
+    } catch (error) {
+      if (
+        activeWorkspaceIdRef.current !== requestWorkspaceId ||
+        lazyLoadEpochRef.current !== requestEpoch
+      ) {
+        return;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      setLazyDirectoryLoadErrors((prev) => {
+        const next = new Map(prev);
+        next.set(nextPath, message);
+        return next;
+      });
+    } finally {
+      if (
+        activeWorkspaceIdRef.current === requestWorkspaceId &&
+        lazyLoadEpochRef.current === requestEpoch
+      ) {
+        inFlightIgnoredDirectoryLoadRef.current = null;
+        if (pendingIgnoredDirectoryLoadsRef.current.length > 0) {
+          void flushIgnoredDirectoryLoadQueue();
+        }
+      }
+    }
+  }, [applyLazyDirectoryResponse, workspaceId]);
+
+  const flushPrefetchDirectoryLoadQueue = useCallback(async () => {
+    if (inFlightPrefetchDirectoryLoadRef.current) {
+      return;
+    }
+    const nextPath = pendingPrefetchDirectoryLoadsRef.current.shift();
+    if (!nextPath) {
+      return;
+    }
+    if (
+      !expandedFoldersRef.current.has(nextPath.split("/").slice(0, -1).join("/")) ||
+      loadedLazyDirectoriesRef.current.has(nextPath) ||
+      loadingLazyDirectoriesRef.current.has(nextPath)
+    ) {
+      if (pendingPrefetchDirectoryLoadsRef.current.length > 0) {
+        void flushPrefetchDirectoryLoadQueue();
+      }
+      return;
+    }
+    const requestWorkspaceId = workspaceId;
+    const requestEpoch = lazyLoadEpochRef.current;
+    inFlightPrefetchDirectoryLoadRef.current = nextPath;
+    loadingLazyDirectoriesRef.current = new Set(loadingLazyDirectoriesRef.current).add(nextPath);
+    setLoadingLazyDirectories((prev) => new Set(prev).add(nextPath));
+    try {
+      const response = await getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, nextPath);
+      if (
+        activeWorkspaceIdRef.current !== requestWorkspaceId ||
+        lazyLoadEpochRef.current !== requestEpoch
+      ) {
+        return;
+      }
+      applyLazyDirectoryResponse(nextPath, response);
+      finalizeLazyDirectoryLoad(nextPath);
+      queueIgnoredDirectoryLoad(nextPath);
+      void flushIgnoredDirectoryLoadQueue();
+    } catch {
+      if (
+        activeWorkspaceIdRef.current !== requestWorkspaceId ||
+        lazyLoadEpochRef.current !== requestEpoch
+      ) {
+        return;
+      }
+      clearLazyDirectoryLoading(nextPath);
+    } finally {
+      if (
+        activeWorkspaceIdRef.current === requestWorkspaceId &&
+        lazyLoadEpochRef.current === requestEpoch
+      ) {
+        inFlightPrefetchDirectoryLoadRef.current = null;
+        if (pendingPrefetchDirectoryLoadsRef.current.length > 0) {
+          void flushPrefetchDirectoryLoadQueue();
+        }
+      }
+    }
+  }, [
+    applyLazyDirectoryResponse,
+    clearLazyDirectoryLoading,
+    finalizeLazyDirectoryLoad,
+    flushIgnoredDirectoryLoadQueue,
+    queueIgnoredDirectoryLoad,
+    workspaceId,
+  ]);
 
   useEffect(() => {
     return () => {
@@ -1177,6 +1528,14 @@ export function FileTreePanel({
   }, [allTreeNodePaths, selectedNodePath, visibleTreePathOrder, visibleTreePathTypeMap]);
 
   useEffect(() => {
+    expandedFoldersRef.current = expandedFolders;
+  }, [expandedFolders]);
+
+  useEffect(() => {
+    activeWorkspaceIdRef.current = workspaceId;
+  }, [workspaceId]);
+
+  useEffect(() => {
     loadedLazyDirectoriesRef.current = loadedLazyDirectories;
   }, [loadedLazyDirectories]);
 
@@ -1195,15 +1554,7 @@ export function FileTreePanel({
     setIsDragSelecting(false);
     dragAnchorLineRef.current = null;
     dragMovedRef.current = false;
-    setLazyFiles(new Set());
-    setLazyDirectories(new Set());
-    setLazyGitignoredFiles(new Set());
-    setLazyGitignoredDirectories(new Set());
-    setLazyLoadableDirectories(new Set());
-    setLazyDirectoryMetadata(new Map());
-    setLoadedLazyDirectories(new Set());
-    setLoadingLazyDirectories(new Set());
-    setLazyDirectoryLoadErrors(new Map());
+    resetLazyTreeState();
     setNewFileParent(null);
     setNewFileName("");
     setNewFolderParent(null);
@@ -1213,9 +1564,8 @@ export function FileTreePanel({
     setSelectedNodeType(null);
     setSelectedNodePaths(new Set());
     selectionAnchorPathRef.current = null;
-    loadedLazyDirectoriesRef.current = new Set();
-    loadingLazyDirectoriesRef.current = new Set();
-  }, [workspaceId]);
+    previousRootSnapshotRef.current = null;
+  }, [resetLazyTreeState, workspaceId]);
 
   const closePreview = useCallback(() => {
     setPreviewPath(null);
@@ -1249,93 +1599,88 @@ export function FileTreePanel({
         next.delete(path);
         return next;
       });
+      const requestWorkspaceId = workspaceId;
+      const requestEpoch = lazyLoadEpochRef.current;
       try {
-        const response = await getWorkspaceDirectoryChildren(workspaceId, path);
-        const nextFiles = Array.isArray(response.files) ? response.files : [];
-        const nextDirectories = Array.isArray(response.directories) ? response.directories : [];
-        const nextGitignoredFiles = Array.isArray(response.gitignored_files)
-          ? response.gitignored_files
-          : [];
-        const nextGitignoredDirectories = Array.isArray(response.gitignored_directories)
-          ? response.gitignored_directories
-          : [];
-        const nextDirectoryMetadata = Array.isArray(response.directory_entries)
-          ? response.directory_entries.filter((entry): entry is WorkspaceDirectoryEntry =>
-              Boolean(entry && typeof entry.path === "string" && typeof entry.child_state === "string"),
-            )
-          : [];
-
-        setLazyFiles((prev) => {
-          const next = new Set(prev);
-          nextFiles.forEach((entry) => next.add(entry));
-          return next;
-        });
-        setLazyDirectories((prev) => {
-          const next = new Set(prev);
-          nextDirectories.forEach((entry) => next.add(entry));
-          return next;
-        });
-        setLazyLoadableDirectories((prev) => {
-          const next = new Set(prev);
-          nextDirectories.forEach((entry) => next.add(entry));
-          nextDirectoryMetadata.forEach((entry) => {
-            if (entry.child_state === "unknown" || entry.child_state === "partial") {
-              next.add(entry.path);
-            }
-            if (entry.child_state === "empty" || entry.child_state === "loaded") {
-              next.delete(entry.path);
-            }
-          });
-          return next;
-        });
-        setLazyDirectoryMetadata((prev) => {
-          const next = new Map(prev);
-          if (nextDirectoryMetadata.length === 0) {
-            const childState = nextFiles.length === 0 && nextDirectories.length === 0
-              ? "empty"
-              : "loaded";
-            next.set(path, { path, child_state: childState });
-          } else {
-            nextDirectoryMetadata.forEach((entry) => next.set(entry.path, entry));
-          }
-          return next;
-        });
-        setLazyGitignoredFiles((prev) => {
-          const next = new Set(prev);
-          nextGitignoredFiles.forEach((entry) => next.add(entry));
-          return next;
-        });
-        setLazyGitignoredDirectories((prev) => {
-          const next = new Set(prev);
-          nextGitignoredDirectories.forEach((entry) => next.add(entry));
-          return next;
-        });
-        loadedLazyDirectoriesRef.current = new Set(loadedLazyDirectoriesRef.current).add(path);
-        setLoadedLazyDirectories((prev) => {
-          const next = new Set(prev);
-          next.add(path);
-          return next;
-        });
+        const response = await getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, path);
+        if (
+          activeWorkspaceIdRef.current !== requestWorkspaceId ||
+          lazyLoadEpochRef.current !== requestEpoch
+        ) {
+          return;
+        }
+        applyLazyDirectoryResponse(path, response);
+        finalizeLazyDirectoryLoad(path);
+        const directChildDirectories = (Array.isArray(response.directories) ? response.directories : [])
+          .filter((childPath) => childPath.startsWith(`${path}/`))
+          .filter((childPath) => childPath.slice(path.length + 1).length > 0)
+          .filter((childPath) => !childPath.slice(path.length + 1).includes("/"));
+        directChildDirectories.forEach((childPath) => queuePrefetchDirectoryLoad(childPath));
+        void flushPrefetchDirectoryLoadQueue();
+        queueIgnoredDirectoryLoad(path);
+        void flushIgnoredDirectoryLoadQueue();
       } catch (error) {
+        if (
+          activeWorkspaceIdRef.current !== requestWorkspaceId ||
+          lazyLoadEpochRef.current !== requestEpoch
+        ) {
+          return;
+        }
         const message = error instanceof Error ? error.message : String(error);
         setLazyDirectoryLoadErrors((prev) => {
           const next = new Map(prev);
           next.set(path, message);
           return next;
         });
-      } finally {
-        const nextLoadingDirectories = new Set(loadingLazyDirectoriesRef.current);
-        nextLoadingDirectories.delete(path);
-        loadingLazyDirectoriesRef.current = nextLoadingDirectories;
-        setLoadingLazyDirectories((prev) => {
-          const next = new Set(prev);
-          next.delete(path);
-          return next;
-        });
+        clearLazyDirectoryLoading(path);
       }
     },
-    [workspaceId],
+    [
+      applyLazyDirectoryResponse,
+      clearLazyDirectoryLoading,
+      finalizeLazyDirectoryLoad,
+      flushIgnoredDirectoryLoadQueue,
+      queueIgnoredDirectoryLoad,
+      workspaceId,
+    ],
   );
+
+  useEffect(() => {
+    const nextRootSnapshot = {
+      workspaceId,
+      files,
+      directories: directoryEntries,
+      directoryMetadata,
+      ignoredFiles: ignoredFileEntries,
+      ignoredDirectories: ignoredDirectoryEntries,
+    };
+    const shouldResetLazyTree = didRootSnapshotChange(previousRootSnapshotRef.current, nextRootSnapshot);
+    previousRootSnapshotRef.current = nextRootSnapshot;
+    if (!shouldResetLazyTree) {
+      return;
+    }
+    const previouslyLoadedLazyFolders = new Set<string>([
+      ...loadedLazyDirectoriesRef.current,
+      ...loadingLazyDirectoriesRef.current,
+    ]);
+    const expandedLazyFolders = Array.from(previouslyLoadedLazyFolders).filter(
+      (path) => path && expandedFolders.has(path),
+    );
+    resetLazyTreeState();
+    expandedLazyFolders.forEach((path) => {
+      void loadLazyDirectoryChildren(path);
+    });
+  }, [
+    directoryEntries,
+    directoryMetadata,
+    expandedFolders,
+    files,
+    ignoredDirectoryEntries,
+    ignoredFileEntries,
+    loadLazyDirectoryChildren,
+    resetLazyTreeState,
+    workspaceId,
+  ]);
 
   useEffect(() => {
     if (!previewPath) {

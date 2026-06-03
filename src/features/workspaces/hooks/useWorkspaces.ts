@@ -29,6 +29,7 @@ import {
   saveSidebarSnapshotWorkspaces,
 } from "../../threads/utils/sidebarSnapshot";
 import { isDefaultWorkspacePath } from "../utils/defaultWorkspace";
+import type { WorkspaceSidebarOrganizationAction } from "../types/workspaceOrganization";
 import { isWindowsPlatform } from "../../../utils/platform";
 
 const GROUP_ID_RANDOM_MODULUS = 1_000_000;
@@ -47,6 +48,11 @@ type WorkspaceGroupSection = {
   id: string | null;
   name: string;
   workspaces: WorkspaceInfo[];
+};
+
+type WorkspaceSettingsPatch = {
+  workspaceId: string;
+  patch: Partial<WorkspaceSettings>;
 };
 
 function normalizeGroupName(name: string) {
@@ -72,6 +78,20 @@ function isDuplicateGroupName(
       group.id !== excludeId &&
       normalizeGroupName(group.name).toLowerCase() === normalized,
   );
+}
+
+function compareWorkspaceOrder(a: WorkspaceInfo, b: WorkspaceInfo) {
+  const aIsDefault = isDefaultWorkspacePath(a.path);
+  const bIsDefault = isDefaultWorkspacePath(b.path);
+  if (aIsDefault !== bIsDefault) {
+    return aIsDefault ? -1 : 1;
+  }
+  const orderDiff =
+    getSortOrderValue(a.settings.sortOrder) - getSortOrderValue(b.settings.sortOrder);
+  if (orderDiff !== 0) {
+    return orderDiff;
+  }
+  return a.name.localeCompare(b.name);
 }
 
 function createGroupId() {
@@ -218,19 +238,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     });
 
     const sortWorkspaces = (list: WorkspaceInfo[]) =>
-      list.slice().sort((a, b) => {
-        const aIsDefault = isDefaultWorkspacePath(a.path);
-        const bIsDefault = isDefaultWorkspacePath(b.path);
-        if (aIsDefault !== bIsDefault) {
-          return aIsDefault ? -1 : 1;
-        }
-        const orderDiff =
-          getSortOrderValue(a.settings.sortOrder) - getSortOrderValue(b.settings.sortOrder);
-        if (orderDiff !== 0) {
-          return orderDiff;
-        }
-        return a.name.localeCompare(b.name);
-      });
+      list.slice().sort(compareWorkspaceOrder);
 
     const sections: WorkspaceGroupSection[] = workspaceGroups.map((group) => ({
       id: group.id,
@@ -717,6 +725,145 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     [updateWorkspaceSettings, workspaceGroupById, workspaces],
   );
 
+  const applyWorkspaceSettingsPatches = useCallback(
+    async (patches: WorkspaceSettingsPatch[]) => {
+      if (patches.length === 0) {
+        return true;
+      }
+      await Promise.all(
+        patches.map((entry) => updateWorkspaceSettings(entry.workspaceId, entry.patch)),
+      );
+      return true;
+    },
+    [updateWorkspaceSettings],
+  );
+
+  const applyWorkspaceSidebarOrganization = useCallback(
+    async (action: WorkspaceSidebarOrganizationAction) => {
+      const rootWorkspaces = workspaces.filter(
+        (entry) => (entry.kind ?? "main") !== "worktree" && !entry.parentId,
+      );
+      const rootWorkspaceById = new Map(rootWorkspaces.map((entry) => [entry.id, entry]));
+      const source = rootWorkspaceById.get(action.sourceWorkspaceId);
+      if (!source || isDefaultWorkspacePath(source.path)) {
+        return null;
+      }
+
+      if (action.kind === "move-to-ungrouped") {
+        const nextUngroupedWorkspaces = rootWorkspaces
+          .filter(
+            (entry) =>
+              entry.id !== source.id &&
+              (entry.settings.groupId ?? null) === null,
+          )
+          .sort(compareWorkspaceOrder);
+        nextUngroupedWorkspaces.push(source);
+        return applyWorkspaceSettingsPatches(
+          nextUngroupedWorkspaces.map((workspace, index) => ({
+            workspaceId: workspace.id,
+            patch: { groupId: null, sortOrder: index },
+          })),
+        );
+      }
+
+      if (action.kind === "move-to-group") {
+        if (!workspaceGroupById.has(action.targetGroupId)) {
+          return null;
+        }
+        const nextGroupWorkspaces = rootWorkspaces
+          .filter(
+            (entry) =>
+              entry.id !== source.id &&
+              (entry.settings.groupId ?? null) === action.targetGroupId,
+          )
+          .sort(compareWorkspaceOrder);
+        nextGroupWorkspaces.push(source);
+        return applyWorkspaceSettingsPatches(
+          nextGroupWorkspaces.map((workspace, index) => ({
+            workspaceId: workspace.id,
+            patch: { groupId: action.targetGroupId, sortOrder: index },
+          })),
+        );
+      }
+
+      const target = rootWorkspaceById.get(action.targetWorkspaceId);
+      if (!target || source.id === target.id || isDefaultWorkspacePath(target.path)) {
+        return null;
+      }
+
+      if (action.kind === "create-group") {
+        if (!appSettings || !onUpdateAppSettings) {
+          return null;
+        }
+        const trimmed = normalizeGroupName(action.groupName);
+        if (!trimmed) {
+          throw new Error("Group name is required.");
+        }
+        if (isReservedGroupName(trimmed)) {
+          throw new Error(`"${RESERVED_GROUP_NAME}" is reserved.`);
+        }
+        const currentGroups = appSettings.workspaceGroups ?? [];
+        if (isDuplicateGroupName(trimmed, currentGroups)) {
+          throw new Error("Group name already exists.");
+        }
+        const nextSortOrder =
+          currentGroups.reduce((max, group) => {
+            if (typeof group.sortOrder === "number") {
+              return Math.max(max, group.sortOrder);
+            }
+            return max;
+          }, -1) + 1;
+        const nextGroup: WorkspaceGroup = {
+          id: createGroupId(),
+          name: trimmed,
+          sortOrder: nextSortOrder,
+          copiesFolder: null,
+        };
+        await updateWorkspaceGroups([...currentGroups, nextGroup]);
+        try {
+          await applyWorkspaceSettingsPatches([
+            { workspaceId: target.id, patch: { groupId: nextGroup.id, sortOrder: 0 } },
+            { workspaceId: source.id, patch: { groupId: nextGroup.id, sortOrder: 1 } },
+          ]);
+        } catch (error) {
+          await updateWorkspaceGroups(currentGroups);
+          throw error;
+        }
+        return true;
+      }
+
+      const targetGroupId = target.settings.groupId ?? null;
+      const ordered = rootWorkspaces
+        .filter(
+          (entry) =>
+            entry.id !== source.id &&
+            (entry.settings.groupId ?? null) === targetGroupId,
+        )
+        .sort(compareWorkspaceOrder);
+      const targetIndex = ordered.findIndex((entry) => entry.id === target.id);
+      if (targetIndex === -1) {
+        return null;
+      }
+      const insertIndex = action.position === "before" ? targetIndex : targetIndex + 1;
+      const nextOrdered = ordered.slice();
+      nextOrdered.splice(insertIndex, 0, source);
+      return applyWorkspaceSettingsPatches(
+        nextOrdered.map((workspace, index) => ({
+          workspaceId: workspace.id,
+          patch: { groupId: targetGroupId, sortOrder: index },
+        })),
+      );
+    },
+    [
+      appSettings,
+      applyWorkspaceSettingsPatches,
+      onUpdateAppSettings,
+      updateWorkspaceGroups,
+      workspaceGroupById,
+      workspaces,
+    ],
+  );
+
   async function removeWorkspace(workspaceId: string) {
     const workspace = workspaces.find((entry) => entry.id === workspaceId);
     const workspaceName = workspace?.name || t("workspace.noWorkspaceSelected");
@@ -939,6 +1086,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}) {
     moveWorkspaceGroup,
     deleteWorkspaceGroup,
     assignWorkspaceGroup,
+    applyWorkspaceSidebarOrganization,
     removeWorkspace,
     removeWorktree,
     renameWorktree,

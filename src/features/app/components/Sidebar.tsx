@@ -7,6 +7,7 @@ import type {
   ThreadSummary,
   WorkspaceInfo,
 } from "../../../types";
+import type { WorkspaceSidebarOrganizationAction } from "../../workspaces/types/workspaceOrganization";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, ReactNode, RefObject } from "react";
 import { useTranslation } from "react-i18next";
@@ -101,6 +102,36 @@ type ThreadFolderMovePickerState = {
   targets: ThreadMoveFolderTarget[];
   currentFolderId: string | null;
 };
+
+type WorkspaceDropIntent =
+  | "before"
+  | "after"
+  | "group"
+  | "move-to-group";
+
+type WorkspaceDropPreview = {
+  targetKind: "workspace" | "group" | "ungrouped";
+  targetId: string;
+  intent: WorkspaceDropIntent;
+};
+
+type PendingWorkspaceGroupPrompt = {
+  sourceWorkspaceId: string;
+  targetWorkspaceId: string;
+  sourceName: string;
+  targetName: string;
+};
+
+type WorkspacePointerDragState = {
+  sourceWorkspaceId: string;
+  sourceName: string;
+  startX: number;
+  startY: number;
+  active: boolean;
+};
+
+const WORKSPACE_DND_DATA_TYPE = "application/x-ccgui-workspace-id";
+const WORKSPACE_POINTER_DRAG_THRESHOLD = 6;
 
 const SESSION_FOLDER_COLLAPSED_STATE_KEY = "workspaceSessionFolders.collapsedByWorkspaceId";
 
@@ -433,6 +464,9 @@ type SidebarProps = {
   onAutoNameThread: (workspaceId: string, threadId: string) => void;
   onDeleteWorkspace: (workspaceId: string) => void;
   onDeleteWorktree: (workspaceId: string) => void;
+  onApplyWorkspaceSidebarOrganization?: (
+    action: WorkspaceSidebarOrganizationAction,
+  ) => Promise<boolean | null> | boolean | null;
   onRenameWorkspaceAlias: (workspace: WorkspaceInfo) => void;
   onLoadOlderThreads: (workspaceId: string) => void;
   onReloadWorkspaceThreads: (workspaceId: string) => void;
@@ -521,6 +555,7 @@ export function Sidebar({
   onAutoNameThread,
   onDeleteWorkspace,
   onDeleteWorktree,
+  onApplyWorkspaceSidebarOrganization,
   onRenameWorkspaceAlias,
   onLoadOlderThreads,
   onReloadWorkspaceThreads,
@@ -594,6 +629,14 @@ export function Sidebar({
   const [folderMovePicker, setFolderMovePicker] =
     useState<ThreadFolderMovePickerState | null>(null);
   const [folderMovePickerQuery, setFolderMovePickerQuery] = useState("");
+  const [draggingWorkspaceId, setDraggingWorkspaceId] = useState<string | null>(null);
+  const workspacePointerDragRef = useRef<WorkspacePointerDragState | null>(null);
+  const workspacePointerDragCompletedRef = useRef(false);
+  const [workspaceDropPreview, setWorkspaceDropPreview] = useState<WorkspaceDropPreview | null>(null);
+  const [pendingWorkspaceGroupPrompt, setPendingWorkspaceGroupPrompt] =
+    useState<PendingWorkspaceGroupPrompt | null>(null);
+  const [workspaceGroupDraft, setWorkspaceGroupDraft] = useState("");
+  const [workspaceGroupDraftError, setWorkspaceGroupDraftError] = useState<string | null>(null);
   const { isExitedSessionsHidden, toggleExitedSessionsHidden } =
     useExitedSessionVisibility();
   const [searchQuery, setSearchQuery] = useState("");
@@ -1204,6 +1247,13 @@ export function Sidebar({
       ),
     [filteredGroupedWorkspacesWithoutDefault],
   );
+  const workspaceGroupNameSet = useMemo(() => {
+    const names = new Set<string>();
+    namedGroupedWorkspaces.forEach((group) => {
+      names.add(group.name.trim().toLowerCase());
+    });
+    return names;
+  }, [namedGroupedWorkspaces]);
 
   const isSearchActive = Boolean(normalizedQuery);
 
@@ -1743,6 +1793,501 @@ export function Sidebar({
     return targetsByWorkspaceId;
   }, [sessionFoldersByWorkspaceId, t]);
 
+  const getWorkspaceDragSourceId = useCallback((event: React.DragEvent<HTMLElement>) => {
+    return (
+      event.dataTransfer.getData(WORKSPACE_DND_DATA_TYPE) ||
+      event.dataTransfer.getData("text/plain")
+    ).trim();
+  }, []);
+
+  const resolveWorkspaceDropIntent = useCallback(
+    (event: React.DragEvent<HTMLElement>): WorkspaceDropIntent => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const height = Math.max(rect.height, 1);
+      const offset = event.clientY - rect.top;
+      const topThreshold = height * 0.25;
+      const bottomThreshold = height * 0.75;
+      if (offset <= topThreshold) {
+        return "before";
+      }
+      if (offset >= bottomThreshold) {
+        return "after";
+      }
+      return "group";
+    },
+    [],
+  );
+
+  const resolveWorkspaceDropIntentFromPoint = useCallback(
+    (target: HTMLElement, clientY: number): WorkspaceDropIntent => {
+      const rect = target.getBoundingClientRect();
+      const height = Math.max(rect.height, 1);
+      const offset = clientY - rect.top;
+      const topThreshold = height * 0.25;
+      const bottomThreshold = height * 0.75;
+      if (offset <= topThreshold) {
+        return "before";
+      }
+      if (offset >= bottomThreshold) {
+        return "after";
+      }
+      return "group";
+    },
+    [],
+  );
+
+  const getWorkspaceCardAtPoint = useCallback((clientX: number, clientY: number) => {
+    const element = document.elementFromPoint(clientX, clientY);
+    if (!(element instanceof HTMLElement)) {
+      return null;
+    }
+    const card = element.closest<HTMLElement>("[data-workspace-id]");
+    if (!card) {
+      return null;
+    }
+    const targetWorkspaceId = card.dataset.workspaceId?.trim() ?? "";
+    if (!targetWorkspaceId) {
+      return null;
+    }
+    return { card, targetWorkspaceId };
+  }, []);
+
+  const applyWorkspaceDropPreview = useCallback(
+    (sourceWorkspaceId: string, targetWorkspaceId: string, intent: WorkspaceDropIntent) => {
+      if (!onApplyWorkspaceSidebarOrganization || sourceWorkspaceId === targetWorkspaceId) {
+        return;
+      }
+      const sourceWorkspace = workspaces.find((entry) => entry.id === sourceWorkspaceId);
+      const targetWorkspace = workspaces.find((entry) => entry.id === targetWorkspaceId);
+      if (
+        !sourceWorkspace ||
+        !targetWorkspace ||
+        isDefaultWorkspacePath(sourceWorkspace.path)
+      ) {
+        return;
+      }
+      if (intent === "group") {
+        const targetGroupId = targetWorkspace.settings.groupId ?? null;
+        if (targetGroupId) {
+          void onApplyWorkspaceSidebarOrganization({
+            kind: "move-to-group",
+            sourceWorkspaceId,
+            targetGroupId,
+          });
+          return;
+        }
+        setPendingWorkspaceGroupPrompt({
+          sourceWorkspaceId,
+          targetWorkspaceId,
+          sourceName: sourceWorkspace.name,
+          targetName: targetWorkspace.name,
+        });
+        setWorkspaceGroupDraft("");
+        setWorkspaceGroupDraftError(null);
+        return;
+      }
+      void onApplyWorkspaceSidebarOrganization({
+        kind: "reorder",
+        sourceWorkspaceId,
+        targetWorkspaceId,
+        position: intent,
+      });
+    },
+    [onApplyWorkspaceSidebarOrganization, workspaces],
+  );
+
+  const handleWorkspacePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLElement>, workspace: WorkspaceInfo) => {
+      if (
+        event.button !== 0 ||
+        !onApplyWorkspaceSidebarOrganization ||
+        isDefaultWorkspacePath(workspace.path)
+      ) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("button, input, textarea, select, [role='menuitem'], [data-workspace-drag-ignore='true']")
+      ) {
+        return;
+      }
+      workspacePointerDragRef.current = {
+        sourceWorkspaceId: workspace.id,
+        sourceName: workspace.name,
+        startX: event.clientX,
+        startY: event.clientY,
+        active: false,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    [onApplyWorkspaceSidebarOrganization],
+  );
+
+  const handleWorkspacePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const dragState = workspacePointerDragRef.current;
+      if (!dragState) {
+        return;
+      }
+      const distance = Math.hypot(
+        event.clientX - dragState.startX,
+        event.clientY - dragState.startY,
+      );
+      if (!dragState.active && distance < WORKSPACE_POINTER_DRAG_THRESHOLD) {
+        return;
+      }
+      dragState.active = true;
+      event.preventDefault();
+      event.stopPropagation();
+      setDraggingWorkspaceId(dragState.sourceWorkspaceId);
+      const target = getWorkspaceCardAtPoint(event.clientX, event.clientY);
+      if (!target || target.targetWorkspaceId === dragState.sourceWorkspaceId) {
+        setWorkspaceDropPreview(null);
+        return;
+      }
+      const intent = resolveWorkspaceDropIntentFromPoint(target.card, event.clientY);
+      setWorkspaceDropPreview({
+        targetKind: "workspace",
+        targetId: target.targetWorkspaceId,
+        intent,
+      });
+    },
+    [getWorkspaceCardAtPoint, resolveWorkspaceDropIntentFromPoint],
+  );
+
+  const finishWorkspacePointerDrag = useCallback(
+    (event: React.PointerEvent<HTMLElement>, shouldApply: boolean) => {
+      const dragState = workspacePointerDragRef.current;
+      workspacePointerDragRef.current = null;
+      setDraggingWorkspaceId(null);
+      const pointTarget = getWorkspaceCardAtPoint(event.clientX, event.clientY);
+      const pointPreview =
+        pointTarget && pointTarget.targetWorkspaceId !== dragState?.sourceWorkspaceId
+          ? {
+              targetId: pointTarget.targetWorkspaceId,
+              intent: resolveWorkspaceDropIntentFromPoint(pointTarget.card, event.clientY),
+            }
+          : null;
+      const statePreview =
+        workspaceDropPreview?.targetKind === "workspace"
+          ? {
+              targetId: workspaceDropPreview.targetId,
+              intent: workspaceDropPreview.intent,
+            }
+          : null;
+      const preview = pointPreview ?? statePreview;
+      setWorkspaceDropPreview(null);
+      if (!dragState?.active) {
+        return;
+      }
+      workspacePointerDragCompletedRef.current = true;
+      window.setTimeout(() => {
+        workspacePointerDragCompletedRef.current = false;
+      }, 0);
+      event.preventDefault();
+      event.stopPropagation();
+      if (
+        shouldApply &&
+        preview &&
+        preview.targetId !== dragState.sourceWorkspaceId
+      ) {
+        applyWorkspaceDropPreview(
+          dragState.sourceWorkspaceId,
+          preview.targetId,
+          preview.intent,
+        );
+      }
+    },
+    [
+      applyWorkspaceDropPreview,
+      getWorkspaceCardAtPoint,
+      resolveWorkspaceDropIntentFromPoint,
+      workspaceDropPreview,
+    ],
+  );
+
+  const shouldSuppressWorkspaceRowClick = useCallback(() => {
+    return workspacePointerDragCompletedRef.current;
+  }, []);
+
+  const handleWorkspaceDragStart = useCallback(
+    (event: React.DragEvent<HTMLElement>, workspace: WorkspaceInfo) => {
+      if (isDefaultWorkspacePath(workspace.path)) {
+        event.preventDefault();
+        return;
+      }
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData(WORKSPACE_DND_DATA_TYPE, workspace.id);
+      event.dataTransfer.setData("text/plain", workspace.id);
+      setDraggingWorkspaceId(workspace.id);
+      setWorkspaceDropPreview(null);
+    },
+    [],
+  );
+
+  const handleWorkspaceDragEnd = useCallback(() => {
+    setDraggingWorkspaceId(null);
+    setWorkspaceDropPreview(null);
+  }, []);
+
+  const handleWorkspaceDragOverCard = useCallback(
+    (event: React.DragEvent<HTMLElement>, targetWorkspace: WorkspaceInfo) => {
+      if (!onApplyWorkspaceSidebarOrganization) {
+        return;
+      }
+      const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
+      if (!sourceWorkspaceId || sourceWorkspaceId === targetWorkspace.id) {
+        return;
+      }
+      const sourceWorkspace = workspaces.find((entry) => entry.id === sourceWorkspaceId);
+      if (!sourceWorkspace || isDefaultWorkspacePath(sourceWorkspace.path)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "move";
+      const intent = resolveWorkspaceDropIntent(event);
+      setWorkspaceDropPreview({
+        targetKind: "workspace",
+        targetId: targetWorkspace.id,
+        intent,
+      });
+    },
+    [
+      draggingWorkspaceId,
+      getWorkspaceDragSourceId,
+      onApplyWorkspaceSidebarOrganization,
+      resolveWorkspaceDropIntent,
+      workspaces,
+    ],
+  );
+
+  const handleWorkspaceDropOnCard = useCallback(
+    (event: React.DragEvent<HTMLElement>, targetWorkspace: WorkspaceInfo) => {
+      if (!onApplyWorkspaceSidebarOrganization) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
+      const previewIntent =
+        workspaceDropPreview?.targetKind === "workspace" &&
+        workspaceDropPreview.targetId === targetWorkspace.id
+          ? workspaceDropPreview.intent
+          : null;
+      setDraggingWorkspaceId(null);
+      setWorkspaceDropPreview(null);
+      if (!sourceWorkspaceId || sourceWorkspaceId === targetWorkspace.id) {
+        return;
+      }
+      const sourceWorkspace = workspaces.find((entry) => entry.id === sourceWorkspaceId);
+      if (!sourceWorkspace) {
+        return;
+      }
+      const intent = previewIntent ?? resolveWorkspaceDropIntent(event);
+      if (intent === "group") {
+        const targetGroupId = targetWorkspace.settings.groupId ?? null;
+        if (targetGroupId) {
+          void onApplyWorkspaceSidebarOrganization({
+            kind: "move-to-group",
+            sourceWorkspaceId,
+            targetGroupId,
+          });
+          return;
+        }
+        setPendingWorkspaceGroupPrompt({
+          sourceWorkspaceId,
+          targetWorkspaceId: targetWorkspace.id,
+          sourceName: sourceWorkspace.name,
+          targetName: targetWorkspace.name,
+        });
+        setWorkspaceGroupDraft("");
+        setWorkspaceGroupDraftError(null);
+        return;
+      }
+      void onApplyWorkspaceSidebarOrganization({
+        kind: "reorder",
+        sourceWorkspaceId,
+        targetWorkspaceId: targetWorkspace.id,
+        position: intent,
+      });
+    },
+    [
+      draggingWorkspaceId,
+      getWorkspaceDragSourceId,
+      onApplyWorkspaceSidebarOrganization,
+      resolveWorkspaceDropIntent,
+      workspaceDropPreview,
+      workspaces,
+    ],
+  );
+
+  const handleWorkspaceDragLeaveCard = useCallback((event: React.DragEvent<HTMLElement>) => {
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+      return;
+    }
+    setWorkspaceDropPreview((current) =>
+      current?.targetKind === "workspace" && current.targetId === event.currentTarget.dataset.workspaceId
+        ? null
+        : current,
+    );
+  }, []);
+
+  const handleWorkspaceGroupDragOver = useCallback(
+    (event: React.DragEvent<HTMLElement>, groupId: string) => {
+      if (!onApplyWorkspaceSidebarOrganization) {
+        return;
+      }
+      const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
+      if (!sourceWorkspaceId) {
+        return;
+      }
+      const sourceWorkspace = workspaces.find((entry) => entry.id === sourceWorkspaceId);
+      if (!sourceWorkspace || isDefaultWorkspacePath(sourceWorkspace.path)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "move";
+      setWorkspaceDropPreview({
+        targetKind: "group",
+        targetId: groupId,
+        intent: "move-to-group",
+      });
+    },
+    [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization, workspaces],
+  );
+
+  const handleWorkspaceGroupDrop = useCallback(
+    (event: React.DragEvent<HTMLElement>, groupId: string) => {
+      if (!onApplyWorkspaceSidebarOrganization) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
+      setDraggingWorkspaceId(null);
+      setWorkspaceDropPreview(null);
+      if (!sourceWorkspaceId) {
+        return;
+      }
+      const sourceWorkspace = workspaces.find((entry) => entry.id === sourceWorkspaceId);
+      if (!sourceWorkspace || isDefaultWorkspacePath(sourceWorkspace.path)) {
+        return;
+      }
+      void onApplyWorkspaceSidebarOrganization({
+        kind: "move-to-group",
+        sourceWorkspaceId,
+        targetGroupId: groupId,
+      });
+    },
+    [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization, workspaces],
+  );
+
+  const handleWorkspaceGroupDragLeave = useCallback((event: React.DragEvent<HTMLElement>) => {
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+      return;
+    }
+    setWorkspaceDropPreview((current) =>
+      current?.targetKind === "group" && current.targetId === event.currentTarget.dataset.groupId
+        ? null
+        : current,
+    );
+  }, []);
+
+  const handleUngroupedDragOver = useCallback((event: React.DragEvent<HTMLElement>) => {
+    if (!onApplyWorkspaceSidebarOrganization) {
+      return;
+    }
+    const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
+    if (!sourceWorkspaceId) {
+      return;
+    }
+    const sourceWorkspace = workspaces.find((entry) => entry.id === sourceWorkspaceId);
+    if (!sourceWorkspace || isDefaultWorkspacePath(sourceWorkspace.path)) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "move";
+    setWorkspaceDropPreview({
+      targetKind: "ungrouped",
+      targetId: "__ungrouped__",
+      intent: "move-to-group",
+    });
+  }, [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization, workspaces]);
+
+  const handleUngroupedDragLeave = useCallback((event: React.DragEvent<HTMLElement>) => {
+    const relatedTarget = event.relatedTarget;
+    if (relatedTarget instanceof Node && event.currentTarget.contains(relatedTarget)) {
+      return;
+    }
+    setWorkspaceDropPreview((current) =>
+      current?.targetKind === "ungrouped" ? null : current,
+    );
+  }, []);
+
+  const handleUngroupedDrop = useCallback((event: React.DragEvent<HTMLElement>) => {
+    if (!onApplyWorkspaceSidebarOrganization) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const sourceWorkspaceId = getWorkspaceDragSourceId(event) || draggingWorkspaceId;
+    setDraggingWorkspaceId(null);
+    setWorkspaceDropPreview(null);
+    if (!sourceWorkspaceId) {
+      return;
+    }
+    void onApplyWorkspaceSidebarOrganization({
+      kind: "move-to-ungrouped",
+      sourceWorkspaceId,
+    });
+  }, [draggingWorkspaceId, getWorkspaceDragSourceId, onApplyWorkspaceSidebarOrganization]);
+
+  const closeWorkspaceGroupPrompt = useCallback(() => {
+    setPendingWorkspaceGroupPrompt(null);
+    setWorkspaceGroupDraft("");
+    setWorkspaceGroupDraftError(null);
+  }, []);
+
+  const handleConfirmWorkspaceGroupPrompt = useCallback(() => {
+    if (!pendingWorkspaceGroupPrompt || !onApplyWorkspaceSidebarOrganization) {
+      return;
+    }
+    const trimmed = workspaceGroupDraft.trim();
+    if (!trimmed) {
+      setWorkspaceGroupDraftError(t("sidebar.workspaceGroupNameRequired"));
+      return;
+    }
+    if (workspaceGroupNameSet.has(trimmed.toLowerCase())) {
+      setWorkspaceGroupDraftError(t("sidebar.workspaceGroupNameDuplicate"));
+      return;
+    }
+    Promise.resolve(onApplyWorkspaceSidebarOrganization({
+      kind: "create-group",
+      sourceWorkspaceId: pendingWorkspaceGroupPrompt.sourceWorkspaceId,
+      targetWorkspaceId: pendingWorkspaceGroupPrompt.targetWorkspaceId,
+      groupName: trimmed,
+    }))
+      .then(() => {
+        closeWorkspaceGroupPrompt();
+      })
+      .catch((error: unknown) => {
+        setWorkspaceGroupDraftError(error instanceof Error ? error.message : String(error));
+      });
+  }, [
+    closeWorkspaceGroupPrompt,
+    onApplyWorkspaceSidebarOrganization,
+    pendingWorkspaceGroupPrompt,
+    t,
+    workspaceGroupDraft,
+    workspaceGroupNameSet,
+  ]);
+
   const renderWorkspaceEntry = useCallback((entry: WorkspaceInfo) => {
     const threads = threadsByWorkspace[entry.id] ?? [];
     const isCollapsed = entry.settings.sidebarCollapsed;
@@ -1862,6 +2407,27 @@ export function Sidebar({
         onSelectWorkspace={onSelectWorkspace}
         onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
         onToggleExitedSessions={toggleExitedSessionsHidden}
+        dragHandleProps={onApplyWorkspaceSidebarOrganization && !isDefaultWorkspacePath(entry.path) ? {
+          draggable: true,
+          onDragStart: (event) => handleWorkspaceDragStart(event, entry),
+          onDragEnd: handleWorkspaceDragEnd,
+        } : undefined}
+        pointerDragProps={onApplyWorkspaceSidebarOrganization && !isDefaultWorkspacePath(entry.path) ? {
+          onPointerDown: (event) => handleWorkspacePointerDown(event, entry),
+          onPointerMove: handleWorkspacePointerMove,
+          onPointerUp: (event) => finishWorkspacePointerDrag(event, true),
+          onPointerCancel: (event) => finishWorkspacePointerDrag(event, false),
+          onLostPointerCapture: (event) => finishWorkspacePointerDrag(event, false),
+        } : undefined}
+        dropState={
+          workspaceDropPreview?.targetKind === "workspace" && workspaceDropPreview.targetId === entry.id
+            ? workspaceDropPreview.intent
+            : null
+        }
+        onWorkspaceDragOver={(event) => handleWorkspaceDragOverCard(event, entry)}
+        onWorkspaceDragLeave={handleWorkspaceDragLeaveCard}
+        onWorkspaceDrop={(event) => handleWorkspaceDropOnCard(event, entry)}
+        shouldSuppressWorkspaceRowClick={shouldSuppressWorkspaceRowClick}
       >
         {!isCollapsed && worktrees.length > 0 && (
           <WorktreeSection
@@ -2001,6 +2567,7 @@ export function Sidebar({
     deleteConfirmWorkspaceId,
     deletingWorktreeIds,
     expandedWorkspaces,
+    finishWorkspacePointerDrag,
     getPinTimestamp,
     getThreadRows,
     getThreadTime,
@@ -2013,6 +2580,13 @@ export function Sidebar({
     handleRenameSessionFolder,
     handleDeleteSessionFolder,
     handleToggleSessionFolderCollapsed,
+    handleWorkspaceDragEnd,
+    handleWorkspaceDragLeaveCard,
+    handleWorkspaceDragOverCard,
+    handleWorkspaceDragStart,
+    handleWorkspaceDropOnCard,
+    handleWorkspacePointerDown,
+    handleWorkspacePointerMove,
     hasDegradedThreadList,
     isThreadAutoNaming,
     isThreadPinned,
@@ -2028,6 +2602,7 @@ export function Sidebar({
     showWorkspaceSessionMenu,
     showWorkspaceMenu,
     showWorktreeMenu,
+    shouldSuppressWorkspaceRowClick,
     systemProxyEnabled,
     systemProxyUrl,
     onToggleWorkspaceCollapse,
@@ -2046,6 +2621,8 @@ export function Sidebar({
     threadStatusById,
     threadsByWorkspace,
     toggleExitedSessionsHidden,
+    workspaceDropPreview,
+    workspaces,
     worktreesByParent,
     _threadListLoadingByWorkspace,
   ]);
@@ -2230,6 +2807,16 @@ export function Sidebar({
             <div className="workspace-list">
           {defaultWorkspaceEntries.map(renderWorkspaceEntry)}
           {ungroupedWorkspaceEntries.map(renderWorkspaceEntry)}
+          {namedGroupedWorkspaces.length > 0 ? (
+            <div
+              className={`workspace-ungrouped-drop-zone${workspaceDropPreview?.targetKind === "ungrouped" ? " is-active" : ""}`}
+              onDragOver={handleUngroupedDragOver}
+              onDragLeave={handleUngroupedDragLeave}
+              onDrop={handleUngroupedDrop}
+            >
+              {t("settings.ungrouped")}
+            </div>
+          ) : null}
           {namedGroupedWorkspaces.map((group) => {
             const toggleId = group.id;
             const isGroupCollapsed = Boolean(
@@ -2244,7 +2831,13 @@ export function Sidebar({
                 name={group.name}
                 showHeader
                 isCollapsed={isGroupCollapsed}
+                isDropTarget={
+                  workspaceDropPreview?.targetKind === "group" && workspaceDropPreview.targetId === group.id
+                }
                 onToggleCollapse={toggleGroupCollapse}
+                onWorkspaceDragOver={handleWorkspaceGroupDragOver}
+                onWorkspaceDragLeave={handleWorkspaceGroupDragLeave}
+                onWorkspaceDrop={handleWorkspaceGroupDrop}
               >
                 {visibleWorkspaces.map(renderWorkspaceEntry)}
               </WorkspaceGroup>
@@ -2379,6 +2972,80 @@ export function Sidebar({
           </div>
         </div>
       </div>
+      {pendingWorkspaceGroupPrompt ? (
+        <div
+          className="sidebar-workspace-menu-backdrop workspace-group-create-backdrop"
+          onClick={closeWorkspaceGroupPrompt}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            closeWorkspaceGroupPrompt();
+          }}
+        >
+          <div
+            className="sidebar-workspace-menu workspace-group-create-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("sidebar.workspaceGroupCreateTitle")}
+            onMouseDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
+            onContextMenu={(event) => event.preventDefault()}
+          >
+            <div className="sidebar-workspace-menu-group">
+              <div className="sidebar-workspace-menu-group-title">
+                {t("sidebar.workspaceGroupCreateTitle")}
+              </div>
+              <div className="workspace-group-create-summary">
+                {t("sidebar.workspaceGroupCreateSummary", {
+                  source: pendingWorkspaceGroupPrompt.sourceName,
+                  target: pendingWorkspaceGroupPrompt.targetName,
+                })}
+              </div>
+              <input
+                className="sidebar-search-input workspace-group-create-input"
+                value={workspaceGroupDraft}
+                onChange={(event) => {
+                  setWorkspaceGroupDraft(event.target.value);
+                  setWorkspaceGroupDraftError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    handleConfirmWorkspaceGroupPrompt();
+                  }
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    closeWorkspaceGroupPrompt();
+                  }
+                }}
+                placeholder={t("settings.newGroupPlaceholder")}
+                aria-label={t("settings.newGroupPlaceholder")}
+                autoFocus
+                data-tauri-drag-region="false"
+              />
+              {workspaceGroupDraftError ? (
+                <div className="workspace-group-create-error">{workspaceGroupDraftError}</div>
+              ) : null}
+              <div className="workspace-group-create-actions">
+                <button
+                  type="button"
+                  className="sidebar-workspace-menu-item"
+                  onClick={closeWorkspaceGroupPrompt}
+                >
+                  <span className="sidebar-workspace-menu-item-label">{t("common.cancel")}</span>
+                </button>
+                <button
+                  type="button"
+                  className="sidebar-workspace-menu-item workspace-group-create-submit"
+                  onClick={handleConfirmWorkspaceGroupPrompt}
+                >
+                  <span className="sidebar-workspace-menu-item-label">{t("common.create")}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {folderMovePicker ? (
         <div
           className="sidebar-workspace-menu-backdrop"

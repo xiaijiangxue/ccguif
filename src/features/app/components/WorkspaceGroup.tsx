@@ -1,10 +1,17 @@
+import type { DragEvent, ReactNode } from "react";
+import { useTranslation } from "react-i18next";
+
 type WorkspaceGroupProps = {
   toggleId: string | null;
   name: string;
   showHeader: boolean;
   isCollapsed: boolean;
+  isDropTarget?: boolean;
   onToggleCollapse: (groupId: string) => void;
-  children: React.ReactNode;
+  onWorkspaceDragOver?: (event: DragEvent<HTMLElement>, groupId: string) => void;
+  onWorkspaceDragLeave?: (event: DragEvent<HTMLElement>) => void;
+  onWorkspaceDrop?: (event: DragEvent<HTMLElement>, groupId: string) => void;
+  children: ReactNode;
 };
 
 export function WorkspaceGroup({
@@ -12,15 +19,32 @@ export function WorkspaceGroup({
   name,
   showHeader,
   isCollapsed,
+  isDropTarget = false,
   onToggleCollapse,
+  onWorkspaceDragOver,
+  onWorkspaceDragLeave,
+  onWorkspaceDrop,
   children,
 }: WorkspaceGroupProps) {
+  const { t } = useTranslation();
   const isToggleable = Boolean(toggleId);
   return (
-    <div className="workspace-group">
+    <div className={`workspace-group${isDropTarget ? " is-drop-target" : ""}`}>
       {showHeader && (
         <div
           className={`workspace-group-header${isToggleable ? " is-toggleable" : ""}`}
+          data-group-id={toggleId ?? undefined}
+          onDragOver={
+            toggleId
+              ? (event) => onWorkspaceDragOver?.(event, toggleId)
+              : undefined
+          }
+          onDragLeave={onWorkspaceDragLeave}
+          onDrop={
+            toggleId
+              ? (event) => onWorkspaceDrop?.(event, toggleId)
+              : undefined
+          }
           onDoubleClick={
             toggleId
               ? (event) => {
@@ -48,6 +72,9 @@ export function WorkspaceGroup({
         >
           <div className="workspace-group-title">
             <div className="workspace-group-label">{name}</div>
+            {isDropTarget ? (
+              <div className="workspace-group-drop-hint">{t("sidebar.workspaceDropMoveToGroup")}</div>
+            ) : null}
           </div>
           {isToggleable && (
             <button

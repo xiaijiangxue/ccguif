@@ -284,8 +284,19 @@
 .workspace-group-title {
   display: inline-flex;
   align-items: center;
-  gap: 0;
+  gap: 6px;
   min-width: 0;
+}
+
+.workspace-group-drop-hint {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--accent-primary, #2563eb) 76%, var(--text-strong));
+}
+
+.workspace-group.is-drop-target .workspace-group-header {
+  background: color-mix(in srgb, var(--accent-primary, #2563eb) 12%, transparent);
+  color: var(--text-strong);
 }
 
 .workspace-group-label {
@@ -376,6 +387,86 @@
   margin-top: -1px;
 }
 
+.workspace-card.is-drop-before::before,
+.workspace-card.is-drop-after::after {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-primary, #2563eb) 80%, var(--text-strong));
+  z-index: 2;
+}
+
+.workspace-card.is-drop-before::before {
+  top: 0;
+}
+
+.workspace-card.is-drop-after::after {
+  bottom: 0;
+}
+
+.workspace-card.is-drop-group .workspace-row,
+.workspace-card.is-drop-move-to-group .workspace-row {
+  background: color-mix(in srgb, var(--accent-primary, #2563eb) 10%, transparent);
+}
+
+.workspace-drop-hint {
+  flex: 0 0 auto;
+  max-width: 86px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--accent-primary, #2563eb) 80%, var(--text-strong));
+}
+
+.workspace-ungrouped-drop-zone {
+  margin: 4px 6px 2px 10px;
+  padding: 6px 10px;
+  border: 1px dashed color-mix(in srgb, var(--border-subtle) 80%, transparent);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease;
+}
+
+.workspace-ungrouped-drop-zone.is-active {
+  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 66%, transparent);
+  background: color-mix(in srgb, var(--accent-primary, #2563eb) 8%, transparent);
+  color: var(--text-strong);
+}
+
+.workspace-drag-handle {
+  width: 14px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  cursor: grab;
+  opacity: 0;
+  border-radius: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.workspace-drag-handle:active {
+  cursor: grabbing;
+}
+
+.workspace-row:hover .workspace-drag-handle,
+.workspace-row:focus-within .workspace-drag-handle,
+.workspace-drag-handle:focus-visible {
+  opacity: 1;
+}
+
+.workspace-drag-handle:hover,
+.workspace-drag-handle:focus-visible {
+  color: var(--text-strong);
+  background: var(--surface-hover-strong);
+}
+
 .workspace-children {
   position: relative;
   display: flex;
@@ -409,6 +500,15 @@
   position: relative;
   isolation: isolate;
   padding: 0;
+  touch-action: none;
+}
+
+.workspace-card.is-draggable .workspace-row {
+  cursor: grab;
+}
+
+.workspace-card.is-draggable .workspace-row:active {
+  cursor: grabbing;
 }
 
 .workspace-row::before {
@@ -733,6 +833,45 @@
   font-weight: 500;
   color: var(--text-muted);
   padding: 3px 8px 6px;
+}
+
+.workspace-group-create-dialog {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.workspace-group-create-summary {
+  padding: 2px 8px 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.workspace-group-create-input {
+  margin: 0 8px;
+  width: calc(100% - 16px);
+}
+
+.workspace-group-create-error {
+  padding: 6px 8px 0;
+  color: var(--danger, #ef4444);
+  font-size: 12px;
+}
+
+.workspace-group-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 10px 8px 0;
+}
+
+.workspace-group-create-actions .sidebar-workspace-menu-item {
+  width: auto;
+}
+
+.workspace-group-create-submit {
+  color: color-mix(in srgb, var(--accent-primary, #2563eb) 78%, var(--text-strong));
 }
 
 .sidebar-workspace-menu-divider,

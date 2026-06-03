@@ -105,6 +105,7 @@ import type {
   CodeAnnotationDraftInput,
   CodeAnnotationSelection,
 } from "../../code-annotations/types";
+import type { WorkspaceSidebarOrganizationAction } from "../../workspaces/types/workspaceOrganization";
 import {
   buildCodeAnnotationDedupeKey,
   createCodeAnnotationSelection,
@@ -373,6 +374,9 @@ type LayoutNodesOptions = {
   }) => void;
   onDeleteWorkspace: (workspaceId: string) => void;
   onDeleteWorktree: (workspaceId: string) => void;
+  onApplyWorkspaceSidebarOrganization?: (
+    action: WorkspaceSidebarOrganizationAction,
+  ) => Promise<boolean | null> | boolean | null;
   onRenameWorkspaceAlias: (workspace: WorkspaceInfo) => void;
   onLoadOlderThreads: (workspaceId: string) => void;
   onReloadWorkspaceThreads: (workspaceId: string) => void;
@@ -1552,6 +1556,7 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
       onOpenClaudeTui={options.onOpenClaudeTui}
       onDeleteWorkspace={options.onDeleteWorkspace}
       onDeleteWorktree={options.onDeleteWorktree}
+      onApplyWorkspaceSidebarOrganization={options.onApplyWorkspaceSidebarOrganization}
       onRenameWorkspaceAlias={options.onRenameWorkspaceAlias}
       onLoadOlderThreads={options.onLoadOlderThreads}
       onReloadWorkspaceThreads={options.onReloadWorkspaceThreads}
