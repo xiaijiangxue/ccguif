@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 1
+- **Total Sessions**: 2
 - **Last Active**: 2026-06-04
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~53 | Active |
+| `journal-1.md` | ~88 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 2 | 2026-06-04 | Chat input height wrapper constraint | `0f211e8e` | `refactor/liquid-precision-ui` |
 | 1 | 2026-06-04 | 合并上游 desktop-cc-gui 更新 | `257bf01c` | `refactor/liquid-precision-ui` |
 <!-- @@@/auto:session-history -->
 

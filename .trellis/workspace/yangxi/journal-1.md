@@ -51,3 +51,38 @@
 ### Next Steps
 
 - None - task complete
+
+
+## Session 2: Chat input height wrapper constraint
+
+**Date**: 2026-06-04
+**Task**: Chat input height wrapper constraint
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Committed the ChatInputBox height constraint adjustment before pushing for GitHub Actions packaging.
+
+### Main Changes
+
+- Updated `ChatInputBox` textarea auto-sizing so it consistently constrains height to the editable wrapper when available.
+- Local compile/run/tests were not executed per default user preference; GitHub Actions packaging is requested next.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0f211e8e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
