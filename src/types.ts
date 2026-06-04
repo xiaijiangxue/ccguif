@@ -1777,6 +1777,25 @@ export type BrowserContextSendAttachment = {
     visible: boolean;
     sensitive: boolean;
   }>;
+  screenshotRefs?: Array<{
+    refId: string;
+    browserSessionId: string;
+    snapshotId: string;
+    capturedAt: number;
+    kind: "thumbnail_reference";
+    storage: "metadata_only" | "ephemeral_ref";
+    modelPayloadAllowed: boolean;
+  }>;
+  ocrTextSupplements?: Array<{
+    refId: string;
+    screenshotRefId: string;
+    text: string;
+    capturedAt: number;
+    charBudget: number;
+    truncated: boolean;
+    redactedKinds: string[];
+    modelPayloadAllowed: boolean;
+  }>;
   elementCounts?: {
     headings: number;
     links: number;
@@ -1786,6 +1805,7 @@ export type BrowserContextSendAttachment = {
     codeCandidates: number;
     readableBlocks?: number;
     visualEvidence?: number;
+    annotations?: number;
   };
   diagnostics?: Array<{
     diagnosticId: string;
@@ -1809,9 +1829,25 @@ export type BrowserContextSendAttachment = {
     candidateId: string;
     filePath: string;
     symbolName?: string | null;
-    reason: "route_match" | "visible_text_match" | "landmark_match" | "manual_hint";
+    reason:
+      | "route_match"
+      | "file_name_match"
+      | "visible_text_match"
+      | "heading_match"
+      | "button_label_match"
+      | "form_label_match"
+      | "aria_label_match"
+      | "test_id_match"
+      | "component_symbol_match"
+      | "manual_hint";
     confidence: "high" | "medium" | "low";
     matchedText?: string | null;
+    sourceEvidence?: string[];
+    explanation?: string;
+    openAction?: {
+      kind: "open_file";
+      filePath: string;
+    } | null;
   }>;
   privacy: {
     redactionApplied: boolean;

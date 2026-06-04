@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-18.md`
-- **Total Sessions**: 666
-- **Last Active**: 2026-06-01
+- **Total Sessions**: 685
+- **Last Active**: 2026-06-03
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-18.md` | ~674 | Active |
+| `journal-18.md` | ~1567 | Active |
 | `journal-17.md` | ~1971 | Archived |
 | `journal-16.md` | ~1985 | Archived |
 | `journal-15.md` | ~1996 | Archived |
@@ -46,6 +46,25 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 685 | 2026-06-03 | 修复打包构建阻断与治理边界 | `63b5ef57` | `feature/v0.5.5` |
+| 684 | 2026-06-03 | 校准 Project Map 视图交互与门禁噪音 | `0ed9db03` | `feature/v0.5.5` |
+| 683 | 2026-06-03 | Project Map 图谱体系与大文件治理批量收口 | `e672301c`, `c1ecd630`, `1e7123c3`, `66929982` | `feature/v0.5.5` |
+| 682 | 2026-06-03 | Browser Agent 浏览器上下文收口 | `e05159c7` | `feature/v0.5.5` |
+| 681 | 2026-06-02 | 回滚 DMG 创建脚本到 v0.5.4 | `862fb673` | `feature/v0.5.5` |
+| 680 | 2026-06-02 | 修复被动读取拉起 Codex 进程 | `20e17a52` | `feature/v0.5.5` |
+| 679 | 2026-06-02 | 记录 Browser Dock 可见性开关提交 | `3f66098a` | `feature/v0.5.5` |
+| 678 | 2026-06-02 | 收敛 stale cleanup runtime ended 事件 | `0dae096c` | `feature/v0.5.5` |
+| 677 | 2026-06-02 | 优化 Browser Dock Phase 3 提案中文可读性 | `d9da91f7` | `feature/v0.5.5` |
+| 676 | 2026-06-02 | 修复 DMG 安装引导布局回退 | `e0ec07c6` | `feature/v0.5.5` |
+| 675 | 2026-06-02 | 归档已验证 OpenSpec 变更 | `e3ac6a9a` | `feature/v0.5.5` |
+| 674 | 2026-06-02 | 记录主 WebView 拖拽转发回归修复 | `f18b38df` | `feature/v0.5.5` |
+| 673 | 2026-06-02 | 修复文件树 ignored 文件夹置灰 | `0841d893` | `feature/v0.5.5` |
+| 672 | 2026-06-02 | OpenSpec 文件树管理范围校准 | `b2688517` | `feature/v0.5.5` |
+| 671 | 2026-06-02 | 修复多 WebView 外部拖拽断链 | `695b64de` | `feature/v0.5.5` |
+| 670 | 2026-06-02 | 文件树删除残留清理收口 | `884f3251` | `feature/v0.5.5` |
+| 669 | 2026-06-02 | 增强文件树文件管理能力 | `8cbb022b` | `feature/v0.5.5` |
+| 668 | 2026-06-01 | Phase2b 前台残留清理收口 | `6e69a6e5` | `feature/v0.5.5` |
+| 667 | 2026-06-01 | 关联 Browser Dock Phase 3 提案文档 | `80f3ada6`, `3ec81734` | `feature/v0.5.5` |
 | 666 | 2026-06-01 | 稳定 Project Map 面板批量测试 | `90bf8321` | `feature/v0.5.4` |
 | 665 | 2026-06-01 | 收窄 Browser Dock 自动打开触发 | `e22c9b1b` | `feature/v0.5.4` |
 | 664 | 2026-06-01 | 修复 CI 品牌与测试噪音门禁 | `08f17169` | `feature/v0.5.4` |

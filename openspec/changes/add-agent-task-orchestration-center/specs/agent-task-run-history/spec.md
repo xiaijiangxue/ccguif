@@ -22,6 +22,13 @@ TaskRun history SHALL preserve optional orchestration lineage fields so executio
 - **THEN** TaskRun history SHALL remain readable
 - **AND** run diagnostics SHALL NOT be deleted as a side effect
 
+#### Scenario: canceled queued dispatch remains traceable
+
+- **WHEN** user cancels a queued orchestration dispatch before runtime start
+- **THEN** TaskRun history SHALL mark that run as canceled
+- **AND** the canceled run SHALL remain readable as historical lineage
+- **AND** retrying the orchestration task SHALL create or link a new run instead of overwriting the canceled run
+
 ### Requirement: Task Runs SHALL Support Non-Kanban Orchestration Sources
 
 TaskRun history SHALL support runs launched from orchestration tasks without pretending every run originated from Kanban.

@@ -39,6 +39,23 @@
 - **THEN** Orchestration Center SHALL narrow the visible work-item queue
 - **AND** filtering SHALL NOT mutate task state
 
+#### Scenario: selected work item remains visible after dispatch
+
+- **WHEN** user confirms dispatch for the selected Project Map work item
+- **AND** the work item's status changes so it no longer matches the active queue filter
+- **THEN** Orchestration Center SHALL keep that work item selected in the detail pane
+- **AND** the UI SHALL show a status or preservation notice instead of silently selecting a different queue item
+
+#### Scenario: queue status follows linked TaskRun lifecycle
+
+- **WHEN** an orchestration task has linked TaskRun records
+- **THEN** Orchestration Center SHALL derive user-facing queue status from the latest linked TaskRun when available
+- **AND** queued or planning runs SHALL appear as queued
+- **AND** running, waiting-input, or blocked runs SHALL appear as running
+- **AND** failed runs SHALL appear as failed
+- **AND** completed runs SHALL appear as review
+- **AND** canceled runs SHALL return the task to todo or equivalent planned state
+
 ### Requirement: Orchestration Task SHALL Preserve Source Evidence And Execution Scope
 
 系统 SHALL persist orchestration tasks as work-item projections that keep provider refs, evidence refs, scope, acceptance, and linked execution ids separate from source artifacts.
@@ -101,6 +118,20 @@
 - **THEN** the orchestration task SHALL enter `review_needed` or equivalent review state
 - **AND** the task SHALL remain uncompleted until user accepts the result
 
+#### Scenario: review gate requires completed linked run
+
+- **WHEN** an orchestration task has review-needed intent
+- **AND** the task has no completed linked TaskRun
+- **THEN** Orchestration Center SHALL NOT show accept-result, request-changes, or create-follow-up review actions
+- **AND** the UI SHALL explain that execution evidence is missing
+
+#### Scenario: orphan review intent is corrected
+
+- **WHEN** lifecycle projection sees a non-archived task marked review-needed
+- **AND** no linked TaskRun can be found for that task
+- **THEN** projection SHALL correct the task to planned or equivalent todo state
+- **AND** projection SHALL reset review state to not-started
+
 #### Scenario: failed run keeps task diagnosable
 
 - **WHEN** a linked TaskRun fails or blocks
@@ -129,6 +160,20 @@
 - **THEN** the action SHALL route through existing TaskRun/thread/runtime control paths
 - **AND** Orchestration Center SHALL update from returned run state rather than locally faking success
 
+#### Scenario: queued dispatch can be canceled before runtime start
+
+- **WHEN** the latest linked TaskRun is queued or planning
+- **THEN** Orchestration Center SHALL expose a cancel-dispatch action
+- **AND** cancellation SHALL mark the TaskRun canceled
+- **AND** cancellation SHALL keep the orchestration task available for retry
+
+#### Scenario: running dispatch opens linked session when available
+
+- **WHEN** the latest linked TaskRun is running or waiting for input
+- **AND** the TaskRun has a linked thread id
+- **THEN** Orchestration Center SHALL expose an open-session action for that linked thread
+- **AND** if no linked thread id exists, the UI SHALL show a clear no-linked-session state
+
 #### Scenario: archive hides task without deleting source artifacts
 
 - **WHEN** user archives an orchestration task
@@ -150,3 +195,43 @@
 - **WHEN** workspace contains `.trellis/tasks/**`
 - **THEN** Orchestration Center MAY expose Trellis candidates through an optional workflow provider
 - **AND** absence of `.trellis/**` SHALL NOT reduce core functionality
+
+### Requirement: Project Map Work Queue SHALL Reflect Current Runtime Boundary
+
+系统 SHALL present the currently implemented orchestration surface as a Project Map Work Queue. Manual task creation and SpecHub runtime candidates are supported as bounded inputs; Trellis and repository-signal runtime candidates remain deferred until runtime entries are supplied.
+
+#### Scenario: runtime surface is Project Map Work Queue
+
+- **WHEN** user opens the current orchestration surface from Project Map
+- **THEN** the UI SHALL present it as a Project Map work queue or equivalent project-map-scoped queue
+- **AND** documentation SHALL NOT claim a fully independent generic orchestration center is complete unless runtime routes and provider inputs support that claim
+
+#### Scenario: manual task UI creates local-only work item
+
+- **WHEN** user creates a manual work item from the Work Queue
+- **THEN** the system SHALL persist a local manual OrchestrationTask draft
+- **AND** the task SHALL NOT invent Project Map, OpenSpec, Trellis, spec-kit, or repository evidence refs
+- **AND** execution SHALL still require the explicit dispatch gate
+
+#### Scenario: SpecHub runtime provider is wired while Trellis and repository signals are deferred
+
+- **WHEN** the layout can build a SpecHub workspace snapshot for the active workspace
+- **THEN** the Work Queue SHALL include the SpecHub provider snapshot alongside core Project Map and TaskRun snapshots
+- **AND** Trellis and repository-signal runtime candidates SHALL remain deferred until runtime entries are supplied
+
+### Requirement: Provider Candidate Dispatch SHALL Persist The Task Projection First
+
+系统 SHALL persist provider-derived candidate tasks before starting execution so review and closure remain traceable.
+
+#### Scenario: dispatching a transient provider candidate
+
+- **WHEN** user dispatches a task that came from provider snapshots and is not yet persisted in the local OrchestrationTask store
+- **THEN** the system SHALL upsert the task projection before creating a TaskRun or sending a thread message
+- **AND** the linked TaskRun SHALL reference the persisted orchestration task id
+- **AND** review gate, archive, and linked run navigation SHALL remain available after dispatch
+
+#### Scenario: projection persistence fails before dispatch
+
+- **WHEN** the system cannot persist the provider candidate task projection
+- **THEN** dispatch SHALL fail before agent execution starts
+- **AND** the system SHALL NOT create a TaskRun that cannot be traced back to an OrchestrationTask

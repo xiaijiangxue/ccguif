@@ -35,7 +35,7 @@ function inferArtifactTracePath(input: {
 
 function normalizeTraceSourceType(value: unknown): ProjectMapRelatedArtifact["type"] {
   const sourceType = asTrimmedString(value);
-  return ["file", "symbol", "spec", "commit", "test", "conversation"].includes(sourceType)
+  return ["file", "symbol", "spec", "task", "document", "commit", "test", "conversation"].includes(sourceType)
     ? (sourceType as ProjectMapRelatedArtifact["type"])
     : "file";
 }

@@ -22,6 +22,7 @@ type ListThreadsForWorkspace = (
     includeOpenCodeSessions?: boolean;
     deletedThreadIds?: string[];
     startupHydrationMode?: "full-catalog";
+    allowRuntimeReconnect?: boolean;
   },
 ) => Promise<void | { applied?: boolean; stale?: boolean }>;
 
@@ -156,7 +157,8 @@ export function useWorkspaceThreadListHydration({
             listThreadsForWorkspace(workspace, {
               ...options,
               startupHydrationMode: "full-catalog",
-            }),
+            allowRuntimeReconnect: false,
+}),
           ),
         );
       } finally {

@@ -1179,6 +1179,7 @@ const zhPart1 = {
         topToolRuntimeConsole: "Runtime console 快捷入口",
         topToolTerminal: "终端快捷入口",
         topToolFocus: "聚焦模式快捷入口",
+        topToolBrowserDock: "Browser Dock 快捷入口",
         topToolRightPanel: "右侧面板开关",
         topToolClientDocumentation: "客户端说明文档入口",
         rightToolbarActivity: "活动入口",
@@ -1203,6 +1204,8 @@ const zhPart1 = {
           "隐藏顶部 runtime console 入口；runtime 行为不变。",
         topToolTerminal: "隐藏顶部终端入口；终端快捷键仍可使用。",
         topToolFocus: "隐藏聚焦模式入口，不改变当前聚焦状态。",
+        topToolBrowserDock:
+          "隐藏顶部 Browser Dock 入口；不关闭已有浏览器会话。",
         topToolRightPanel: "隐藏顶部右侧面板展开/收起按钮。",
         topToolClientDocumentation:
           "隐藏客户端说明文档入口；说明窗口能力不被移除。",
@@ -2834,8 +2837,9 @@ const zhPart1 = {
       panelTitle: "Browser Dock",
       panelKicker: "先在这里打开网页，需要时再把网页上下文交给 AI。",
       noWorkspace: "请先选择一个 workspace，再打开 Browser Dock。",
-      noPage: "打开一个允许的 http/https 页面后，会在这里渲染。",
-      rendering: "正在 Browser Dock 中渲染页面...",
+      noPage: "打开一个允许的 http/https 页面后，会启动 Browser Agent 窗口。",
+      rendering: "正在 Browser Agent 窗口中渲染页面...",
+      windowOpened: "网页已在独立 Browser Agent 窗口中打开。",
       closePanel: "关闭 Browser Dock",
       close: "关闭 Browser Agent 会话",
       info: "查看 Browser Agent 说明",

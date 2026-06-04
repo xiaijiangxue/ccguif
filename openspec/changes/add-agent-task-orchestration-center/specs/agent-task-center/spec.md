@@ -26,6 +26,12 @@ Task Center SHALL project terminal run outcomes to linked orchestration tasks wi
 - **THEN** the linked orchestration task SHALL become review-needed
 - **AND** Task Center SHALL NOT mark the orchestration task as accepted
 
+#### Scenario: review projection requires an actual linked run
+
+- **WHEN** an orchestration task has no matching linked TaskRun
+- **THEN** Task Center lifecycle projection SHALL NOT create a review-needed state from task intent alone
+- **AND** stale review-needed state without a linked run SHALL be corrected to a planned or todo-equivalent state
+
 #### Scenario: failed linked run exposes recovery route
 
 - **WHEN** a linked TaskRun reaches failed or blocked status

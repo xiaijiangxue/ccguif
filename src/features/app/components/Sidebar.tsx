@@ -108,12 +108,19 @@ type WorkspaceDropIntent =
   | "after"
   | "group"
   | "move-to-group";
+type WorkspaceReorderPosition = Extract<WorkspaceDropIntent, "before" | "after">;
 
 type WorkspaceDropPreview = {
   targetKind: "workspace" | "group" | "ungrouped";
   targetId: string;
   intent: WorkspaceDropIntent;
 };
+
+function isWorkspaceReorderPosition(
+  intent: WorkspaceDropIntent,
+): intent is WorkspaceReorderPosition {
+  return intent === "before" || intent === "after";
+}
 
 type PendingWorkspaceGroupPrompt = {
   sourceWorkspaceId: string;
@@ -1905,12 +1912,14 @@ export function Sidebar({
         setWorkspaceGroupDraftError(null);
         return;
       }
-      void onApplyWorkspaceSidebarOrganization({
-        kind: "reorder",
-        sourceWorkspaceId,
-        targetWorkspaceId,
-        position: intent,
-      });
+      if (isWorkspaceReorderPosition(intent)) {
+        void onApplyWorkspaceSidebarOrganization({
+          kind: "reorder",
+          sourceWorkspaceId,
+          targetWorkspaceId,
+          position: intent,
+        });
+      }
     },
     [onApplyWorkspaceSidebarOrganization, workspaces],
   );
@@ -2107,12 +2116,14 @@ export function Sidebar({
         setWorkspaceGroupDraftError(null);
         return;
       }
-      void onApplyWorkspaceSidebarOrganization({
-        kind: "reorder",
-        sourceWorkspaceId,
-        targetWorkspaceId: targetWorkspace.id,
-        position: intent,
-      });
+      if (isWorkspaceReorderPosition(intent)) {
+        void onApplyWorkspaceSidebarOrganization({
+          kind: "reorder",
+          sourceWorkspaceId,
+          targetWorkspaceId: targetWorkspace.id,
+          position: intent,
+        });
+      }
     },
     [
       draggingWorkspaceId,

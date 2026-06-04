@@ -145,3 +145,85 @@
 - Specs:
   - 新增 `agent-task-orchestration-center`。
   - 修改 `agent-task-center`、`agent-task-run-history`、`project-xray-panel`、`spec-hub-workbench-ui`、`openspec-trellis-status-panel-bridge`、`workspace-session-catalog-projection`。
+
+## 2026-06-03 Manual QA Corrections
+
+Manual QA of the Project Map work queue found three product-contract gaps:
+
+- Dispatch feedback was not anchored to the current work item. After confirmation, the selected item could leave the active filter and the detail pane silently switched to another task.
+- Queue status was too coarse. User-facing state must reflect the real linked TaskRun lifecycle, not only orchestration task intent.
+- Review Gate could appear without execution evidence. A task with `0 run / 0 session` must not be reviewable.
+
+Additional acceptance constraints:
+
+- Dispatch confirmation MUST preserve the currently selected Project Map work item in the detail pane, even if its status changes and it leaves the current filter.
+- Queue status MUST be derived from the latest linked TaskRun when available:
+  - `queued` / `planning` -> `queued`
+  - `running` / `waiting_input` / `blocked` -> `running`
+  - `failed` -> `failed`
+  - `completed` -> `review`
+  - `canceled` -> `todo`
+- Queued dispatches MAY be canceled before runtime start; cancellation MUST mark the TaskRun canceled and keep the orchestration task available for retry.
+- Running dispatches MUST expose a linked session/open-session action when a linked thread id exists.
+- Review Gate MUST require at least one completed linked TaskRun. Orphan review intent without linked execution evidence MUST be shown as a diagnostic and corrected back to `planned` / `not_started` by lifecycle projection, except archived tasks.
+
+## Code-First Calibration - 2026-06-03
+
+本节按当前代码事实校准提案边界，避免 OpenSpec artifacts 继续描述尚未接入的能力。
+
+### Current Runtime Surface
+
+当前实际用户可见 surface 是 `Project Map Work Queue`，由 `OrchestrationCenterView` 渲染并挂在 Project Map 面板切换路径下。它不是一个已经完全独立、provider 全量接入的通用 `Agent Task Orchestration Center`。
+
+当前 runtime 主链路是：
+
+```text
+Project Map node candidates
+  -> local OrchestrationTask projection
+  -> explicit dispatch gate
+  -> TaskRun / thread message path
+  -> linked run lifecycle projection
+  -> review gate
+  -> local archive
+```
+
+### Current Code Facts
+
+- `src/features/agent-orchestration/**` 已存在 domain types、local store、Project Map provider、TaskRun provider、dispatch、review、navigation events 与 UI。
+- `src/features/layout/hooks/useLayoutNodes.tsx` 当前把 core Project Map/TaskRun snapshots 接入 runtime UI；2026-06-03 implementation pass 已补上 SpecHub snapshot wiring，并允许有 workspace id 但没有 Project Map dataset 的 plain workspace 打开 Work Queue。
+- `createManualOrchestrationTaskDraft` 已实现为 pure provider utility；2026-06-03 implementation pass 已补上用户可见 manual task creation control，创建结果只写 local OrchestrationTask store，不伪造 evidence refs。
+- `readSpecHubOrchestrationCandidates`、`readTrellisOrchestrationCandidates`、`readRepositorySignalOrchestrationCandidates` 已实现并有 focused tests；runtime UI 当前只接入 SpecHub optional provider，Trellis 和 repository-signal runtime wiring 仍 deferred。
+- Project Map provider 当前会从 dataset 所有 nodes 派生 candidates；这更像 `Project Map Work Queue` 的全图候选投影，而不是经过用户挑选后的任务列表。
+- Dispatch path 已通过 app shell 接入真实 thread/message flow，会创建 TaskRun、发送 orchestration prompt，并 patch TaskRun / OrchestrationTask 状态。
+- 2026-06-03 implementation pass 已收口 provider candidate dispatch 持久化风险：transient provider candidate 会先 upsert 到 local `OrchestrationTask` store，再创建 TaskRun / 发送 thread message。
+
+### Scope Correction
+
+本 change 的当前真实范围应收敛为：
+
+- Project Map evidence / candidate 到 `OrchestrationTask` 的 local-first projection。
+- 用户显式 dispatch gate 到现有 TaskRun/thread 执行路径。
+- TaskRun lifecycle 到 orchestration status/review state 的投影。
+- Review gate：completed run 只进入 `review_needed`，必须人工 accept 才能完成 task。
+- Local archive：隐藏 task projection，不删除 Project Map、TaskRun、session 或 provider source artifacts。
+
+以下能力应标记为 deferred 或后续 change，而不是当前已完成能力：
+
+- 用户可见的 manual task 创建 UI。
+- SpecHub / Trellis / repository signal optional providers 的 runtime UI 接入。
+- provider 写回 OpenSpec/Trellis/spec-kit/agent-rule artifacts。
+- autonomous scheduler 或多 agent 自动派发。
+
+### Relationship To Understand-Anything Research
+
+Understand-Anything 的 graph primitives 已由 Project Map 系列 completed changes 承载，包括 relation graph、guided tour、path finder、impact overlay、Evidence Files、staleness/repair 和 focused tests。
+
+本 change 不再继续承载 Project Map graph capability expansion；它只负责把已存在的 Project Map evidence-backed understanding 接到 work queue、TaskRun 和 review gate。
+
+## Implementation Addendum - 2026-06-03
+
+The calibrated 8.7-8.9 pass updates the current runtime boundary:
+
+- Provider candidates are persisted before dispatch so TaskRun lineage, review gate, and archive remain traceable.
+- Manual task creation is now available in the Project Map Work Queue as a local-only task source with no invented evidence.
+- SpecHub provider candidates are wired into runtime snapshots. Trellis and repository-signal candidates remain deferred because the current layout layer does not yet provide their provider input entries.
