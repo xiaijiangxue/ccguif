@@ -320,6 +320,21 @@ const WORKSPACE_SCAN_ENTRY_BUDGET: usize = 30_000;
 const WORKSPACE_SCAN_TIME_BUDGET: Duration = Duration::from_millis(1_200);
 const WORKSPACE_DIRECTORY_SCAN_BUDGET_MULTIPLIER: usize = 8;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DirectoryChildScanScope {
+    All,
+    VisibleOnly,
+    IgnoredOnly,
+}
+
+fn should_include_directory_child(is_ignored: bool, scope: DirectoryChildScanScope) -> bool {
+    match scope {
+        DirectoryChildScanScope::All => true,
+        DirectoryChildScanScope::VisibleOnly => !is_ignored,
+        DirectoryChildScanScope::IgnoredOnly => is_ignored,
+    }
+}
+
 fn workspace_scan_budget_reached(started_at: Instant, scanned_entries: usize) -> bool {
     scanned_entries >= WORKSPACE_SCAN_ENTRY_BUDGET
         || started_at.elapsed() >= WORKSPACE_SCAN_TIME_BUDGET
@@ -726,10 +741,11 @@ pub(crate) fn list_workspace_files_inner(
     )
 }
 
-pub(crate) fn list_workspace_directory_children_inner(
+fn list_workspace_directory_children_scoped_inner_with_scope(
     root: &PathBuf,
     directory_path: &str,
     max_entries: usize,
+    scope: DirectoryChildScanScope,
 ) -> Result<WorkspaceFilesResponse, String> {
     let normalized_path = normalize_workspace_relative_directory_path(directory_path)?;
     let canonical_root = root
@@ -808,13 +824,16 @@ pub(crate) fn list_workspace_directory_children_inner(
         } else {
             false
         };
+        if !should_include_directory_child(is_ignored, scope) {
+            continue;
+        }
 
         if file_type.is_dir() {
             if should_always_skip(&name) {
                 continue;
             }
             directories.push(normalized.clone());
-            if is_ignored {
+            if is_ignored && scope != DirectoryChildScanScope::VisibleOnly {
                 gitignored_directories.push(normalized);
             }
         } else if file_type.is_file() {
@@ -822,7 +841,7 @@ pub(crate) fn list_workspace_directory_children_inner(
                 continue;
             }
             files.push(normalized.clone());
-            if is_ignored {
+            if is_ignored && scope != DirectoryChildScanScope::VisibleOnly {
                 gitignored_files.push(normalized);
             }
         }
@@ -855,6 +874,45 @@ pub(crate) fn list_workspace_directory_children_inner(
         limit_hit,
         directory_entries,
     ))
+}
+
+pub(crate) fn list_workspace_directory_children_inner(
+    root: &PathBuf,
+    directory_path: &str,
+    max_entries: usize,
+) -> Result<WorkspaceFilesResponse, String> {
+    list_workspace_directory_children_scoped_inner_with_scope(
+        root,
+        directory_path,
+        max_entries,
+        DirectoryChildScanScope::All,
+    )
+}
+
+pub(crate) fn list_workspace_directory_children_visible_inner(
+    root: &PathBuf,
+    directory_path: &str,
+    max_entries: usize,
+) -> Result<WorkspaceFilesResponse, String> {
+    list_workspace_directory_children_scoped_inner_with_scope(
+        root,
+        directory_path,
+        max_entries,
+        DirectoryChildScanScope::VisibleOnly,
+    )
+}
+
+pub(crate) fn list_workspace_directory_children_ignored_inner(
+    root: &PathBuf,
+    directory_path: &str,
+    max_entries: usize,
+) -> Result<WorkspaceFilesResponse, String> {
+    list_workspace_directory_children_scoped_inner_with_scope(
+        root,
+        directory_path,
+        max_entries,
+        DirectoryChildScanScope::IgnoredOnly,
+    )
 }
 
 pub(crate) fn list_external_absolute_directory_children_inner(
