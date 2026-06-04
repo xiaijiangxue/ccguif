@@ -159,3 +159,40 @@ Committed the latest sidebar workspace interaction changes before triggering pac
 ### Next Steps
 
 - None - task complete
+
+
+## Session 5: Composer height and status scope fixes
+
+**Date**: 2026-06-04
+**Task**: Composer height and status scope fixes
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Committed the latest composer resize and status panel scoping changes before triggering package builds.
+
+### Main Changes
+
+- Added composer editable height resync after wrapper resize state changes.
+- Scoped status panel loaded-thread file aggregation to the active root subtree instead of unrelated loaded threads.
+- Added test coverage for composer height resync and unrelated status-panel thread exclusions.
+- Local test run was not executed per user preference; GitHub Actions packaging is triggered next.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c693de76` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

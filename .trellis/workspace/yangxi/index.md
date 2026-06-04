@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 4
+- **Total Sessions**: 5
 - **Last Active**: 2026-06-04
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~161 | Active |
+| `journal-1.md` | ~198 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 5 | 2026-06-04 | Composer height and status scope fixes | `c693de76` | `refactor/liquid-precision-ui` |
 | 4 | 2026-06-04 | Workspace row drag action handling | `7a99c6e3` | `refactor/liquid-precision-ui` |
 | 3 | 2026-06-04 | Daemon scoped directory listing build fix | `b94c5ff4` | `refactor/liquid-precision-ui` |
 | 2 | 2026-06-04 | Chat input height wrapper constraint | `0f211e8e` | `refactor/liquid-precision-ui` |
