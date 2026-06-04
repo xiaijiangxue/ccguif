@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ChatInputBox } from "./ChatInputBox";
@@ -51,5 +51,50 @@ describe("ChatInputBox submit button", () => {
     fireEvent.input(editable);
 
     expect(sendButton.disabled).toBe(false);
+  });
+
+  it("resyncs editable height when the wrapper is resized", async () => {
+    render(<ChatInputBox showHeader />);
+
+    const wrapper = document.querySelector(".input-editable-wrapper") as HTMLDivElement | null;
+    const editable = document.querySelector(".input-editable") as HTMLDivElement | null;
+    const resizeHandle = document.querySelector(".resize-handle--n") as HTMLDivElement | null;
+
+    expect(wrapper).toBeTruthy();
+    expect(editable).toBeTruthy();
+    expect(resizeHandle).toBeTruthy();
+    if (!wrapper || !editable || !resizeHandle) {
+      return;
+    }
+
+    Object.defineProperty(wrapper, "clientHeight", {
+      value: 66,
+      configurable: true,
+    });
+    Object.defineProperty(editable, "scrollHeight", {
+      value: 320,
+      configurable: true,
+    });
+
+    editable.focus();
+    setEditableText(editable, "long prompt");
+    fireEvent.input(editable);
+
+    expect(editable.style.height).toBe("66px");
+
+    Object.defineProperty(wrapper, "clientHeight", {
+      value: 140,
+      configurable: true,
+    });
+
+    fireEvent.pointerDown(resizeHandle, { clientY: 200, pointerId: 1 });
+    fireEvent.pointerMove(window, { clientY: 126, pointerId: 1 });
+    fireEvent.pointerUp(window, { clientY: 126, pointerId: 1 });
+
+    await act(async () => {
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+    });
+
+    expect(editable.style.height).toBe("140px");
   });
 });

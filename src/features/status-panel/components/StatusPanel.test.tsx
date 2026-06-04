@@ -1411,6 +1411,42 @@ describe("StatusPanel", () => {
     expect(document.querySelectorAll(".sp-file-item")).toHaveLength(2);
   });
 
+  it("does not aggregate unrelated loaded thread file changes", () => {
+    const unrelatedEditToolItem: Extract<ConversationItem, { kind: "tool" }> = {
+      ...rootScopedEditToolItem,
+      id: "tool-edit-unrelated",
+      changes: [
+        {
+          path: "unrelated/Heavy.tsx",
+          kind: "modified",
+          diff: "@@ -1 +1 @@\n-old\n+new",
+        },
+      ],
+    };
+
+    render(
+      <StatusPanel
+        items={[childScopedEditToolItem]}
+        isProcessing={false}
+        variant="dock"
+        activeThreadId="child"
+        itemsByThread={{
+          root: [rootScopedEditToolItem],
+          child: [childScopedEditToolItem],
+          unrelated: [unrelatedEditToolItem],
+        }}
+        threadParentById={{ child: "root" }}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Result"));
+
+    expect(screen.getByText("README.md")).toBeTruthy();
+    expect(screen.getByText("App.tsx")).toBeTruthy();
+    expect(screen.queryByText("Heavy.tsx")).toBeNull();
+    expect(document.querySelectorAll(".sp-file-item")).toHaveLength(2);
+  });
+
   it("renders semantic badge classes for add delete rename and modify entries", () => {
     const { container } = render(
       <StatusPanel

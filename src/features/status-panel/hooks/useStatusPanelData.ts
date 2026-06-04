@@ -399,31 +399,21 @@ function collectScopedToolEntries(
     };
   }
 
-  const fallbackParentById = buildFallbackParentById(options.itemsByThread);
+  const fallbackParentById = buildScopedFallbackParentById({
+    activeThreadId: options.activeThreadId,
+    items,
+    itemsByThread: options.itemsByThread,
+    threadParentById: options.threadParentById ?? {},
+  });
   const rootThreadId = resolveRootThreadId(
     options.activeThreadId,
     options.threadParentById ?? {},
     fallbackParentById,
   );
-  const candidateThreadIds = new Set<string>([
-    options.activeThreadId,
+  const relevantThreadIds = collectRootSubtreeThreadIds(
     rootThreadId,
-    ...Object.keys(options.itemsByThread),
-    ...Object.keys(options.threadParentById ?? {}),
-    ...Object.values(options.threadParentById ?? {}),
-    ...Object.keys(fallbackParentById),
-    ...Object.values(fallbackParentById),
-  ]);
-
-  const relevantThreadIds = Array.from(candidateThreadIds).filter(
-    (threadId) =>
-      threadId &&
-      isDescendantOfRoot(
-        threadId,
-        rootThreadId,
-        options.threadParentById ?? {},
-        fallbackParentById,
-      ),
+    options.threadParentById ?? {},
+    fallbackParentById,
   );
 
   return {
@@ -438,25 +428,95 @@ function collectScopedToolEntries(
   };
 }
 
-function buildFallbackParentById(itemsByThread: Record<string, ConversationItem[]>) {
+function buildScopedFallbackParentById({
+  activeThreadId,
+  items,
+  itemsByThread,
+  threadParentById,
+}: {
+  activeThreadId: string;
+  items: ConversationItem[];
+  itemsByThread: Record<string, ConversationItem[]>;
+  threadParentById: Record<string, string>;
+}) {
+  const scopedThreadIds = collectKnownAncestorThreadIds(
+    activeThreadId,
+    threadParentById,
+  );
+
   const fallbackParentById: Record<string, string> = {};
-  Object.entries(itemsByThread).forEach(([threadId, entries]) => {
-    entries.forEach((item) => {
-      if (item.kind !== "tool" || getToolType(item) !== "collabToolCall") {
-        return;
-      }
-      const parsed = parseCollabFallbackLink(getToolDetail(item), threadId);
-      if (!parsed) {
-        return;
-      }
-      parsed.receivers.forEach((receiverId) => {
-        if (!fallbackParentById[receiverId]) {
-          fallbackParentById[receiverId] = parsed.parentId;
-        }
-      });
-    });
+  collectFallbackParentLinksFromEntries(
+    activeThreadId,
+    items,
+    fallbackParentById,
+  );
+  scopedThreadIds.forEach((threadId) => {
+    collectFallbackParentLinksFromEntries(
+      threadId,
+      itemsByThread[threadId] ?? [],
+      fallbackParentById,
+    );
   });
   return fallbackParentById;
+}
+
+function collectKnownAncestorThreadIds(
+  activeThreadId: string,
+  threadParentById: Record<string, string>,
+) {
+  const result = new Set<string>();
+  let current: string | undefined = activeThreadId;
+  while (current && !result.has(current)) {
+    result.add(current);
+    current = threadParentById[current];
+  }
+  return result;
+}
+
+function collectFallbackParentLinksFromEntries(
+  threadId: string,
+  entries: ConversationItem[],
+  fallbackParentById: Record<string, string>,
+) {
+  entries.forEach((item) => {
+    if (item.kind !== "tool" || getToolType(item) !== "collabToolCall") {
+      return;
+    }
+    const parsed = parseCollabFallbackLink(getToolDetail(item), threadId);
+    if (!parsed) {
+      return;
+    }
+    parsed.receivers.forEach((receiverId) => {
+      if (!fallbackParentById[receiverId]) {
+        fallbackParentById[receiverId] = parsed.parentId;
+      }
+    });
+  });
+}
+
+function collectRootSubtreeThreadIds(
+  rootThreadId: string,
+  threadParentById: Record<string, string>,
+  fallbackParentById: Record<string, string>,
+) {
+  const result = new Set<string>([rootThreadId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    Object.entries(threadParentById).forEach(([childId, parentId]) => {
+      if (childId && result.has(parentId) && !result.has(childId)) {
+        result.add(childId);
+        changed = true;
+      }
+    });
+    Object.entries(fallbackParentById).forEach(([childId, parentId]) => {
+      if (childId && result.has(parentId) && !result.has(childId)) {
+        result.add(childId);
+        changed = true;
+      }
+    });
+  }
+  return Array.from(result);
 }
 
 function resolveRootThreadId(
@@ -475,32 +535,6 @@ function resolveRootThreadId(
     current = nextParent;
   }
   return activeThreadId;
-}
-
-function isDescendantOfRoot(
-  threadId: string,
-  rootThreadId: string,
-  threadParentById: Record<string, string>,
-  fallbackParentById: Record<string, string>,
-) {
-  if (threadId === rootThreadId) {
-    return true;
-  }
-  const visited = new Set<string>();
-  let current: string | undefined = threadId;
-  while (current && !visited.has(current)) {
-    visited.add(current);
-    const nextParent: string | undefined =
-      threadParentById[current] ?? fallbackParentById[current];
-    if (!nextParent) {
-      return false;
-    }
-    if (nextParent === rootThreadId) {
-      return true;
-    }
-    current = nextParent;
-  }
-  return false;
 }
 
 function isTaskLikeSubagentTool(item: ToolItem, toolName: string) {

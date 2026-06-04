@@ -1332,6 +1332,22 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       editableWrapperRef,
     });
 
+    useEffect(() => {
+      if (isInputBoxCollapsed) {
+        return;
+      }
+
+      const frame = window.requestAnimationFrame(() => {
+        adjustHeight();
+      });
+      return () => window.cancelAnimationFrame(frame);
+    }, [
+      adjustHeight,
+      isInputBoxCollapsed,
+      editableWrapperStyle.height,
+      editableWrapperStyle.maxHeight,
+    ]);
+
     const handleExpandCollapsedInputBox = useCallback(() => {
       nudge({ wrapperHeightPx: 24 });
       window.requestAnimationFrame(() => {
