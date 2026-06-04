@@ -122,3 +122,40 @@ Fixed the daemon workspace directory child listing helpers required by macOS and
 ### Next Steps
 
 - None - task complete
+
+
+## Session 4: Workspace row drag action handling
+
+**Date**: 2026-06-04
+**Task**: Workspace row drag action handling
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Committed the latest sidebar workspace interaction changes before triggering package builds.
+
+### Main Changes
+
+- Removed the dedicated left workspace drag handle while keeping row-level drag availability.
+- Stopped pointer/mouse propagation from workspace action controls so they remain clickable without toggling the row.
+- Added sidebar coverage for the no-handle drag surface and action click propagation behavior.
+- Local test run was not executed per user preference; GitHub Actions packaging is triggered next.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7a99c6e3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
