@@ -475,6 +475,93 @@ describe("Sidebar", () => {
     expect(within(betaCard).getByText("Beta running")).toBeTruthy();
   });
 
+  it("keeps workspace row drag available without rendering a left drag handle", () => {
+    const workspaceAlpha = {
+      id: "ws-alpha",
+      name: "alpha",
+      path: "/tmp/alpha",
+      connected: true,
+      kind: "main" as const,
+      settings: {
+        sidebarCollapsed: true,
+        worktreeSetupScript: null,
+      },
+    };
+    const workspaceBeta = {
+      id: "ws-beta",
+      name: "beta",
+      path: "/tmp/beta",
+      connected: true,
+      kind: "main" as const,
+      settings: {
+        sidebarCollapsed: true,
+        worktreeSetupScript: null,
+      },
+    };
+    const onApplyWorkspaceSidebarOrganization = vi.fn();
+
+    const { container } = render(
+      <Sidebar
+        {...baseProps}
+        workspaces={[workspaceAlpha, workspaceBeta]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspaceAlpha, workspaceBeta],
+          },
+        ]}
+        onApplyWorkspaceSidebarOrganization={onApplyWorkspaceSidebarOrganization}
+      />,
+    );
+
+    expect(container.querySelector(".workspace-drag-handle")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Drag project" })).toBeNull();
+    expect(container.querySelector(".workspace-card.is-draggable .workspace-row")).toBeTruthy();
+  });
+
+  it("lets workspace action buttons receive pointer clicks without toggling the row", () => {
+    const workspace = {
+      id: "ws-alpha",
+      name: "alpha",
+      path: "/tmp/alpha",
+      connected: true,
+      kind: "main" as const,
+      settings: {
+        sidebarCollapsed: true,
+        worktreeSetupScript: null,
+      },
+    };
+    const onSelectWorkspace = vi.fn();
+    const onToggleWorkspaceCollapse = vi.fn();
+
+    render(
+      <Sidebar
+        {...baseProps}
+        workspaces={[workspace]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Ungrouped",
+            workspaces: [workspace],
+          },
+        ]}
+        activeWorkspaceId="ws-other"
+        onSelectWorkspace={onSelectWorkspace}
+        onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
+      />,
+    );
+
+    const openButton = screen.getByRole("button", { name: "Open in main panel" });
+    fireEvent.pointerDown(openButton);
+    fireEvent.mouseDown(openButton);
+    fireEvent.click(openButton);
+
+    expect(onSelectWorkspace).toHaveBeenCalledTimes(1);
+    expect(onSelectWorkspace).toHaveBeenCalledWith("ws-alpha");
+    expect(onToggleWorkspaceCollapse).not.toHaveBeenCalled();
+  });
+
   it("does not collapse the workspace row when the exited-session toggle is activated by keyboard", async () => {
     const workspace = {
       id: "ws-alpha",

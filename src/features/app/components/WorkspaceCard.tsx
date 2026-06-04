@@ -1,6 +1,7 @@
 import type {
   DragEvent,
   MouseEvent,
+  PointerEvent,
   PointerEventHandler,
 } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,10 @@ import { isDefaultWorkspacePath } from "../../workspaces/utils/defaultWorkspace"
 
 function isActivationKey(key: string) {
   return key === "Enter" || key === " " || key === "Space" || key === "Spacebar";
+}
+
+function stopWorkspaceActionPointerEvent(event: MouseEvent | PointerEvent) {
+  event.stopPropagation();
 }
 
 type WorkspaceCardDropState = "before" | "after" | "group" | "move-to-group" | null;
@@ -163,33 +168,6 @@ export function WorkspaceCard({
       >
         <div className="workspace-header-content">
           <div className="workspace-leading-icons">
-            {canDragWorkspace ? (
-              <span
-                className="workspace-drag-handle"
-                role="button"
-                tabIndex={0}
-                aria-label={t("sidebar.dragWorkspace")}
-                title={t("sidebar.dragWorkspace")}
-                data-tauri-drag-region="false"
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-                onDoubleClick={(event) => event.stopPropagation()}
-                onKeyDown={(event) => {
-                  if (isActivationKey(event.key)) {
-                    event.stopPropagation();
-                  }
-                }}
-                draggable={false}
-                onDragStart={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                }}
-              >
-                <span className="codicon codicon-gripper" aria-hidden />
-              </span>
-            ) : null}
             <button
               type="button"
               className={`workspace-folder-btn${hasRunningSession ? " is-session-running" : ""}`}
@@ -244,7 +222,13 @@ export function WorkspaceCard({
             </span>
           ) : null}
 
-          <div className="workspace-actions">
+          <div
+            className="workspace-actions"
+            data-workspace-drag-ignore="true"
+            onPointerDown={stopWorkspaceActionPointerEvent}
+            onMouseDown={stopWorkspaceActionPointerEvent}
+            onDoubleClick={stopWorkspaceActionPointerEvent}
+          >
             {showExitedSessionsToggle && onToggleExitedSessions ? (
               <button
                 type="button"
@@ -253,6 +237,8 @@ export function WorkspaceCard({
                 aria-label={exitedSessionsToggleTitle}
                 title={exitedSessionsToggleTitle}
                 data-tauri-drag-region="false"
+                onPointerDown={stopWorkspaceActionPointerEvent}
+                onMouseDown={stopWorkspaceActionPointerEvent}
                 onClick={(event) => {
                   event.stopPropagation();
                   onToggleExitedSessions(workspace.path);
@@ -286,6 +272,8 @@ export function WorkspaceCard({
             {canQuickReloadThreadList ? (
               <TooltipIconButton
                 className="workspace-action-btn workspace-degraded-badge"
+                onPointerDown={stopWorkspaceActionPointerEvent}
+                onMouseDown={stopWorkspaceActionPointerEvent}
                 onClick={(event) => {
                   event.stopPropagation();
                   onQuickReloadWorkspaceThreads(workspace.id);
@@ -319,6 +307,8 @@ export function WorkspaceCard({
             ) : null}
             <TooltipIconButton
               className="workspace-action-btn"
+              onPointerDown={stopWorkspaceActionPointerEvent}
+              onMouseDown={stopWorkspaceActionPointerEvent}
               onClick={(event) => {
                 event.stopPropagation();
                 onSelectWorkspace(workspace.id);
@@ -339,6 +329,8 @@ export function WorkspaceCard({
             {onCreateSessionFolder ? (
               <TooltipIconButton
                 className="workspace-action-btn"
+                onPointerDown={stopWorkspaceActionPointerEvent}
+                onMouseDown={stopWorkspaceActionPointerEvent}
                 onClick={(event) => {
                   event.stopPropagation();
                   onCreateSessionFolder(workspace.id);
@@ -358,6 +350,8 @@ export function WorkspaceCard({
             ) : null}
             <TooltipIconButton
               className="workspace-action-btn"
+              onPointerDown={stopWorkspaceActionPointerEvent}
+              onMouseDown={stopWorkspaceActionPointerEvent}
               onClick={(event) => {
                 event.stopPropagation();
                 onShowWorkspaceMenu(event, workspace);

@@ -438,35 +438,6 @@
   color: var(--text-strong);
 }
 
-.workspace-drag-handle {
-  width: 14px;
-  height: 18px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-faint);
-  cursor: grab;
-  opacity: 0;
-  border-radius: 4px;
-  -webkit-app-region: no-drag;
-}
-
-.workspace-drag-handle:active {
-  cursor: grabbing;
-}
-
-.workspace-row:hover .workspace-drag-handle,
-.workspace-row:focus-within .workspace-drag-handle,
-.workspace-drag-handle:focus-visible {
-  opacity: 1;
-}
-
-.workspace-drag-handle:hover,
-.workspace-drag-handle:focus-visible {
-  color: var(--text-strong);
-  background: var(--surface-hover-strong);
-}
-
 .workspace-children {
   position: relative;
   display: flex;
