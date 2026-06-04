@@ -86,3 +86,39 @@ Committed the ChatInputBox height constraint adjustment before pushing for GitHu
 ### Next Steps
 
 - None - task complete
+
+
+## Session 3: Daemon scoped directory listing build fix
+
+**Date**: 2026-06-04
+**Task**: Daemon scoped directory listing build fix
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Fixed the daemon workspace directory child listing helpers required by macOS and Windows package builds.
+
+### Main Changes
+
+- Restored daemon-side visible/ignored directory child listing helpers used by `file_access.rs`.
+- Added the same scoped directory scan behavior as the main workspace file listing module.
+- Verification run: `cargo check --manifest-path src-tauri/Cargo.toml --bin cc_gui_daemon` passed with one pre-existing dead-code warning in `src/workspaces/files.rs`.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b94c5ff4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
