@@ -33,7 +33,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: "cursor" }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -82,7 +82,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: true }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -129,7 +129,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: true }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -177,7 +177,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -232,7 +232,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -286,7 +286,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -347,7 +347,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         moveFolderTargetsByWorkspaceId={{
@@ -409,7 +409,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -469,7 +469,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [degradedWorktree.id]: false }}
         threadListPagingByWorkspace={{ [degradedWorktree.id]: false }}
         threadListCursorByWorkspace={{ [degradedWorktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -515,7 +515,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [degradedWorktree.id]: false }}
         threadListPagingByWorkspace={{ [degradedWorktree.id]: false }}
         threadListCursorByWorkspace={{ [degradedWorktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -569,7 +569,7 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [windowsWorktree.id]: false }}
         threadListPagingByWorkspace={{ [windowsWorktree.id]: false }}
         threadListCursorByWorkspace={{ [windowsWorktree.id]: null }}
-        expandedWorkspaces={new Set()}
+        workspaceThreadRootLimits={{}}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
