@@ -696,7 +696,9 @@ pub(super) fn handle_browser_toolbar_navigation(
         "activate" => {
             let target_browser_session_id = query_pairs
                 .get("targetSessionId")
-                .map(|value| normalize_toolbar_query_value(Some(value), toolbar_browser_session_id.as_str()))
+                .map(|value| {
+                    normalize_toolbar_query_value(Some(value), toolbar_browser_session_id.as_str())
+                })
                 .unwrap_or_else(|| toolbar_browser_session_id.clone());
             let app_for_action = app.clone();
             let locale = toolbar_locale.clone();

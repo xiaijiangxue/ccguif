@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { ConversationItem } from "../../../types";
 import type {
   TodoItem,
@@ -50,6 +50,7 @@ interface StatusPanelDataOptions {
   itemsByThread?: Record<string, ConversationItem[]>;
   threadParentById?: Record<string, string>;
   threadStatusById?: Record<string, ThreadStatusSnapshot | undefined>;
+  deferSummary?: boolean;
 }
 
 type ToolItem = Extract<ConversationItem, { kind: "tool" }>;
@@ -57,6 +58,20 @@ type ToolItem = Extract<ConversationItem, { kind: "tool" }>;
 type SubagentAccumulator = SubagentInfo & {
   statusPriority: number;
 };
+
+type StatusPanelProjectionInputs = {
+  items: ConversationItem[];
+  activeThreadId?: string | null;
+  activeTurnId?: string | null;
+  itemsByThread?: Record<string, ConversationItem[]>;
+  threadParentById?: Record<string, string>;
+  threadStatusById?: Record<string, ThreadStatusSnapshot | undefined>;
+};
+
+const fallbackParentByItemsByThreadCache = new WeakMap<
+  Record<string, ConversationItem[]>,
+  Record<string, string>
+>();
 
 function getRuntimeString(value: unknown): string {
   return typeof value === "string" ? value : "";
@@ -94,6 +109,18 @@ const STATUS_WEIGHT: Record<SubagentInfo["status"], number> = {
   completed: 2,
 };
 
+function useDeferredStatusPanelInputs(
+  latestInputs: StatusPanelProjectionInputs,
+  deferSummary: boolean,
+): StatusPanelProjectionInputs {
+  const lastReadyInputsRef = useRef(latestInputs);
+  if (!deferSummary) {
+    lastReadyInputsRef.current = latestInputs;
+    return latestInputs;
+  }
+  return lastReadyInputsRef.current;
+}
+
 /**
  * 从 ConversationItem[] 中提取 StatusPanel 所需数据。
  *
@@ -112,11 +139,23 @@ export function useStatusPanelData(
     itemsByThread,
     threadParentById,
     threadStatusById,
+    deferSummary = false,
   } = options;
+  const projectionInputs = useDeferredStatusPanelInputs(
+    {
+      items,
+      activeThreadId,
+      activeTurnId,
+      itemsByThread,
+      threadParentById,
+      threadStatusById,
+    },
+    deferSummary,
+  );
 
   const todos = useMemo(() => {
     let lastTodos: TodoItem[] = [];
-    for (const item of items) {
+    for (const item of projectionInputs.items) {
       if (item.kind !== "tool") continue;
       const toolName = extractToolName(getToolTitle(item)).trim().toLowerCase();
       if (toolName !== "todowrite" && toolName !== "todo_write") continue;
@@ -141,17 +180,17 @@ export function useStatusPanelData(
         }));
     }
     return lastTodos;
-  }, [items]);
+  }, [projectionInputs.items]);
 
   const scopedToolEntries = useMemo(
     () =>
-      collectScopedToolEntries(items, {
-        activeThreadId,
-        activeTurnId,
-        itemsByThread,
-        threadParentById,
+      collectScopedToolEntries(projectionInputs.items, {
+        activeThreadId: projectionInputs.activeThreadId,
+        activeTurnId: projectionInputs.activeTurnId,
+        itemsByThread: projectionInputs.itemsByThread,
+        threadParentById: projectionInputs.threadParentById,
       }),
-    [activeThreadId, activeTurnId, items, itemsByThread, threadParentById],
+    [projectionInputs],
   );
 
   const subagents = useMemo(() => {
@@ -173,8 +212,8 @@ export function useStatusPanelData(
           scopedToolEntries.rootThreadId && threadId !== scopedToolEntries.rootThreadId
             ? resolveThreadScopedSubagentStatus(
                 threadId,
-                threadStatusById,
-                itemsByThread,
+                projectionInputs.threadStatusById,
+                projectionInputs.itemsByThread,
               )
             : undefined;
         const taskDescription = extractTaskDescription(args, item);
@@ -244,8 +283,8 @@ export function useStatusPanelData(
       agentIds.forEach((agentId) => {
         const threadScopedStatus = resolveThreadScopedSubagentStatus(
           agentId,
-          threadStatusById,
-          itemsByThread,
+          projectionInputs.threadStatusById,
+          projectionInputs.itemsByThread,
         );
         const explicitStatus = structuredStatuses[agentId] ?? textStatuses[agentId];
         const genericStatus = inferCollabRuntimeStatus(collabActionName, item.status);
@@ -294,10 +333,9 @@ export function useStatusPanelData(
         return left.type.localeCompare(right.type);
       });
   }, [
-    itemsByThread,
     isCodexEngine,
+    projectionInputs,
     scopedToolEntries,
-    threadStatusById,
   ]);
 
   const fileChanges = useMemo(() => {
@@ -368,7 +406,7 @@ export function useStatusPanelData(
   };
 }
 
-function collectScopedToolEntries(
+export function collectScopedToolEntries(
   items: ConversationItem[],
   options: Pick<
     StatusPanelDataOptions,
@@ -410,10 +448,24 @@ function collectScopedToolEntries(
     options.threadParentById ?? {},
     fallbackParentById,
   );
-  const relevantThreadIds = collectRootSubtreeThreadIds(
+  const candidateThreadIds = new Set<string>([
+    options.activeThreadId,
     rootThreadId,
-    options.threadParentById ?? {},
-    fallbackParentById,
+    ...Object.keys(options.itemsByThread),
+    ...Object.keys(options.threadParentById ?? {}),
+    ...Object.values(options.threadParentById ?? {}),
+    ...Object.keys(fallbackParentById),
+    ...Object.values(fallbackParentById),
+  ]);
+  const relevantThreadIds = Array.from(candidateThreadIds).filter(
+    (threadId) =>
+      threadId &&
+      isDescendantOfRoot(
+        threadId,
+        rootThreadId,
+        options.threadParentById ?? {},
+        fallbackParentById,
+      ),
   );
 
   return {
@@ -426,6 +478,20 @@ function collectScopedToolEntries(
       ),
     ),
   };
+}
+
+export function buildFallbackParentById(
+  itemsByThread: Record<string, ConversationItem[]>,
+) {
+  const fallbackParentById: Record<string, string> = {};
+  Object.entries(itemsByThread).forEach(([threadId, entries]) => {
+    collectFallbackParentLinksFromEntries(
+      threadId,
+      entries,
+      fallbackParentById,
+    );
+  });
+  return fallbackParentById;
 }
 
 function buildScopedFallbackParentById({
@@ -443,7 +509,6 @@ function buildScopedFallbackParentById({
     activeThreadId,
     threadParentById,
   );
-
   const fallbackParentById: Record<string, string> = {};
   collectFallbackParentLinksFromEntries(
     activeThreadId,
@@ -494,29 +559,16 @@ function collectFallbackParentLinksFromEntries(
   });
 }
 
-function collectRootSubtreeThreadIds(
-  rootThreadId: string,
-  threadParentById: Record<string, string>,
-  fallbackParentById: Record<string, string>,
+export function getFallbackParentById(
+  itemsByThread: Record<string, ConversationItem[]>,
 ) {
-  const result = new Set<string>([rootThreadId]);
-  let changed = true;
-  while (changed) {
-    changed = false;
-    Object.entries(threadParentById).forEach(([childId, parentId]) => {
-      if (childId && result.has(parentId) && !result.has(childId)) {
-        result.add(childId);
-        changed = true;
-      }
-    });
-    Object.entries(fallbackParentById).forEach(([childId, parentId]) => {
-      if (childId && result.has(parentId) && !result.has(childId)) {
-        result.add(childId);
-        changed = true;
-      }
-    });
+  const cached = fallbackParentByItemsByThreadCache.get(itemsByThread);
+  if (cached) {
+    return cached;
   }
-  return Array.from(result);
+  const fallbackParentById = buildFallbackParentById(itemsByThread);
+  fallbackParentByItemsByThreadCache.set(itemsByThread, fallbackParentById);
+  return fallbackParentById;
 }
 
 function resolveRootThreadId(
@@ -535,6 +587,32 @@ function resolveRootThreadId(
     current = nextParent;
   }
   return activeThreadId;
+}
+
+function isDescendantOfRoot(
+  threadId: string,
+  rootThreadId: string,
+  threadParentById: Record<string, string>,
+  fallbackParentById: Record<string, string>,
+) {
+  if (threadId === rootThreadId) {
+    return true;
+  }
+  const visited = new Set<string>();
+  let current: string | undefined = threadId;
+  while (current && !visited.has(current)) {
+    visited.add(current);
+    const nextParent: string | undefined =
+      threadParentById[current] ?? fallbackParentById[current];
+    if (!nextParent) {
+      return false;
+    }
+    if (nextParent === rootThreadId) {
+      return true;
+    }
+    current = nextParent;
+  }
+  return false;
 }
 
 function isTaskLikeSubagentTool(item: ToolItem, toolName: string) {

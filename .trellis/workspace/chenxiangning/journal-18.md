@@ -1565,3 +1565,402 @@ Validation performed before commit:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 686: 归档已验证 OpenSpec 提案并同步主规范
+
+**Date**: 2026-06-03
+**Task**: 归档已验证 OpenSpec 提案并同步主规范
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| 项目 | 内容 |
+|------|------|
+| 工作类型 | OpenSpec 归档与主规范同步 |
+| 主提交 | `36463247 docs(openspec): 归档已验证提案并同步主规范` |
+| 归档范围 | 将 11 个已完成 OpenSpec changes 移动到 `openspec/changes/archive/2026-06-03-*` |
+| Spec 同步 | 将 59 个 delta requirements 合并进 13 个主 capability specs |
+| 保留 Active | `refactor-project-map-view-information-architecture` 仍保留 active，因为 typecheck 与 focused Vitest 验证任务未完成 |
+| 验证 | `openspec validate --all --strict --no-interactive` 通过，结果为 309 passed / 0 failed |
+| 工作区隔离 | `CHANGELOG.md` 是既有未暂存改动，未纳入本次 OpenSpec 提交 |
+
+## 归档的 Changes
+
+- `prevent-passive-runtime-acquisition`
+- `advance-browser-dock-trusted-observation-and-code-bridge`
+- `improve-project-map-context-and-impact-navigation`
+- `complete-project-map-relation-persistence-and-impact-sources`
+- `add-project-map-guided-tour-and-path-navigation`
+- `extend-project-map-code-spec-task-knowledge-graph`
+- `add-project-map-staleness-refresh-and-graph-repair`
+- `add-project-map-evidence-file-explorer`
+- `improve-project-map-relation-ux`
+- `add-project-map-focused-tests`
+- `add-agent-task-orchestration-center`
+
+## 更新的主 Specs
+
+- `openspec/specs/agent-task-center/spec.md`
+- `openspec/specs/agent-task-orchestration-center/spec.md`
+- `openspec/specs/agent-task-run-history/spec.md`
+- `openspec/specs/browser-agent-page-understanding/spec.md`
+- `openspec/specs/conversation-lifecycle-contract/spec.md`
+- `openspec/specs/dynamic-project-governance-evidence/spec.md`
+- `openspec/specs/git-operations/spec.md`
+- `openspec/specs/openspec-trellis-status-panel-bridge/spec.md`
+- `openspec/specs/project-map-incremental-generation/spec.md`
+- `openspec/specs/project-xray-panel/spec.md`
+- `openspec/specs/spec-hub-adapter-openspec/spec.md`
+- `openspec/specs/spec-hub-workbench-ui/spec.md`
+- `openspec/specs/workspace-session-catalog-projection/spec.md`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `36463247` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 687: 补充 v0.5.5 发布说明
+
+**Date**: 2026-06-03
+**Task**: 补充 v0.5.5 发布说明
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| 项目 | 内容 |
+|------|------|
+| 工作类型 | Changelog 文档更新 |
+| 主提交 | `b05258de docs(changelog): 补充 v0.5.5 发布说明` |
+| 更新范围 | `CHANGELOG.md` |
+| 内容摘要 | 新增 2026-06-03 v0.5.5 中英文发布说明，覆盖文件树能力、Browser Agent、Agent Task 编排、Project Map、运行态修复、DMG 发布路径与打包治理边界 |
+| 验证 | 文档-only 改动，提交前确认暂存区仅包含 `CHANGELOG.md`，未运行代码测试 |
+
+## 备注
+
+该提交在 OpenSpec 归档提交之后独立完成，避免发布说明与 OpenSpec 归档记录混在同一个 commit 中。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b05258de` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 688: Project Map 查询关联工作台
+
+**Date**: 2026-06-04
+**Task**: Project Map 查询关联工作台
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+本次提交完成 OpenSpec change `deepen-project-map-query-and-association-workbench` 的实现与验证。
+
+主要改动：
+- 新增 Project Map 统一查询、近期活动投影、Advisor Hints、关联解释、快速过滤和本地历史能力，保持 graph-first 视图不被列表替代。
+- 新增 `activityProjection`、`advisorProjections`、`highlightProjection`、`projectionGuards` 等 Project Map runtime projection helpers，并扩展 `navigation` 的 grouped query 与 path explanation。
+- 新增 `ProjectMapWorkbenchPanels` 与 overlay 样式，增强 detail/evidence surfaces 的折叠展示、证据反查、节点聚焦和图上高亮。
+- 修复边界 review 发现的问题：absolute/degraded path 不再参与 workspace-relative 匹配；line/limit/preview limit 做 finite sanitize；证据 chip 去重按完整 path/ref/hash，避免同名异目录文件被折叠。
+
+验证结果：
+- `npx vitest run src/features/project-map/utils/projectionGuards.test.ts src/features/project-map/components/ProjectMapPanel.test.tsx` 通过，2 files / 59 tests。
+- Project Map focused utils tests 通过，5 files / 20 tests。
+- `npm run typecheck` 通过。
+- `npm run lint` 通过。
+- `npm run check:large-files` 通过，found=0。
+- `npm run check:heavy-test-noise` 通过，607 test files，breachCount=0。
+- `npx openspec validate deepen-project-map-query-and-association-workbench --strict --no-interactive` 通过。
+
+后续建议：
+- 若继续扩展 Project Map UI，优先拆分 `ProjectMapPanel.tsx` 编排逻辑，避免接近 large-file hard gate。
+- OpenSpec change 已实现并 strict valid，后续可进入 verify/sync/archive 决策。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6fffd914` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 689: 增加工作区会话拉取模式切换
+
+**Date**: 2026-06-04
+**Task**: 增加工作区会话拉取模式切换
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+新增项目会话归因模式设置，保留默认相关会话模式，并提供当前工作区窄拉取模式；补齐后端扫描、前端设置、线程列表、分页加载、投影摘要和测试门禁。
+
+### Main Changes
+
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `649ef387` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 690: Fix Claude argv prompt shell escaping
+
+**Date**: 2026-06-04
+**Task**: Fix Claude argv prompt shell escaping
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+修复 Claude 提示词通过 argv 传递导致 Windows shell metacharacter/skill 调用失败的问题，改为默认使用 stream-json stdin 传递用户 prompt，并补充 OpenSpec 记录和回归测试。
+
+### Main Changes
+
+| Area | Change |
+|------|--------|
+| Claude command contract | 非空用户 prompt 默认走 `--input-format stream-json` stdin，避免 `.cmd/.bat` wrapper 或 shell metacharacter 解析 prompt argv。 |
+| Compatibility | 保留 `build_command(..., use_stream_json_input=false, ...)` fallback，仅生产路径通过 `should_use_stream_json_input` 选择 stdin。 |
+| Boundary preservation | `build_message_content` 继续用 trim 判断空文本，但 text payload 保留首尾 whitespace，避免从 argv 切到 stdin 后改变用户输入字节。 |
+| Regression coverage | 新增单行文本、特殊字符 prompt 不进入 argv、边界 whitespace 保真测试；保留 multiline/image stream-json 行为。 |
+| OpenSpec | 新增 `fix-claude-argv-prompt-shell-escaping` proposal/design/spec/tasks，记录根因、方案取舍、兼容边界和验收标准。 |
+
+**Validation**:
+- `cargo test --manifest-path src-tauri/Cargo.toml claude::tests_stream`
+- `cargo test --manifest-path src-tauri/Cargo.toml claude::tests_command`
+- `cargo test --manifest-path src-tauri/Cargo.toml claude_message_content`
+- `openspec validate fix-claude-argv-prompt-shell-escaping --strict --no-interactive`
+
+**Known residual**:
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --check` 之前被无关既有文件 `src-tauri/src/browser_agent/toolbar.rs` 格式问题阻断，未纳入本次原子修复提交。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `512b9e6b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 691: 归档运行时交互卡顿优化提案
+
+**Date**: 2026-06-04
+**Task**: 归档运行时交互卡顿优化提案
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+归档 OpenSpec 提案 fix-client-runtime-interaction-jank，提交客户端运行时交互卡顿优化、性能证据和规范同步。
+
+### Main Changes
+
+## 完成内容
+
+- 归档 OpenSpec change：`fix-client-runtime-interaction-jank` -> `openspec/changes/archive/2026-06-04-fix-client-runtime-interaction-jank/`。
+- 同步 5 个主 specs：`conversation-realtime-client-performance`、`long-list-virtualization-performance`、`runtime-performance-evidence-gates`、`workspace-session-catalog-projection`、`workspace-session-radar-overview`。
+- 提交客户端运行时交互卡顿优化：Composer advisory props 稳定、StatusPanel scoped projection、Messages streaming 控制即时路径、Foreground-first thread switching、Sidebar/session folder projection cache、Session catalog bounded paging/dedupe/stale guards、Radar/prewarm staging。
+- 更新性能证据：`docs/perf/baseline.*`、`docs/perf/runtime-evidence-gates.*`、`docs/perf/history/v0.5.6-baseline.*`、提案内 `performance-evidence-report.md`。
+
+## 验证
+
+- `npm run check:heavy-test-noise`：通过，608 个 test files 完成，act warnings 0，stdout/stderr payload noise 0。
+- `node scripts/check-heavy-test-noise.mjs --input .artifacts/heavy-test-noise.log --mode report`：通过，0 breaches。
+- `npm run typecheck`：通过。
+- `openspec validate --all --strict --no-interactive`：通过，312 items passed。
+- `npm run perf:baseline:all`：通过。
+- `npm run check:runtime-evidence-gates`：通过。
+- `git diff --check`：通过。
+
+## 残余边界
+
+- 当前自动化证据包含 proxy baseline、runtime evidence gate、browser scroll measured evidence；真实 Tauri/WebView streaming typing React Profiler/PerformanceObserver 采样仍属于 release qualifier，不能据此夸大为完整真实用户环境性能结论。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `980a7b57ac9b07804455e31f8a1eab133677b4bc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 692: 修复 WebView2 消息图片内存压力
+
+**Date**: 2026-06-05
+**Task**: 修复 WebView2 消息图片内存压力
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Area | Summary |
+|------|---------|
+| Root cause | Windows WebView2 renderer memory pressure from long-lived inline `data:image` payloads, deferred Claude image hydration, and image-heavy message timelines. |
+| Frontend | Added transient object URL rendering for inline message images and lightbox previews while preserving fallback display behavior. |
+| Deferred images | Added explicit `blob:` ownership and release handling for normal unmount, state overwrite, hydration failure, and async late resolve after unmount. |
+| Virtualization | Added render-density based virtualization for image-heavy timelines without changing the old row-count streaming guard. |
+| Regression coverage | Added tests for deferred image resource release and deferred image updates on an existing message row. |
+
+**Updated Files**:
+- `src/features/messages/components/MessageMediaBlocks.tsx`
+- `src/features/messages/components/MessagesRows.tsx`
+- `src/features/messages/components/MessagesTimeline.tsx`
+- `src/features/messages/components/messagesTimelineVirtualization.ts`
+- `src/features/messages/components/Messages.rich-content.test.tsx`
+- `src/features/messages/components/messagesTimelineVirtualization.test.ts`
+- `openspec/changes/fix-webview2-message-image-memory-pressure/**`
+- `.trellis/tasks/archive/2026-06/06-04-fix-webview2-message-image-memory-pressure/**`
+
+**Validation**:
+- `pnpm typecheck` passed.
+- `pnpm vitest run src/features/messages/components/Messages.rich-content.test.tsx src/features/messages/components/messagesTimelineVirtualization.test.ts` passed: 2 files, 25 tests.
+
+**Code Commit**:
+- `63d6e8b8 fix(messages): 修复 WebView2 图片内存压力`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `63d6e8b8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
+
+
+## Session 693: 运行时提示仅显示错误消息
+
+**Date**: 2026-06-05
+**Task**: 运行时提示仅显示错误消息
+**Branch**: `feature/v0.5.6`
+
+### Summary
+
+将运行时提示 dock 的可见消息收敛为 error 级别，保留内部诊断 buffer。
+
+### Main Changes
+
+- 将 runtime notice 可见过滤函数沉淀到 `src/services/globalRuntimeNotices.ts`。
+- `useGlobalRuntimeNoticeDock` 对外只返回 error 级 notices，dock 状态基于可见 error 派生。
+- `GlobalRuntimeNoticeDock` 组件增加防御过滤，即使直接传入 info/warning 也不会显示正常日志或 streaming 状态。
+- 更新 hook/component 单测，覆盖内部 buffer 保留 info/warning、用户可见 dock 只显示 error。
+- 验证：`npm exec vitest -- run src/features/notifications/hooks/useGlobalRuntimeNoticeDock.test.tsx src/features/notifications/components/GlobalRuntimeNoticeDock.test.tsx`，16 tests passed。
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c585cc14` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

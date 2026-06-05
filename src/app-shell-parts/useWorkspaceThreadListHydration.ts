@@ -54,6 +54,13 @@ type ThreadHydrationKind = "full-catalog" | "session-radar";
 type ThreadListHydrationResult = void | { applied?: boolean; stale?: boolean };
 const ACTIVE_WORKSPACE_READY_MILESTONE: StartupMilestoneName =
   "active-workspace-ready";
+const IDLE_PREWARM_DELAY_MS = 120;
+
+type IdleCallbackHandle = number;
+type IdleCallbackApi = typeof window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => IdleCallbackHandle;
+  cancelIdleCallback?: (handle: IdleCallbackHandle) => void;
+};
 
 function isDiscardedStaleHydrationResult(
   result: ThreadListHydrationResult,
@@ -105,6 +112,24 @@ function createThreadHydrationTask(
   };
 }
 
+function scheduleIdleHydration(callback: () => void): () => void {
+  if (typeof window === "undefined") {
+    const timeoutId = setTimeout(callback, IDLE_PREWARM_DELAY_MS);
+    return () => clearTimeout(timeoutId);
+  }
+  const idleWindow = window as IdleCallbackApi;
+  if (typeof idleWindow.requestIdleCallback === "function") {
+    const idleHandle = idleWindow.requestIdleCallback(callback, {
+      timeout: IDLE_PREWARM_DELAY_MS,
+    });
+    return () => {
+      idleWindow.cancelIdleCallback?.(idleHandle);
+    };
+  }
+  const timeoutId = window.setTimeout(callback, IDLE_PREWARM_DELAY_MS);
+  return () => window.clearTimeout(timeoutId);
+}
+
 export function useWorkspaceThreadListHydration({
   activeWorkspaceId,
   activeWorkspaceProjectionOwnerIds,
@@ -123,6 +148,7 @@ export function useWorkspaceThreadListHydration({
     new Map<string, ThreadHydrationKind>(),
   );
   const autoHydratedActiveWorkspaceIdRef = useRef<string | null>(null);
+  const idleHydrationCleanupByWorkspaceIdRef = useRef(new Map<string, () => void>());
   const [hydrationCycle, setHydrationCycle] = useState(0);
 
   const backgroundHydrationWorkspaces = useMemo(() => {
@@ -250,12 +276,28 @@ export function useWorkspaceThreadListHydration({
       if (fullyHydratedThreadListWorkspaceIdsRef.current.has(workspaceId)) {
         return;
       }
-      hydrationPhaseByWorkspaceIdRef.current.set(workspaceId, "idle-prewarm");
-      hydrationKindByWorkspaceIdRef.current.set(workspaceId, "session-radar");
-      void listThreadsForWorkspaceTracked(workspace, {
-        preserveState: true,
-        includeOpenCodeSessions: false,
+      if (idleHydrationCleanupByWorkspaceIdRef.current.has(workspaceId)) {
+        return;
+      }
+      const cleanup = scheduleIdleHydration(() => {
+        idleHydrationCleanupByWorkspaceIdRef.current.delete(workspaceId);
+        if (threadListLoadingByWorkspace[workspaceId] ?? false) {
+          return;
+        }
+        if (hydratingThreadListWorkspaceIdsRef.current.has(workspaceId)) {
+          return;
+        }
+        if (fullyHydratedThreadListWorkspaceIdsRef.current.has(workspaceId)) {
+          return;
+        }
+        hydrationPhaseByWorkspaceIdRef.current.set(workspaceId, "idle-prewarm");
+        hydrationKindByWorkspaceIdRef.current.set(workspaceId, "session-radar");
+        void listThreadsForWorkspaceTracked(workspace, {
+          preserveState: true,
+          includeOpenCodeSessions: false,
+        });
       });
+      idleHydrationCleanupByWorkspaceIdRef.current.set(workspaceId, cleanup);
     },
     [
       listThreadsForWorkspaceTracked,
@@ -279,11 +321,27 @@ export function useWorkspaceThreadListHydration({
       if (fullyHydratedThreadListWorkspaceIdsRef.current.has(workspaceId)) {
         return;
       }
-      hydrationPhaseByWorkspaceIdRef.current.set(workspaceId, "idle-prewarm");
-      hydrationKindByWorkspaceIdRef.current.set(workspaceId, "full-catalog");
-      void listThreadsForWorkspaceTracked(workspace, {
-        preserveState: true,
+      if (idleHydrationCleanupByWorkspaceIdRef.current.has(workspaceId)) {
+        return;
+      }
+      const cleanup = scheduleIdleHydration(() => {
+        idleHydrationCleanupByWorkspaceIdRef.current.delete(workspaceId);
+        if (threadListLoadingByWorkspace[workspaceId] ?? false) {
+          return;
+        }
+        if (hydratingThreadListWorkspaceIdsRef.current.has(workspaceId)) {
+          return;
+        }
+        if (fullyHydratedThreadListWorkspaceIdsRef.current.has(workspaceId)) {
+          return;
+        }
+        hydrationPhaseByWorkspaceIdRef.current.set(workspaceId, "idle-prewarm");
+        hydrationKindByWorkspaceIdRef.current.set(workspaceId, "full-catalog");
+        void listThreadsForWorkspaceTracked(workspace, {
+          preserveState: true,
+        });
       });
+      idleHydrationCleanupByWorkspaceIdRef.current.set(workspaceId, cleanup);
     },
     [
       listThreadsForWorkspaceTracked,
@@ -343,6 +401,14 @@ export function useWorkspaceThreadListHydration({
     nextBackgroundWorkspaceThreadHydrationId,
     prewarmFullCatalogForWorkspace,
   ]);
+
+  useEffect(() => {
+    const cleanupByWorkspaceId = idleHydrationCleanupByWorkspaceIdRef.current;
+    return () => {
+      cleanupByWorkspaceId.forEach((cleanup) => cleanup());
+      cleanupByWorkspaceId.clear();
+    };
+  }, []);
 
   return {
     ensureWorkspaceThreadListLoaded,

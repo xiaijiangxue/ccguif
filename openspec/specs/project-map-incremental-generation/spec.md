@@ -286,3 +286,79 @@ Project Map generation and organizer runs SHALL normalize untrusted model respon
 - **WHEN** both organizer initial normalization and repair normalization fail
 - **THEN** the organizer run MUST fail with a visible parse diagnostic
 - **AND** the worker MUST NOT write partial organizer candidates or map metadata from the failed response
+
+### Requirement: Project Map relation context support
+Project Map generation and persistence SHALL tolerate optional typed relations between nodes, including relation type, source/target node IDs, confidence, stale state, source kind, and supporting evidence.
+
+#### Scenario: Dataset contains optional relations
+- **WHEN** a Project Map dataset includes relation records between existing nodes
+- **THEN** generation, persistence, and display preparation preserve those relations without breaking existing node rendering
+
+#### Scenario: Dataset omits relations
+- **WHEN** a Project Map dataset does not include relation records
+- **THEN** existing Project Map loading and incremental generation continue to work without requiring migration
+
+### Requirement: Project Map context ignore policy
+Project Map context and impact construction SHALL apply an ignore policy that excludes dependency folders, generated outputs, runtime artifacts, binary assets, and other non-source paths before matching files to nodes.
+
+#### Scenario: Ignored file path is provided to impact analysis
+- **WHEN** changed file paths include dependency, generated, runtime, or binary paths covered by the ignore policy
+- **THEN** those paths are excluded from node matching and do not create changed or unmapped Project Map nodes
+
+#### Scenario: Source file path is not ignored
+- **WHEN** a changed file path is a source or specification file not covered by the ignore policy
+- **THEN** Project Map context and impact construction can use it for node matching
+
+### Requirement: Project Map relation snapshot round trip
+Project Map storage SHALL allow optional relation snapshots to be written and read as part of the existing Project Map snapshot contract.
+
+#### Scenario: Relation snapshot exists
+- **WHEN** Project Map storage contains `relations/latest.json` for a workspace map
+- **THEN** reading the Project Map returns relation data to the frontend dataset builder
+
+#### Scenario: Relation snapshot is absent
+- **WHEN** Project Map storage has no `relations/latest.json`
+- **THEN** reading the Project Map succeeds and returns an empty or omitted relation collection without requiring migration
+
+### Requirement: Project Map relation write path safety
+Project Map snapshot writes SHALL permit `relations/latest.json` and continue rejecting relation files outside the allowed Project Map storage contract.
+
+#### Scenario: Safe relation path is written
+- **WHEN** a Project Map snapshot includes `relations/latest.json`
+- **THEN** the backend accepts the path as part of the constrained snapshot contract
+
+#### Scenario: Unsafe relation path is written
+- **WHEN** a Project Map snapshot includes a relation file path with nested directories, parent traversal, uppercase reserved segments, or unsupported extensions
+- **THEN** the backend rejects the write path
+
+### Requirement: Project Map optional tour metadata
+Project Map datasets SHALL tolerate optional tour metadata without requiring migration for existing datasets.
+
+#### Scenario: Dataset includes tour steps
+- **WHEN** a Project Map dataset includes tour steps
+- **THEN** Project Map generation and persistence preserve those steps
+
+#### Scenario: Dataset omits tour steps
+- **WHEN** a Project Map dataset omits tour steps
+- **THEN** Project Map continues to load and render normally
+
+### Requirement: Deterministic spec task document graph extraction
+Project Map generation SHALL support deterministic extraction of OpenSpec, Trellis task, and documentation relationships before applying any LLM-inferred enrichment.
+
+#### Scenario: OpenSpec capability is linked deterministically
+- **WHEN** deterministic evidence links a Project Map node to an OpenSpec capability
+- **THEN** the generated graph records the relationship with deterministic or spec-link source kind
+
+### Requirement: Project Map fingerprint refresh classification
+Project Map incremental generation SHALL classify source changes before recommending skip, partial refresh, architecture refresh, or full refresh.
+
+#### Scenario: Cosmetic or ignored changes are detected
+- **WHEN** changed files are cosmetic or ignored by Project Map policy
+- **THEN** Project Map does not require a refresh recommendation
+
+### Requirement: Project Map graph integrity validation
+Project Map generation SHALL validate node references, relation endpoints, and evidence references before using graph data for rendering or context packs.
+
+#### Scenario: Relation endpoint is missing
+- **WHEN** a relation references a missing source or target node
+- **THEN** Project Map reports or removes the invalid relation before using it

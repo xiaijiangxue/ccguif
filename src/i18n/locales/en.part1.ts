@@ -1324,6 +1324,16 @@ const enPart1 = {
       "Manage real session history per project with paged loading, filtering, batch archive, unarchive, and deletion.",
     sessionManagementModeProject: "Project view",
     sessionManagementModeGlobal: "Global archive",
+    sessionAttributionModeTitle: "Workspace session pull mode",
+    sessionAttributionModeDescription:
+      "This only changes the pull scope in Project view, not Global archive. Legacy default is the behavior before this switch existed. Current workspace is the new narrower pull mode.",
+    sessionAttributionModeCurrent: "Current: {{mode}}",
+    sessionAttributionModeRelated: "Legacy default",
+    sessionAttributionModeRelatedDescription:
+      "Keeps the pre-switch behavior and tries to recover same-project, worktree, and inferred related history.",
+    sessionAttributionModeWorkspaceOnly: "Current workspace",
+    sessionAttributionModeWorkspaceOnlyDescription:
+      "Only uses path evidence for the selected workspace, improving isolation while possibly showing fewer sessions.",
     sessionManagementGlobalCodexOnly:
       "Global history currently shows Codex sessions visible to this client.",
     sessionManagementGlobalHistoryAllEngines:

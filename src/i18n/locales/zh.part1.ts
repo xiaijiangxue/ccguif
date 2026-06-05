@@ -1350,6 +1350,16 @@ const zhPart1 = {
       "按项目统一管理真实会话历史，支持分页读取、筛选、批量归档、取消归档与删除。",
     sessionManagementModeProject: "项目视图",
     sessionManagementModeGlobal: "全局归档",
+    sessionAttributionModeTitle: "工作区会话拉取模式",
+    sessionAttributionModeDescription:
+      "这个开关只影响项目视图里的会话拉取范围，不影响全局归档。旧版默认模式就是开关上线前的行为；当前工作区模式是新增的窄范围拉取。",
+    sessionAttributionModeCurrent: "当前生效：{{mode}}",
+    sessionAttributionModeRelated: "旧版默认模式",
+    sessionAttributionModeRelatedDescription:
+      "保留开关上线前的逻辑，会尽量找回同项目、worktree 和可推断相关历史。",
+    sessionAttributionModeWorkspaceOnly: "当前工作区模式",
+    sessionAttributionModeWorkspaceOnlyDescription:
+      "只按当前 workspace 的路径证据拉取，隔离更强，但可能少显示一些历史。",
     sessionManagementGlobalCodexOnly:
       "全局历史当前仅展示这个客户端可见的 Codex 会话。",
     sessionManagementGlobalHistoryAllEngines:

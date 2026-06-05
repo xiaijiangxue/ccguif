@@ -35,7 +35,10 @@ import {
   remarkFileLinks,
   toFileLink,
 } from "../../../utils/remarkFileLinks";
-import { normalizeOutsideMarkdownCode } from "../../../utils/markdownCodeRegions";
+import {
+  getMarkdownInlineCodeInfo,
+  normalizeOutsideMarkdownCode,
+} from "../../../utils/markdownCodeRegions";
 import { highlightLine } from "../../../utils/syntax";
 import { detectCodexLeadMarker, type CodexLeadMarkerConfig } from "../constants/codexLeadMarkers";
 import { parseToolCallBlocks, type Block } from "../utils/toolCallBlocks";
@@ -121,6 +124,7 @@ const MARKDOWN_ALERT_TONE_SET = new Set([
   "warning",
   "caution",
 ]);
+const TOOL_CALL_XML_CANDIDATE_REGEX = /<\s*(?:antml:)?(?:function_calls|invoke)\b/i;
 
 let markdownRuntimeCache: MarkdownRuntime | null = null;
 let markdownRuntimePromise: Promise<MarkdownRuntime> | null = null;
@@ -2235,7 +2239,17 @@ export const Markdown = memo(function Markdown({
   );
 
   const renderMarkdownContent = useCallback((nextContent: string) => {
-    if (renderRuntimeMode === "lightweight" || !markdownRuntime) {
+    const hasSyntaxIncompleteInlineCode =
+      getMarkdownInlineCodeInfo(nextContent).hasUnclosedInlineCode;
+    const shouldUseStreamingInlineCodeFallback =
+      streamingThrottleMs !== undefined &&
+      hasSyntaxIncompleteInlineCode &&
+      TOOL_CALL_XML_CANDIDATE_REGEX.test(nextContent);
+    if (
+      renderRuntimeMode === "lightweight" ||
+      !markdownRuntime ||
+      shouldUseStreamingInlineCodeFallback
+    ) {
       return (
         <LightweightMarkdown
           value={nextContent}
@@ -2261,6 +2275,7 @@ export const Markdown = memo(function Markdown({
     remarkPluginsMemo,
     renderLightweightLink,
     renderRuntimeMode,
+    streamingThrottleMs,
     urlTransform,
   ]);
 

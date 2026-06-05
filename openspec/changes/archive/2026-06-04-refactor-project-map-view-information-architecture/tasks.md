@@ -37,6 +37,6 @@
 
 ## 6. Validation
 
-- [ ] 6.1 [P0][depends:3-5][I: changed TypeScript modules][O: type safety pass][V: `npm run typecheck`] Run typecheck.
-- [ ] 6.2 [P0][depends:5][I: focused Project Map suites][O: focused regression pass][V: targeted Vitest command for touched Project Map tests] Run focused tests.
+- [x] 6.1 [P0][depends:3-5][I: changed TypeScript modules][O: type safety pass][V: `npm run typecheck`] Run typecheck.
+- [x] 6.2 [P0][depends:5][I: focused Project Map suites][O: focused regression pass][V: targeted Vitest command for touched Project Map tests] Run focused tests.
 - [x] 6.3 [P0][depends:1.4][I: OpenSpec change][O: strict OpenSpec pass][V: `openspec validate refactor-project-map-view-information-architecture --strict --no-interactive`] Validate OpenSpec artifact.
