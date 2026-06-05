@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
-import { Markdown } from "./Markdown";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { Markdown, prewarmMarkdownRuntime } from "./Markdown";
 
 describe("Markdown list rendering", () => {
+  beforeAll(async () => {
+    await prewarmMarkdownRuntime();
+  });
+
   afterEach(() => {
     cleanup();
   });

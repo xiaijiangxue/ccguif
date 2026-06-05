@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { Markdown } from "./Markdown";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { Markdown, prewarmMarkdownRuntime } from "./Markdown";
 
 describe("Markdown file links", () => {
+  beforeAll(async () => {
+    await prewarmMarkdownRuntime();
+  });
+
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -305,6 +309,38 @@ describe("Markdown file links", () => {
     );
 
     expect(container.textContent ?? "").toContain("最终句子");
+  });
+
+  it("keeps final assistant markdown lightweight until idle upgrade is ready", () => {
+    vi.useFakeTimers();
+    const finalValue = [
+      "## 完整结论",
+      "",
+      "第一段",
+      "",
+      "| 指标 | 结果 |",
+      "|---|---|",
+      "| jitter | improved |",
+    ].join("\n");
+
+    const { container } = render(
+      <Markdown
+        value={finalValue}
+        liveRenderMode="full"
+        fullRenderUpgrade="idle"
+      />,
+    );
+
+    expect(container.querySelector("h2")?.textContent).toBe("完整结论");
+    expect(container.textContent ?? "").not.toContain("## 完整结论");
+    expect(container.querySelector("table")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(320);
+    });
+
+    expect(container.querySelector("h2")?.textContent).toBe("完整结论");
+    expect(container.querySelector("table")).toBeTruthy();
   });
 
   it("keeps lightweight live markdown links on the safe URL boundary", () => {

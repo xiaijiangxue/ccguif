@@ -24,7 +24,7 @@ import {
   buildEngineTaskOutputSnapshot,
   buildTaskOutputSourceFromNotification,
 } from "../../engine-task-output/utils/engineTaskOutputProjection";
-import { languageFromPath } from "../../../utils/syntax";
+import { languageFromPath } from "../../../utils/languageFromPath";
 import type { PresentationProfile } from "../presentation/presentationProfile";
 import { parseAgentTaskNotification } from "../utils/agentTaskNotification";
 import {
@@ -295,6 +295,12 @@ function shouldUseLightweightStreamingMarkdown(
 ) {
   if (item.role !== "assistant" || !isStreaming) {
     return false;
+  }
+  // Keep active assistant deltas on the cheap renderer. Final Markdown is allowed
+  // to converge after the turn settles, but streaming must not parse/sanitize the
+  // full markdown chain on every visible update.
+  if (complexity.trimmedText) {
+    return true;
   }
   const useStagedMarkdownThrottle =
     presentationProfile?.useCodexStagedMarkdownThrottle ?? activeEngine === "codex";
@@ -1041,8 +1047,6 @@ export const MessageRow = memo(function MessageRow({
   const useCodexCanvasMarkdown = presentationProfile
     ? presentationProfile.codexCanvasMarkdown
     : activeEngine === "codex";
-  const useStagedMarkdownThrottle =
-    presentationProfile?.useCodexStagedMarkdownThrottle ?? activeEngine === "codex";
   const markdownClassName =
     item.role === "assistant" && useCodexCanvasMarkdown
       ? "markdown markdown-codex-canvas"
@@ -1058,8 +1062,7 @@ export const MessageRow = memo(function MessageRow({
     () => {
       if (
         item.role !== "assistant" ||
-        !isStreaming ||
-        !useStagedMarkdownThrottle
+        !isStreaming
       ) {
         streamingMarkdownComplexityCacheRef.current = null;
         return EMPTY_STREAMING_MARKDOWN_COMPLEXITY;
@@ -1079,7 +1082,7 @@ export const MessageRow = memo(function MessageRow({
       };
       return nextComplexity;
     },
-    [displayText, isStreaming, item.role, useStagedMarkdownThrottle],
+    [displayText, isStreaming, item.role],
   );
   const usePlainTextStreamingSurface = shouldUsePlainTextStreamingSurface(
     item,
@@ -1343,6 +1346,7 @@ export const MessageRow = memo(function MessageRow({
             onOpenFileLink={onOpenFileLink}
             onOpenFileLinkMenu={onOpenFileLinkMenu}
             liveRenderMode={useLightweightStreamingMarkdown ? "lightweight" : "full"}
+            fullRenderUpgrade={item.role === "assistant" ? "idle" : "immediate"}
             progressiveReveal={useLightweightStreamingMarkdown}
             onRenderedValueChange={handleMarkdownRenderedAssistantValue}
           />

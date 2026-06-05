@@ -7,6 +7,7 @@ import { parseReasoning } from "./messagesReasoning";
 const markdownCalls = vi.hoisted(() => ({
   calls: [] as Array<{
     liveRenderMode?: "full" | "lightweight";
+    fullRenderUpgrade?: "immediate" | "idle";
     progressiveReveal?: boolean;
     streamingThrottleMs?: number;
     value: string;
@@ -16,12 +17,14 @@ const markdownCalls = vi.hoisted(() => ({
 vi.mock("./Markdown", () => ({
   Markdown: ({
     liveRenderMode,
+    fullRenderUpgrade,
     progressiveReveal,
     streamingThrottleMs,
     value,
     onRenderedValueChange,
   }: {
     liveRenderMode?: "full" | "lightweight";
+    fullRenderUpgrade?: "immediate" | "idle";
     progressiveReveal?: boolean;
     streamingThrottleMs?: number;
     value: string;
@@ -29,6 +32,7 @@ vi.mock("./Markdown", () => ({
   }) => {
     markdownCalls.calls.push({
       liveRenderMode,
+      fullRenderUpgrade,
       progressiveReveal,
       streamingThrottleMs,
       value,
@@ -38,6 +42,7 @@ vi.mock("./Markdown", () => ({
       <div
         data-testid="markdown"
         data-live-render-mode={liveRenderMode ?? "full"}
+        data-full-render-upgrade={fullRenderUpgrade ?? "immediate"}
         data-progressive-reveal={progressiveReveal ? "true" : "false"}
         data-throttle={streamingThrottleMs ?? -1}
       >
@@ -240,7 +245,7 @@ describe("MessagesRows stream mitigation", () => {
     });
   });
 
-  it("converges completed large Claude output back to final Markdown rendering", () => {
+  it("marks completed large Claude output for idle full Markdown upgrade", () => {
     const longText = [
       "# 终章",
       "",
@@ -296,6 +301,9 @@ describe("MessagesRows stream mitigation", () => {
     expect(screen.getByTestId("markdown").textContent).toBe(longText);
     expect(screen.getByTestId("markdown").getAttribute("data-live-render-mode")).toBe(
       "full",
+    );
+    expect(screen.getByTestId("markdown").getAttribute("data-full-render-upgrade")).toBe(
+      "idle",
     );
     expect(screen.getByTestId("markdown").getAttribute("data-progressive-reveal")).toBe(
       "false",
@@ -366,7 +374,7 @@ describe("MessagesRows stream mitigation", () => {
     );
   });
 
-  it("keeps markdown live rendering for short Codex streaming output", () => {
+  it("keeps short Codex streaming output on lightweight Markdown", () => {
     const messageItem = {
       id: "assistant-codex-short",
       kind: "message" as const,
@@ -386,14 +394,14 @@ describe("MessagesRows stream mitigation", () => {
 
     expect(screen.getByTestId("markdown").getAttribute("data-throttle")).toBe("48");
     expect(screen.getByTestId("markdown").getAttribute("data-live-render-mode")).toBe(
-      "full",
+      "lightweight",
     );
     expect(screen.getByTestId("markdown").getAttribute("data-progressive-reveal")).toBe(
-      "false",
+      "true",
     );
   });
 
-  it("keeps large Codex streaming on Markdown and stays on Markdown after completion", () => {
+  it("keeps large Codex streaming on Markdown and marks completion for idle full upgrade", () => {
     const messageItem = {
       id: "assistant-codex-final",
       kind: "message" as const,
@@ -432,6 +440,9 @@ describe("MessagesRows stream mitigation", () => {
     expect(screen.getByTestId("markdown").textContent).toBe(messageItem.text);
     expect(screen.getByTestId("markdown").getAttribute("data-live-render-mode")).toBe(
       "full",
+    );
+    expect(screen.getByTestId("markdown").getAttribute("data-full-render-upgrade")).toBe(
+      "idle",
     );
     expect(screen.getByTestId("markdown").getAttribute("data-progressive-reveal")).toBe(
       "false",
@@ -490,7 +501,10 @@ describe("MessagesRows stream mitigation", () => {
 
     expect(screen.getByTestId("markdown").getAttribute("data-throttle")).toBe("80");
     expect(screen.getByTestId("markdown").getAttribute("data-live-render-mode")).toBe(
-      "full",
+      "lightweight",
+    );
+    expect(screen.getByTestId("markdown").getAttribute("data-progressive-reveal")).toBe(
+      "true",
     );
   });
 

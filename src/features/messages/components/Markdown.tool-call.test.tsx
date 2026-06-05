@@ -1,12 +1,16 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
-import { Markdown } from "./Markdown";
+import { beforeAll, describe, expect, it } from "vitest";
+import { Markdown, prewarmMarkdownRuntime } from "./Markdown";
 
 const lightweightInvokeValue =
   "<invoke name=\"read\"><parameter name=\"file\">AGENTS.md</parameter></invoke>";
 
 describe("Markdown tool-call fallback", () => {
+  beforeAll(async () => {
+    await prewarmMarkdownRuntime();
+  });
+
   it("renders residual function_calls XML as a tool-call card", () => {
     const value = [
       "我会查找文件：",

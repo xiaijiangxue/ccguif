@@ -1,9 +1,13 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-import { Markdown } from "./Markdown";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { Markdown, prewarmMarkdownRuntime } from "./Markdown";
 
 describe("Markdown fenced block rendering", () => {
+  beforeAll(async () => {
+    await prewarmMarkdownRuntime();
+  });
+
   it("renders fenced markdown blocks as rich markdown cards", () => {
     const value = [
       "```markdown",

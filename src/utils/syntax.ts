@@ -29,7 +29,7 @@ import "prismjs/components/prism-toml";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-tsx";
 import "prismjs/components/prism-yaml";
-import { resolvePreviewLanguageFromPath } from "./fileLanguageRegistry";
+export { languageFromPath } from "./languageFromPath";
 
 function escapeHtml(value: string) {
   return value
@@ -47,10 +47,6 @@ function sanitizePrismHtml(html: string): string {
   return html
     .replace(/<script[\s>][\s\S]*?<\/script>/gi, "")
     .replace(/\bon\w+\s*=/gi, "data-removed=");
-}
-
-export function languageFromPath(path?: string | null) {
-  return resolvePreviewLanguageFromPath(path);
 }
 
 export function highlightLine(text: string, language?: string | null) {

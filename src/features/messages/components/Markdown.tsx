@@ -1,11 +1,6 @@
 import { Fragment, lazy, memo, startTransition, Suspense, useCallback, useEffect, useMemo, useRef, useState, isValidElement, type ReactNode, type MouseEvent } from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import type { Components } from "react-markdown";
 import { useTranslation } from "react-i18next";
-import remarkBreaks from "remark-breaks";
-import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeRaw from "rehype-raw";
-import rehypeSanitize, { defaultSchema } from "rehype-sanitize";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { LocalImage } from "./LocalImage";
@@ -56,6 +51,7 @@ type MarkdownProps = {
   softBreaks?: boolean;
   preserveFormatting?: boolean;
   liveRenderMode?: "full" | "lightweight";
+  fullRenderUpgrade?: "immediate" | "idle";
   progressiveReveal?: boolean;
   progressiveRevealStepMs?: number;
   progressiveRevealChunkChars?: number;
@@ -96,6 +92,18 @@ type LinkBlockProps = {
   urls: string[];
 };
 
+type ReactMarkdownComponent = typeof import("react-markdown").default;
+type ReactMarkdownProps = Parameters<ReactMarkdownComponent>[0];
+type MarkdownRuntime = {
+  ReactMarkdown: ReactMarkdownComponent;
+  remarkBreaks: unknown;
+  remarkGfm: unknown;
+  remarkMath: unknown;
+  rehypeRaw: unknown;
+  rehypeSanitize: unknown;
+  defaultSchema: typeof import("rehype-sanitize").defaultSchema;
+};
+
 const SUPPORTS_REGEX_LOOKBEHIND = (() => {
   try {
     void new RegExp("(?<=a)b");
@@ -113,6 +121,154 @@ const MARKDOWN_ALERT_TONE_SET = new Set([
   "warning",
   "caution",
 ]);
+
+let markdownRuntimeCache: MarkdownRuntime | null = null;
+let markdownRuntimePromise: Promise<MarkdownRuntime> | null = null;
+
+function loadMarkdownRuntime() {
+  if (markdownRuntimeCache) {
+    return Promise.resolve(markdownRuntimeCache);
+  }
+  if (!markdownRuntimePromise) {
+    markdownRuntimePromise = Promise.all([
+      import("react-markdown"),
+      import("remark-breaks"),
+      import("remark-gfm"),
+      import("remark-math"),
+      import("rehype-raw"),
+      import("rehype-sanitize"),
+    ]).then(([
+      reactMarkdownModule,
+      remarkBreaksModule,
+      remarkGfmModule,
+      remarkMathModule,
+      rehypeRawModule,
+      rehypeSanitizeModule,
+    ]) => {
+      const runtime = {
+        ReactMarkdown: reactMarkdownModule.default,
+        remarkBreaks: remarkBreaksModule.default,
+        remarkGfm: remarkGfmModule.default,
+        remarkMath: remarkMathModule.default,
+        rehypeRaw: rehypeRawModule.default,
+        rehypeSanitize: rehypeSanitizeModule.default,
+        defaultSchema: rehypeSanitizeModule.defaultSchema,
+      } satisfies MarkdownRuntime;
+      markdownRuntimeCache = runtime;
+      return runtime;
+    });
+  }
+  return markdownRuntimePromise;
+}
+
+export function prewarmMarkdownRuntime() {
+  return loadMarkdownRuntime();
+}
+
+function useMarkdownRuntime(shouldLoad: boolean) {
+  const [runtime, setRuntime] = useState(() => markdownRuntimeCache);
+  useEffect(() => {
+    if (!shouldLoad || runtime) {
+      return undefined;
+    }
+    let cancelled = false;
+    void loadMarkdownRuntime().then((nextRuntime) => {
+      if (cancelled) {
+        return;
+      }
+      startTransition(() => setRuntime(nextRuntime));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [runtime, shouldLoad]);
+  return runtime;
+}
+
+type IdleHandle =
+  | { kind: "none" }
+  | { kind: "idle"; cancel: () => void }
+  | { kind: "timeout"; handle: number };
+
+function scheduleIdleWork(callback: () => void, timeout = 400): IdleHandle {
+  if (typeof window === "undefined") {
+    callback();
+    return { kind: "none" };
+  }
+  const requestIdleCallbackFn = (
+    window as typeof window & {
+      requestIdleCallback?: (
+        callback: IdleRequestCallback,
+        options?: IdleRequestOptions,
+      ) => number;
+    }
+  ).requestIdleCallback;
+  const cancelIdleCallbackFn = (
+    window as typeof window & {
+      cancelIdleCallback?: (handle: number) => void;
+    }
+  ).cancelIdleCallback;
+  if (requestIdleCallbackFn && cancelIdleCallbackFn) {
+    const handle = requestIdleCallbackFn(() => callback(), { timeout });
+    return {
+      kind: "idle",
+      cancel: () => cancelIdleCallbackFn(handle),
+    };
+  }
+  return { kind: "timeout", handle: window.setTimeout(callback, timeout) };
+}
+
+function cancelIdleWork(handle: IdleHandle) {
+  if (handle.kind === "none") {
+    return;
+  }
+  if (handle.kind === "idle") {
+    handle.cancel();
+    return;
+  }
+  window.clearTimeout(handle.handle);
+}
+
+function useIdleFlag({
+  enabled,
+  timeout = 400,
+  resetKey,
+}: {
+  enabled: boolean;
+  timeout?: number;
+  resetKey?: string | number | boolean | null;
+}) {
+  const [ready, setReady] = useState(!enabled);
+  useEffect(() => {
+    if (!enabled) {
+      setReady(true);
+      return undefined;
+    }
+    setReady(false);
+    let cancelled = false;
+    const handle = scheduleIdleWork(() => {
+      if (cancelled) {
+        return;
+      }
+      startTransition(() => setReady(true));
+    }, timeout);
+    return () => {
+      cancelled = true;
+      cancelIdleWork(handle);
+    };
+  }, [enabled, resetKey, timeout]);
+  return ready;
+}
+
+function renderIdleUpgradeTimeoutMs(value: string) {
+  if (value.length > 24_000) {
+    return 1_200;
+  }
+  if (value.length > 8_000) {
+    return 760;
+  }
+  return 320;
+}
 
 function stableToolCallHash(value: string) {
   let hash = 5381;
@@ -138,6 +294,7 @@ function areMarkdownPropsEqual(prev: MarkdownProps, next: MarkdownProps) {
     prev.softBreaks === next.softBreaks &&
     prev.preserveFormatting === next.preserveFormatting &&
     prev.liveRenderMode === next.liveRenderMode &&
+    prev.fullRenderUpgrade === next.fullRenderUpgrade &&
     prev.progressiveReveal === next.progressiveReveal &&
     prev.progressiveRevealStepMs === next.progressiveRevealStepMs &&
     prev.progressiveRevealChunkChars === next.progressiveRevealChunkChars &&
@@ -986,14 +1143,67 @@ function extractLatexContent(languageTag: string | null, value: string): string 
   return inner || null;
 }
 
-function renderHighlightedCodeLines(value: string, languageTag: string | null) {
-  return value.split("\n").map((line, index) => (
+function LazyHighlightedCodeLine({
+  line,
+  languageTag,
+  highlightEnabled,
+}: {
+  line: string;
+  languageTag: string | null;
+  highlightEnabled: boolean;
+}) {
+  const highlightedHtml = useMemo(
+    () => (highlightEnabled ? highlightLine(line, languageTag) : null),
+    [highlightEnabled, languageTag, line],
+  );
+  if (highlightedHtml === null) {
+    return <span className="markdown-codeblock-line">{line}</span>;
+  }
+  return (
     <span
-      key={`${index}:${line.length}`}
       className="markdown-codeblock-line"
-      dangerouslySetInnerHTML={{ __html: highlightLine(line, languageTag) }}
+      dangerouslySetInnerHTML={{ __html: highlightedHtml }}
     />
-  ));
+  );
+}
+
+function useCodeHighlightReady(value: string) {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  const idleReady = useIdleFlag({
+    enabled: true,
+    timeout: value.length > 8_000 ? 900 : 360,
+    resetKey: value,
+  });
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) {
+      setVisible(true);
+      return undefined;
+    }
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return undefined;
+    }
+    setVisible(false);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          startTransition(() => setVisible(true));
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "360px 0px" },
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [value]);
+
+  return {
+    ref,
+    highlightReady: visible && idleReady,
+  };
 }
 
 function CodeBlock({ className, value, copyUseModifier }: CodeBlockProps) {
@@ -1003,9 +1213,21 @@ function CodeBlock({ className, value, copyUseModifier }: CodeBlockProps) {
   const languageTag = extractLanguageTag(className);
   const languageLabel = languageTag ?? "Code";
   const fencedValue = `\`\`\`${languageTag ?? ""}\n${value}\n\`\`\``;
+  const lines = useMemo(
+    () => value.split("\n"),
+    [value],
+  );
+  const { ref: highlightRootRef, highlightReady } = useCodeHighlightReady(value);
   const highlightedLines = useMemo(
-    () => renderHighlightedCodeLines(value, languageTag),
-    [value, languageTag],
+    () => lines.map((line, index) => (
+      <LazyHighlightedCodeLine
+        key={`${index}:${line.length}`}
+        line={line}
+        languageTag={languageTag}
+        highlightEnabled={highlightReady}
+      />
+    )),
+    [highlightReady, languageTag, lines],
   );
 
   useEffect(() => {
@@ -1048,7 +1270,7 @@ function CodeBlock({ className, value, copyUseModifier }: CodeBlockProps) {
   };
 
   return (
-    <div className="markdown-codeblock">
+    <div className="markdown-codeblock" ref={highlightRootRef}>
       <div className="markdown-codeblock-header">
         <span className="markdown-codeblock-language">{languageLabel}</span>
         <div className="markdown-codeblock-actions">
@@ -1417,13 +1639,9 @@ function PreBlock({
   }
   const isSingleLine = !value.includes("\n");
   if (isSingleLine) {
-    const highlightedHtml = highlightLine(value, languageTag);
     return (
       <pre className="markdown-codeblock-single">
-        <code
-          className={className}
-          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-        />
+        <code className={className}>{value}</code>
       </pre>
     );
   }
@@ -1447,6 +1665,7 @@ export const Markdown = memo(function Markdown({
   softBreaks = false,
   preserveFormatting = false,
   liveRenderMode = "full",
+  fullRenderUpgrade = "immediate",
   progressiveReveal = false,
   progressiveRevealStepMs = PROGRESSIVE_REVEAL_STEP_MS,
   progressiveRevealChunkChars = PROGRESSIVE_REVEAL_CHUNK_CHARS,
@@ -1455,6 +1674,24 @@ export const Markdown = memo(function Markdown({
   onOpenFileLinkMenu,
   onRenderedValueChange,
 }: MarkdownProps) {
+  const shouldIdleUpgradeFullRender =
+    liveRenderMode === "full" && fullRenderUpgrade === "idle";
+  const fullRenderReady = useIdleFlag({
+    enabled: shouldIdleUpgradeFullRender,
+    timeout: renderIdleUpgradeTimeoutMs(value),
+    resetKey: `${value.length}:${value.slice(0, 80)}:${value.slice(-80)}`,
+  });
+  const effectiveLiveRenderMode =
+    shouldIdleUpgradeFullRender && !fullRenderReady
+      ? "lightweight"
+      : liveRenderMode;
+  const shouldLoadFullMarkdownRuntime = effectiveLiveRenderMode === "full";
+  const markdownRuntime = useMarkdownRuntime(shouldLoadFullMarkdownRuntime);
+  const renderRuntimeMode =
+    effectiveLiveRenderMode === "full" && markdownRuntime
+      ? "full"
+      : "lightweight";
+
   // Throttle rapid value changes during streaming to reduce expensive
   // ReactMarkdown re-parses that block the main thread and cause input lag.
   //
@@ -1670,7 +1907,7 @@ export const Markdown = memo(function Markdown({
     if (preserveFormatting) {
       return renderValue;
     }
-    if (liveRenderMode === "lightweight") {
+    if (renderRuntimeMode === "lightweight") {
       return renderValue.replace(/\r\n/g, "\n");
     }
     const normalizeDisplayText = (text: string) =>
@@ -1688,7 +1925,7 @@ export const Markdown = memo(function Markdown({
         ),
       );
     return normalizeOutsideMarkdownCode(renderValue, normalizeDisplayText);
-  }, [renderValue, codeBlock, liveRenderMode, preserveFormatting]);
+  }, [renderValue, codeBlock, preserveFormatting, renderRuntimeMode]);
   const toolCallBlocks = useMemo(() => parseToolCallBlocks(content), [content]);
   const shouldRenderToolCallSegments = !(
     toolCallBlocks.length === 1 && toolCallBlocks[0]?.kind === "md"
@@ -1866,22 +2103,25 @@ export const Markdown = memo(function Markdown({
   // Memoize plugin arrays so ReactMarkdown doesn't re-initialize its processor
   const remarkPluginsMemo = useMemo(
     () => {
-      const plugins = softBreaks
-        ? [remarkBreaks, remarkMath, remarkFileLinks]
-        : [remarkMath, remarkFileLinks];
-      if (SUPPORTS_REGEX_LOOKBEHIND) {
-        return [remarkGfm, ...plugins];
+      if (!markdownRuntime) {
+        return [];
       }
-      return plugins;
+      const plugins = softBreaks
+        ? [markdownRuntime.remarkBreaks, markdownRuntime.remarkMath, remarkFileLinks]
+        : [markdownRuntime.remarkMath, remarkFileLinks];
+      if (SUPPORTS_REGEX_LOOKBEHIND) {
+        return [markdownRuntime.remarkGfm, ...plugins] as ReactMarkdownProps["remarkPlugins"];
+      }
+      return plugins as ReactMarkdownProps["remarkPlugins"];
     },
-    [softBreaks],
+    [markdownRuntime, softBreaks],
   );
   const hasMathContent = useMemo(() => detectMathContent(value), [value]);
   const [katexReady, setKatexReady] = useState(
     () => areKatexAssetsReady(),
   );
   useEffect(() => {
-    if (!hasMathContent || katexReady) return;
+    if (!hasMathContent || katexReady || renderRuntimeMode !== "full") return;
     let cancelled = false;
     loadKatexAssets().then(() => {
       if (cancelled) return;
@@ -1890,22 +2130,25 @@ export const Markdown = memo(function Markdown({
     return () => {
       cancelled = true;
     };
-  }, [hasMathContent, katexReady]);
+  }, [hasMathContent, katexReady, renderRuntimeMode]);
   const rehypePluginsMemo = useMemo(
     () => {
+      if (!markdownRuntime) {
+        return [];
+      }
       const plugins: unknown[] = [
-        rehypeRaw,
-        [rehypeSanitize, {
-          ...defaultSchema,
+        markdownRuntime.rehypeRaw,
+        [markdownRuntime.rehypeSanitize, {
+          ...markdownRuntime.defaultSchema,
           tagNames: [
-            ...(defaultSchema.tagNames ?? []),
+            ...(markdownRuntime.defaultSchema.tagNames ?? []),
             "details", "summary", "abbr", "mark", "ins", "del",
             "sub", "sup", "kbd", "var", "samp",
           ],
           attributes: {
-            ...defaultSchema.attributes,
-            "*": [...(defaultSchema.attributes?.["*"] ?? []), "className", "class", "style"],
-            "img": [...(defaultSchema.attributes?.["img"] ?? []), "loading"],
+            ...markdownRuntime.defaultSchema.attributes,
+            "*": [...(markdownRuntime.defaultSchema.attributes?.["*"] ?? []), "className", "class", "style"],
+            "img": [...(markdownRuntime.defaultSchema.attributes?.["img"] ?? []), "loading"],
           },
         }],
       ];
@@ -1913,9 +2156,9 @@ export const Markdown = memo(function Markdown({
       if (katexReady && cachedRehypeKatex) {
         plugins.push(cachedRehypeKatex);
       }
-      return plugins as Parameters<typeof ReactMarkdown>[0]["rehypePlugins"];
+      return plugins as ReactMarkdownProps["rehypePlugins"];
     },
-    [katexReady],
+    [katexReady, markdownRuntime],
   );
   const urlTransform = useCallback((url: string) => {
     const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(url);
@@ -1992,7 +2235,7 @@ export const Markdown = memo(function Markdown({
   );
 
   const renderMarkdownContent = useCallback((nextContent: string) => {
-    if (liveRenderMode === "lightweight") {
+    if (renderRuntimeMode === "lightweight" || !markdownRuntime) {
       return (
         <LightweightMarkdown
           value={nextContent}
@@ -2000,6 +2243,7 @@ export const Markdown = memo(function Markdown({
         />
       );
     }
+    const { ReactMarkdown } = markdownRuntime;
     return (
       <ReactMarkdown
         remarkPlugins={remarkPluginsMemo}
@@ -2012,10 +2256,11 @@ export const Markdown = memo(function Markdown({
     );
   }, [
     components,
-    liveRenderMode,
+    markdownRuntime,
     rehypePluginsMemo,
     remarkPluginsMemo,
     renderLightweightLink,
+    renderRuntimeMode,
     urlTransform,
   ]);
 

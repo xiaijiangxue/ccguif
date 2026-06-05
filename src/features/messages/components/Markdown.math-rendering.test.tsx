@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { Markdown, prewarmKatexAssets } from "./Markdown";
+import { Markdown, prewarmKatexAssets, prewarmMarkdownRuntime } from "./Markdown";
 
 describe("Markdown math rendering", () => {
   beforeAll(async () => {
+    await prewarmMarkdownRuntime();
     await prewarmKatexAssets();
   });
 
