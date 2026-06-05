@@ -17,5 +17,10 @@
       "Bash(git check-ignore *)",
       "Bash(rtk ls *)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "figma",
+    "ddg-search",
+    "bing-search"
+  ]
 }

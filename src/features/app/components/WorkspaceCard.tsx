@@ -4,6 +4,7 @@ import type {
   PointerEvent,
   PointerEventHandler,
 } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
 import Eye from "lucide-react/dist/esm/icons/eye";
@@ -21,6 +22,8 @@ function isActivationKey(key: string) {
 function stopWorkspaceActionPointerEvent(event: MouseEvent | PointerEvent) {
   event.stopPropagation();
 }
+
+const WORKSPACE_CHILDREN_COLLAPSE_MS = 280;
 
 type WorkspaceCardDropState = "before" | "after" | "group" | "move-to-group" | null;
 
@@ -92,6 +95,7 @@ export function WorkspaceCard({
   children,
 }: WorkspaceCardProps) {
   const { t } = useTranslation();
+  const [renderedChildren, setRenderedChildren] = useState(children);
   const isDefaultWorkspace = isDefaultWorkspacePath(workspace.path);
   const canQuickReloadThreadList =
     isThreadListDegraded && typeof onQuickReloadWorkspaceThreads === "function";
@@ -110,6 +114,19 @@ export function WorkspaceCard({
   const handleToggleCollapse = () => {
     onToggleWorkspaceCollapse(workspace.id, !isCollapsed);
   };
+
+  useEffect(() => {
+    if (!isCollapsed) {
+      setRenderedChildren(children);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => {
+      setRenderedChildren(null);
+    }, WORKSPACE_CHILDREN_COLLAPSE_MS);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [children, isCollapsed]);
 
   return (
     <div
@@ -374,7 +391,12 @@ export function WorkspaceCard({
           </div>
         </div>
       </div>
-      {children ? <div className="workspace-children">{children}</div> : null}
+      <div
+        className={`workspace-children${isCollapsed ? " is-collapsed" : " is-expanded"}`}
+        aria-hidden={isCollapsed}
+      >
+        <div className="workspace-children-inner">{renderedChildren}</div>
+      </div>
     </div>
   );
 }
