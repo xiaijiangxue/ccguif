@@ -56,9 +56,9 @@ import {
   triggerChatInputInsertFromTreeDrag,
 } from "../utils/fileTreeDragBridge";
 import { FilePreviewPopover } from "./FilePreviewPopover";
+import { FileTreeChildren } from "./FileTreeChildren";
 import { FileTreeRootActions } from "./FileTreeRootActions";
-import {
-  clampRendererContextMenuPosition,
+import { clampRendererContextMenuPosition,
   RendererContextMenu,
   type RendererContextMenuItem,
   type RendererContextMenuState,
@@ -2821,13 +2821,13 @@ export function FileTreePanel({
             <Plus size={10} aria-hidden />
           </button>
         </div>
-        {hasChildren && isExpanded && (
-          <div className="file-tree-children">
+        {hasChildren && (
+          <FileTreeChildren isExpanded={isExpanded}>
             {node.children.map((child) => renderNode(child, depth + 1))}
-          </div>
+          </FileTreeChildren>
         )}
-        {isLazyFolder && isExpanded && node.children.length === 0 && (
-          <div className="file-tree-children">
+        {isLazyFolder && node.children.length === 0 && (
+          <FileTreeChildren isExpanded={isExpanded}>
             {isLazyLoading ? (
               <div className="file-tree-lazy-state">{t("files.loadingFiles")}</div>
             ) : lazyLoadError ? (
@@ -2842,7 +2842,7 @@ export function FileTreePanel({
             ) : (
               <div className="file-tree-lazy-state">{t("files.noFilesAvailable")}</div>
             )}
-          </div>
+          </FileTreeChildren>
         )}
       </div>
     );
