@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 7
+- **Total Sessions**: 8
 - **Last Active**: 2026-06-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~289 | Active |
+| `journal-1.md` | ~322 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 8 | 2026-06-06 | Replace CSS tooltip with portal-based implementation in ContextBar | `df3b9645` | `refactor/liquid-precision-ui` |
 | 7 | 2026-06-06 | 优化侧栏会话删除入口与消息滚动边界 | `94a7dedd` | `refactor/liquid-precision-ui` |
 | 6 | 2026-06-06 | 合并上游 v0.5.7 更新 | `2af19e2a` | `refactor/liquid-precision-ui` |
 | 5 | 2026-06-04 | Composer height and status scope fixes | `c693de76` | `refactor/liquid-precision-ui` |

@@ -287,3 +287,36 @@ Committed the latest composer resize and status panel scoping changes before tri
 ### Next Steps
 
 - None - task complete
+
+
+## Session 8: Replace CSS tooltip with portal-based implementation in ContextBar
+
+**Date**: 2026-06-06
+**Task**: Replace CSS tooltip with portal-based implementation in ContextBar
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Replaced CSS-only ::after/::before tooltip on context items with a React portal-based popup to avoid overflow constraints. Also added keyboard accessibility (tabIndex, focus/blur handlers) for context items.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `df3b9645` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
