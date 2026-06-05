@@ -1283,17 +1283,24 @@
 .new-file-prompt {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 60;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
 }
 
 .new-file-prompt-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
+  background:
+    radial-gradient(
+      circle at 50% 38%,
+      color-mix(in srgb, var(--surface-card-strong) 10%, transparent) 0%,
+      transparent 34%
+    ),
+    rgba(7, 10, 16, 0.48);
+  backdrop-filter: blur(14px) saturate(1.08);
 }
 
 .app.reduced-transparency .new-file-prompt-backdrop {
@@ -1302,23 +1309,30 @@
 
 .new-file-prompt-card {
   position: relative;
-  width: min(380px, calc(100vw - 48px));
-  background: var(--surface-card-strong);
-  border: 1px solid var(--border-stronger);
-  border-radius: 14px;
-  padding: 20px;
+  width: min(408px, calc(100vw - 48px));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card-strong) 96%, white 4%),
+      color-mix(in srgb, var(--surface-card) 94%, transparent)
+    );
+  border: 1px solid color-mix(in srgb, var(--border-stronger) 76%, transparent);
+  border-radius: 16px;
+  padding: 22px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4),
-              0 0 0 1px rgba(255, 255, 255, 0.04) inset;
-  animation: new-file-prompt-enter 0.15s ease-out;
+  gap: 12px;
+  box-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.32),
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
+  animation: new-file-prompt-enter 0.16s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes new-file-prompt-enter {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(4px);
+    transform: scale(0.975) translateY(6px);
   }
   to {
     opacity: 1;
@@ -1327,54 +1341,120 @@
 }
 
 .new-file-prompt-title {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-strong);
-  letter-spacing: -0.01em;
+  font-size: 18px;
+  font-weight: 680;
+  line-height: 1.2;
+  color: var(--text-stronger, var(--text-strong));
+  letter-spacing: 0;
 }
 
 .new-file-prompt-path {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 62%, transparent);
+  background: color-mix(in srgb, var(--surface-control) 58%, transparent);
   font-size: 12px;
-  color: var(--text-faint);
+  line-height: 1.25;
+  color: color-mix(in srgb, var(--text-muted) 86%, transparent);
   font-family: var(--code-font-family);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  margin-top: -6px;
+  margin-top: -2px;
 }
 
 .new-file-prompt-input {
   width: 100%;
-  border-radius: 8px;
-  border: 1px solid var(--border-subtle);
-  background: var(--surface-card-muted);
-  color: var(--text-strong);
-  padding: 9px 12px;
-  font-size: 13px;
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 76%, transparent);
+  background: color-mix(in srgb, var(--surface-card-muted) 88%, var(--surface-card) 12%);
+  color: var(--text-stronger, var(--text-strong));
+  padding: 10px 12px;
+  font-size: 14px;
   font-family: var(--code-font-family);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  line-height: 1.35;
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.04),
+    0 0 0 0 color-mix(in srgb, var(--input-focus-border, #3b82f6) 0%, transparent);
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .new-file-prompt-input::placeholder {
-  color: var(--text-dim);
+  color: color-mix(in srgb, var(--text-dim) 82%, transparent);
 }
 
 .new-file-prompt-input:focus {
   outline: none;
-  border-color: var(--border-accent);
-  box-shadow: 0 0 0 3px var(--shadow-accent, rgba(42, 80, 128, 0.25));
+  border-color: color-mix(in srgb, var(--input-focus-border, var(--border-accent)) 82%, transparent);
+  background: color-mix(in srgb, var(--surface-card-muted) 96%, transparent);
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--input-focus-border, #3b82f6) 16%, transparent),
+    inset 0 1px 1px rgba(0, 0, 0, 0.04);
 }
 
 .new-file-prompt-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 2px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .new-file-prompt-actions button {
-  padding: 6px 14px;
+  min-height: 32px;
+  padding: 6px 13px;
   border-radius: 8px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 620;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition:
+    background-color 0.14s ease,
+    border-color 0.14s ease,
+    color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.new-file-prompt-actions button:first-child,
+.new-file-prompt-actions button.ghost {
+  background: transparent;
+  color: color-mix(in srgb, var(--text-muted) 88%, var(--text-strong));
+}
+
+.new-file-prompt-actions button:first-child:hover,
+.new-file-prompt-actions button:first-child:focus-visible,
+.new-file-prompt-actions button.ghost:hover,
+.new-file-prompt-actions button.ghost:focus-visible {
+  background: color-mix(in srgb, var(--surface-hover) 86%, transparent);
+  color: var(--text-strong);
+}
+
+.new-file-prompt-actions button:last-child,
+.new-file-prompt-actions button.primary {
+  background: color-mix(in srgb, var(--text-strong) 92%, var(--surface-card) 8%);
+  color: color-mix(in srgb, var(--surface-card) 94%, white 6%);
+  border-color: color-mix(in srgb, var(--text-strong) 18%, transparent);
+}
+
+.new-file-prompt-actions button:last-child:hover:not(:disabled),
+.new-file-prompt-actions button:last-child:focus-visible:not(:disabled),
+.new-file-prompt-actions button.primary:hover:not(:disabled),
+.new-file-prompt-actions button.primary:focus-visible:not(:disabled) {
+  background: var(--text-stronger, var(--text-strong));
+  transform: translateY(-1px);
+}
+
+.new-file-prompt-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
