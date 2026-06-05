@@ -328,6 +328,7 @@ export type ThreadListProps = {
   pinnedRows: ThreadRow[];
   unpinnedRows: ThreadRow[];
   totalThreadRoots: number;
+  hasMoreRoots?: boolean;
   visibleThreadRootCount: number;
   isExpanded: boolean;
   nextCursor: string | null;
@@ -345,7 +346,7 @@ export type ThreadListProps = {
   isThreadPinned: (workspaceId: string, threadId: string) => boolean;
   isThreadAutoNaming: (workspaceId: string, threadId: string) => boolean;
   onToggleThreadPin?: (workspaceId: string, threadId: string) => void;
-  onToggleExpanded: (workspaceId: string) => void;
+  onToggleExpanded: (workspaceId: string, shouldLoadOlder?: boolean) => void;
   onLoadOlderThreads: (workspaceId: string) => void;
   onSelectThread: (workspaceId: string, threadId: string) => void;
   onShowThreadMenu: ShowThreadMenuHandler;
@@ -362,6 +363,7 @@ export function ThreadList({
   pinnedRows,
   unpinnedRows,
   totalThreadRoots,
+  hasMoreRoots = false,
   visibleThreadRootCount,
   isExpanded,
   nextCursor,
@@ -391,7 +393,11 @@ export function ThreadList({
 }: ThreadListProps) {
   const { t } = useTranslation();
   const indentUnit = nested ? 10 : 14;
-  const [collapsedParentThreadIds, setCollapsedParentThreadIds] = useState<Set<string>>(
+  const canLoadOlder = showLoadOlder && Boolean(nextCursor);
+  const hasMoreAvailable = hasMoreRoots || canLoadOlder;
+  const showMoreButton =
+    hasMoreAvailable || (isExpanded && totalThreadRoots > visibleThreadRootCount);
+  const [expandedParentThreadIds, setExpandedParentThreadIds] = useState<Set<string>>(
     () => new Set(),
   );
   const isExitedThread = useCallback((thread: ThreadSummary) => {
@@ -433,17 +439,14 @@ export function ThreadList({
     [visiblePinnedRows, visibleUnpinnedRows],
   );
   const effectiveCollapsedParentThreadIds = useMemo(() => {
-    if (collapsedParentThreadIds.size === 0) {
-      return collapsedParentThreadIds;
-    }
     const next = new Set<string>();
-    collapsedParentThreadIds.forEach((threadId) => {
-      if (visibleParentThreadIds.has(threadId)) {
+    visibleParentThreadIds.forEach((threadId) => {
+      if (!expandedParentThreadIds.has(threadId)) {
         next.add(threadId);
       }
     });
     return next;
-  }, [collapsedParentThreadIds, visibleParentThreadIds]);
+  }, [expandedParentThreadIds, visibleParentThreadIds]);
   const displayedPinnedRows = useMemo(
     () => filterCollapsedThreadRows(visiblePinnedRows, effectiveCollapsedParentThreadIds),
     [effectiveCollapsedParentThreadIds, visiblePinnedRows],
@@ -464,7 +467,7 @@ export function ThreadList({
   const toggleSubagentParent = useCallback((event: MouseEvent, threadId: string) => {
     event.preventDefault();
     event.stopPropagation();
-    setCollapsedParentThreadIds((current) => {
+    setExpandedParentThreadIds((current) => {
       const next = new Set(current);
       if (next.has(threadId)) {
         next.delete(threadId);
@@ -481,7 +484,7 @@ export function ThreadList({
       }
       event.preventDefault();
       event.stopPropagation();
-      setCollapsedParentThreadIds((current) => {
+      setExpandedParentThreadIds((current) => {
         const next = new Set(current);
         if (next.has(threadId)) {
           next.delete(threadId);
@@ -605,20 +608,28 @@ export function ThreadList({
           {t("threads.exitedSessionsHidden", { count: hiddenExitedCount })}
         </div>
       )}
-      {totalThreadRoots > visibleThreadRootCount && (
+      {showMoreButton && (
         <button
           className="thread-more"
           onClick={(event) => {
             event.stopPropagation();
-            onToggleExpanded(workspaceId);
+            if (!hasMoreRoots && canLoadOlder) {
+              onLoadOlderThreads(workspaceId);
+              return;
+            }
+            onToggleExpanded(
+              workspaceId,
+              false,
+            );
           }}
         >
-          {isExpanded ? t("threads.showLess") : t("threads.more")}
+          {hasMoreAvailable ? t("threads.more") : t("threads.showLess")}
         </button>
       )}
       {showLoadOlder &&
         nextCursor &&
-        (isExpanded || totalThreadRoots <= visibleThreadRootCount) && (
+        !showMoreButton &&
+        totalThreadRoots <= visibleThreadRootCount && (
         <button
           className="thread-more"
           onClick={(event) => {

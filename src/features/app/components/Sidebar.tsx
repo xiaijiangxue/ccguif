@@ -93,6 +93,7 @@ type WorkspaceGroupSection = {
 type WorkspaceThreadRows = {
   unpinnedRows: Array<{ thread: ThreadSummary; depth: number }>;
   totalRoots: number;
+  hasMoreRoots: boolean;
 };
 
 type ToolConversationItem = Extract<ConversationItem, { kind: "tool" }>;
@@ -609,9 +610,9 @@ export function Sidebar({
     [globalSearchShortcut, isMac],
   );
 
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [workspaceThreadRootLimits, setWorkspaceThreadRootLimits] = useState<
+    Record<string, number>
+  >(() => ({}));
   const [collapsedWorktreeSections, setCollapsedWorktreeSections] = useState<Set<string>>(
     () => new Set(),
   );
@@ -1156,7 +1157,7 @@ export function Sidebar({
       }
       const { pinnedRows } = getThreadRows(
         threads,
-        true,
+        Number.POSITIVE_INFINITY,
         workspace.id,
         getPinTimestamp,
       );
@@ -1214,7 +1215,7 @@ export function Sidebar({
   const { sidebarBodyRef, scrollFade, updateScrollFade } = useSidebarScrollFade(
     groupedWorkspaces,
     threadsByWorkspace,
-    expandedWorkspaces,
+    workspaceThreadRootLimits,
     normalizedQuery,
   );
 
@@ -1299,32 +1300,41 @@ export function Sidebar({
       }
       group.workspaces.forEach((workspace) => {
         if (workspace.settings.sidebarCollapsed) {
-          rowsByWorkspace.set(workspace.id, { unpinnedRows: [], totalRoots: 0 });
+          rowsByWorkspace.set(workspace.id, {
+            unpinnedRows: [],
+            totalRoots: 0,
+            hasMoreRoots: false,
+          });
           return;
         }
         const threads = getProjectedThreads(workspace.id);
-        const isExpanded = expandedWorkspaces.has(workspace.id);
         const visibleThreadRootCount = normalizeVisibleThreadRootCount(
           workspace.settings.visibleThreadRootCount,
         );
-        const { unpinnedRows, totalRoots } = getThreadRows(
+        const visibleThreadRootLimit =
+          workspaceThreadRootLimits[workspace.id] ?? visibleThreadRootCount;
+        const { unpinnedRows, totalRoots, hasMoreRoots } = getThreadRows(
           threads,
-          isExpanded,
+          visibleThreadRootLimit,
           workspace.id,
           getPinTimestamp,
           visibleThreadRootCount,
         );
-        rowsByWorkspace.set(workspace.id, { unpinnedRows, totalRoots });
+        rowsByWorkspace.set(workspace.id, {
+          unpinnedRows,
+          totalRoots,
+          hasMoreRoots,
+        });
       });
     });
     return rowsByWorkspace;
   }, [
     collapsedGroups,
-    expandedWorkspaces,
     filteredGroupedWorkspaces,
     getPinTimestamp,
     getThreadRows,
     getProjectedThreads,
+    workspaceThreadRootLimits,
   ]);
 
   useEffect(() => {
@@ -1437,17 +1447,48 @@ export function Sidebar({
     return next;
   }, [hasRunningThreadByWorkspaceId, workspaces, worktreesByParent]);
 
-  const handleToggleExpanded = useCallback((workspaceId: string) => {
-    setExpandedWorkspaces((prev) => {
-      const next = new Set(prev);
-      if (next.has(workspaceId)) {
-        next.delete(workspaceId);
-      } else {
-        next.add(workspaceId);
+  const handleToggleExpanded = useCallback(
+    (
+      workspaceId: string,
+      shouldLoadOlderOrTotalRootOverride?: boolean | number,
+    ) => {
+      const workspace = workspaces.find((entry) => entry.id === workspaceId);
+      const step = normalizeVisibleThreadRootCount(
+        workspace?.settings.visibleThreadRootCount,
+      );
+      const shouldLoadOlder =
+        typeof shouldLoadOlderOrTotalRootOverride === "boolean"
+          ? shouldLoadOlderOrTotalRootOverride
+          : false;
+      const totalRoots =
+        typeof shouldLoadOlderOrTotalRootOverride === "number"
+          ? shouldLoadOlderOrTotalRootOverride
+          : threadRowsByWorkspace.get(workspaceId)?.totalRoots ?? step;
+
+      setWorkspaceThreadRootLimits((prev) => {
+        const current = prev[workspaceId] ?? step;
+        const nextLimit = shouldLoadOlder
+          ? current + step
+          : current >= totalRoots
+            ? step
+            : current + step;
+        const next = { ...prev };
+
+        if (nextLimit <= step) {
+          delete next[workspaceId];
+        } else {
+          next[workspaceId] = nextLimit;
+        }
+
+        return next;
+      });
+
+      if (shouldLoadOlder) {
+        onLoadOlderThreads(workspaceId);
       }
-      return next;
-    });
-  }, []);
+    },
+    [onLoadOlderThreads, threadRowsByWorkspace, workspaces],
+  );
 
   const handleToggleWorktreeSection = useCallback((workspaceId: string) => {
     setCollapsedWorktreeSections((previous) => {
@@ -2353,10 +2394,10 @@ export function Sidebar({
   const renderWorkspaceEntry = useCallback((entry: WorkspaceInfo) => {
     const threads = threadsByWorkspace[entry.id] ?? [];
     const isCollapsed = entry.settings.sidebarCollapsed;
-    const isExpanded = expandedWorkspaces.has(entry.id);
     const threadRows = threadRowsByWorkspace.get(entry.id);
     const unpinnedRows = threadRows?.unpinnedRows ?? [];
     const totalThreadRoots = threadRows?.totalRoots ?? 0;
+    const hasMoreThreadRoots = threadRows?.hasMoreRoots ?? false;
     const nextCursor =
       threadListCursorByWorkspace[entry.id] ?? null;
     const showThreadList =
@@ -2383,6 +2424,9 @@ export function Sidebar({
     const visibleThreadRootCount = normalizeVisibleThreadRootCount(
       entry.settings.visibleThreadRootCount,
     );
+    const visibleThreadRootLimit =
+      workspaceThreadRootLimits[entry.id] ?? visibleThreadRootCount;
+    const isExpanded = visibleThreadRootLimit >= totalThreadRoots;
     const hideExitedSessions = isExitedSessionsHidden(entry.path);
     const exitedSessionVisibility = getExitedSessionRowVisibility(unpinnedRows, {
       hideExitedSessions,
@@ -2462,7 +2506,7 @@ export function Sidebar({
             threadListLoadingByWorkspace={_threadListLoadingByWorkspace}
             threadListPagingByWorkspace={threadListPagingByWorkspace}
             threadListCursorByWorkspace={threadListCursorByWorkspace}
-            expandedWorkspaces={expandedWorkspaces}
+            workspaceThreadRootLimits={workspaceThreadRootLimits}
             activeWorkspaceId={activeWorkspaceId}
             activeThreadId={activeThreadId}
             systemProxyEnabled={systemProxyEnabled}
@@ -2499,7 +2543,6 @@ export function Sidebar({
             workspacePath={entry.path}
             folders={folderProjection.folders}
             rootRows={folderProjection.rootRows}
-            totalThreadRoots={totalThreadRoots}
             isExpanded={isExpanded}
             rootDraftRequestKey={rootFolderDraftRequestKey}
             moveFolderTargets={folderMoveTargets}
@@ -2511,6 +2554,7 @@ export function Sidebar({
             onNewSessionInFolder={handleOpenSessionFolderSessionMenu}
             threadListProps={{
               visibleThreadRootCount,
+              hasMoreRoots: hasMoreThreadRoots,
               hideExitedSessions,
               activeWorkspaceId,
               activeThreadId,
@@ -2543,6 +2587,7 @@ export function Sidebar({
             pinnedRows={[]}
             unpinnedRows={unpinnedRows}
             totalThreadRoots={totalThreadRoots}
+            hasMoreRoots={hasMoreThreadRoots}
             visibleThreadRootCount={visibleThreadRootCount}
             isExpanded={isExpanded}
             nextCursor={nextCursor}
@@ -2587,7 +2632,6 @@ export function Sidebar({
     deleteConfirmWorkspaceId,
     deletingWorktreeIds,
     draggingWorkspaceId,
-    expandedWorkspaces,
     finishWorkspacePointerDrag,
     getPinTimestamp,
     getThreadRows,
@@ -2642,6 +2686,7 @@ export function Sidebar({
     threadsByWorkspace,
     toggleExitedSessionsHidden,
     workspaceDropPreview,
+    workspaceThreadRootLimits,
     worktreesByParent,
     _threadListLoadingByWorkspace,
   ]);

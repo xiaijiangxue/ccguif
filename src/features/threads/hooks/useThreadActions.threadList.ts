@@ -3,10 +3,7 @@ import type {
   AutoSessionMetadata,
   WorkspaceSessionSourceCompleteness,
 } from "../../../services/tauri";
-import {
-  DEFAULT_VISIBLE_THREAD_ROOT_COUNT,
-  normalizeVisibleThreadRootCount,
-} from "../../app/constants";
+import { normalizeVisibleThreadRootCount } from "../../app/constants";
 import type { CodexCatalogSessionSummary } from "./useThreadActions.helpers";
 
 export const THREAD_LIST_TARGET_COUNT = 50;
@@ -33,10 +30,6 @@ export const CODEX_SESSION_CATALOG_FETCH_TIMEOUT_MS =
   SIDEBAR_THREAD_LIST_TIMEOUT_MS;
 export const SESSION_CATALOG_PAGE_SIZE = 100;
 
-const MIN_NATIVE_SESSION_LIST_LIMIT = Math.min(
-  SESSION_CATALOG_PAGE_SIZE,
-  DEFAULT_VISIBLE_THREAD_ROOT_COUNT,
-);
 const THREAD_LIST_CURSOR_SOURCE_SEPARATOR = "::";
 const THREAD_LIST_CURSOR_CATALOG_ROOT = "__root__";
 const WORKSPACE_SESSION_SOURCE_COMPLETENESS_VALUES =
@@ -124,7 +117,7 @@ export function resolveNativeSessionListLimit(
   );
   return Math.min(
     SESSION_CATALOG_PAGE_SIZE,
-    Math.max(MIN_NATIVE_SESSION_LIST_LIMIT, visibleRootCount),
+    Math.max(SESSION_CATALOG_PAGE_SIZE, visibleRootCount),
   );
 }
 

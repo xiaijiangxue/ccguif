@@ -8,7 +8,7 @@ import {
 
 type ThreadRowsFn = (
   threads: ThreadSummary[],
-  includeArchived: boolean,
+  visibleThreadRootLimit: boolean | number,
   workspaceId: string,
   getPinTimestamp: (workspaceId: string, threadId: string) => number | null,
 ) => {
@@ -97,7 +97,7 @@ export function useWorkspaceCycling({
       }
       const { pinnedRows, unpinnedRows } = getThreadRows(
         threads,
-        true,
+        Number.POSITIVE_INFINITY,
         workspaceId,
         getPinTimestamp,
       );

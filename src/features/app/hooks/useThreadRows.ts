@@ -20,7 +20,7 @@ export function useThreadRows(threadParentById: Record<string, string>) {
   const getThreadRows = useCallback(
     (
       threads: ThreadSummary[],
-      isExpanded: boolean,
+      visibleThreadRootLimit: boolean | number,
       workspaceId: string,
       getPinTimestamp: (workspaceId: string, threadId: string) => number | null,
       visibleThreadRootCount = DEFAULT_VISIBLE_THREAD_ROOT_COUNT,
@@ -90,9 +90,16 @@ export function useThreadRows(threadParentById: Record<string, string>) {
         return compareThreadRows(a, b);
       });
 
-      const visibleRootCount = isExpanded
-        ? unpinnedRoots.length
-        : visibleThreadRootCount;
+      const resolvedVisibleThreadRootLimit =
+        typeof visibleThreadRootLimit === "boolean"
+          ? visibleThreadRootLimit
+            ? unpinnedRoots.length
+            : visibleThreadRootCount
+          : visibleThreadRootLimit;
+      const visibleRootCount = Math.max(
+        visibleThreadRootCount,
+        Math.min(unpinnedRoots.length, resolvedVisibleThreadRootLimit),
+      );
       const visibleRoots = unpinnedRoots.slice(0, visibleRootCount);
 
       const appendThread = (

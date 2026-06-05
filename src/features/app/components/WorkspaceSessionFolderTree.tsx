@@ -27,7 +27,6 @@ type WorkspaceSessionFolderTreeProps = {
   workspacePath: string;
   folders: WorkspaceSessionFolderNode[];
   rootRows: WorkspaceSessionThreadRow[];
-  totalThreadRoots: number;
   isExpanded: boolean;
   rootDraftRequestKey?: number;
   threadListProps: Omit<ThreadListProps, "workspaceId" | "workspacePath" | "pinnedRows" | "unpinnedRows" | "totalThreadRoots" | "isExpanded" | "nested">;
@@ -49,7 +48,6 @@ export function WorkspaceSessionFolderTree({
   workspacePath,
   folders,
   rootRows,
-  totalThreadRoots,
   isExpanded,
   rootDraftRequestKey = 0,
   threadListProps,
@@ -477,6 +475,8 @@ export function WorkspaceSessionFolderTree({
                 pinnedRows={[]}
                 unpinnedRows={node.rows}
                 totalThreadRoots={node.rows.length}
+                hasMoreRoots={false}
+                visibleThreadRootCount={node.rows.length}
                 isExpanded
                 nextCursor={null}
                 isPaging={false}
@@ -525,7 +525,8 @@ export function WorkspaceSessionFolderTree({
           workspacePath={workspacePath}
           pinnedRows={[]}
           unpinnedRows={rootRows}
-          totalThreadRoots={totalThreadRoots}
+          totalThreadRoots={rootRows.length}
+          hasMoreRoots={threadListProps.hasMoreRoots}
           isExpanded={isExpanded}
           nextCursor={threadListProps.nextCursor}
           isPaging={threadListProps.isPaging}
@@ -539,7 +540,8 @@ export function WorkspaceSessionFolderTree({
           workspacePath={workspacePath}
           pinnedRows={[]}
           unpinnedRows={[]}
-          totalThreadRoots={totalThreadRoots}
+          totalThreadRoots={rootRows.length}
+          hasMoreRoots={threadListProps.hasMoreRoots}
           isExpanded={isExpanded}
           nextCursor={threadListProps.nextCursor}
           isPaging={threadListProps.isPaging}

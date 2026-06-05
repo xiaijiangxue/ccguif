@@ -343,12 +343,13 @@ function getGitignoredFolderAncestorPaths(
 }
 
 function isSpecialDirectoryPath(path: string) {
-  const leaf = path.split("/").filter(Boolean).pop() ?? "";
-  if (!leaf) {
+  const segments = path.split("/").filter(Boolean);
+  if (segments.length === 0) {
     return false;
   }
+  const leaf = segments[segments.length - 1] ?? "";
   return (
-    SPECIAL_DEPENDENCY_DIRECTORIES.has(leaf) ||
+    segments.some((segment) => SPECIAL_DEPENDENCY_DIRECTORIES.has(segment)) ||
     SPECIAL_BUILD_ARTIFACT_DIRECTORIES.has(leaf) ||
     leaf.startsWith("cmake-build-")
   );

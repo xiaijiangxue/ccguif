@@ -194,6 +194,7 @@ describe("ThreadList", () => {
     render(
       <ThreadList
         {...baseProps}
+        hasMoreRoots
         totalThreadRoots={DEFAULT_VISIBLE_THREAD_ROOT_COUNT + 1}
         onToggleExpanded={onToggleExpanded}
       />,
@@ -201,7 +202,7 @@ describe("ThreadList", () => {
 
     const moreButton = screen.getByRole("button", { name: "More..." });
     fireEvent.click(moreButton);
-    expect(onToggleExpanded).toHaveBeenCalledWith("ws-1");
+    expect(onToggleExpanded).toHaveBeenCalledWith("ws-1", false);
   });
 
   it("loads older threads when a cursor is available", () => {
@@ -214,8 +215,8 @@ describe("ThreadList", () => {
       />,
     );
 
-    const loadButton = screen.getByRole("button", { name: "Load older..." });
-    fireEvent.click(loadButton);
+    const moreButton = screen.getByRole("button", { name: "More..." });
+    fireEvent.click(moreButton);
     expect(onLoadOlderThreads).toHaveBeenCalledWith("ws-1");
   });
 
@@ -230,6 +231,24 @@ describe("ThreadList", () => {
 
     expect(screen.queryByRole("button", { name: "Load older..." })).toBeNull();
     expect(screen.getByRole("button", { name: "More..." })).toBeTruthy();
+  });
+
+  it("loads older from the more button when loaded roots are exhausted", () => {
+    const onLoadOlderThreads = vi.fn();
+    const onToggleExpanded = vi.fn();
+    render(
+      <ThreadList
+        {...baseProps}
+        nextCursor="catalog::offset:100"
+        onLoadOlderThreads={onLoadOlderThreads}
+        onToggleExpanded={onToggleExpanded}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "More..." }));
+
+    expect(onLoadOlderThreads).toHaveBeenCalledWith("ws-1");
+    expect(onToggleExpanded).not.toHaveBeenCalled();
   });
 
   it("renders nested rows with indentation and disables pinning", () => {

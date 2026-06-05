@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildWorkspaceSessionSelectionKey } from "../../settings/components/settings-view/hooks/useWorkspaceSessionCatalog";
 import {
   normalizeProjectCatalogSession,
+  resolveNativeSessionListLimit,
   resolveThreadListCursorForDisplay,
 } from "./useThreadActions.threadList";
 
@@ -103,5 +104,20 @@ describe("useThreadActions.threadList", () => {
         runtimeCursor: null,
       }),
     ).toBe("catalog::offset:200");
+  });
+
+  it("keeps native fallback fetch window independent from collapsed display count", () => {
+    expect(
+      resolveNativeSessionListLimit({
+        id: "ws-1",
+        name: "Project",
+        path: "/tmp/project",
+        connected: true,
+        settings: {
+          sidebarCollapsed: false,
+          visibleThreadRootCount: 20,
+        },
+      }),
+    ).toBe(100);
   });
 });

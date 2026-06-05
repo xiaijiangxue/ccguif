@@ -37,4 +37,14 @@ describe("sidebar titlebar drag region", () => {
     expect(toggleRule).toContain("-webkit-app-region: no-drag;");
     expect(swappedRule).toContain("margin-right: auto;");
   });
+
+  it("keeps expanded workspace children from clipping long session lists", () => {
+    const expandedRule = getCssRuleBlock(sidebarCss, ".workspace-children");
+    const collapsedRule = getCssRuleBlock(sidebarCss, ".workspace-children.is-collapsed");
+
+    expect(expandedRule).toContain("overflow: visible;");
+    expect(expandedRule).toContain("max-height: none;");
+    expect(collapsedRule).toContain("overflow: hidden;");
+    expect(collapsedRule).toContain("max-height: 0;");
+  });
 });
