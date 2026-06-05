@@ -20,6 +20,7 @@ import FileIcon from "../../../components/FileIcon";
 import type { PanelTabId } from "../../layout/components/PanelTabs";
 import {
   createWorkspaceDirectory,
+  getWorkspaceDirectoryChildren,
   getWorkspaceDirectoryChildrenIgnored,
   getWorkspaceDirectoryChildrenVisible,
   duplicateWorkspaceItem,
@@ -331,7 +332,10 @@ function getGitignoredFolderAncestorPaths(
     }
     const parts = folderPath.split("/").filter(Boolean);
     for (let index = 1; index < parts.length; index += 1) {
-      ancestors.add(parts.slice(0, index).join("/"));
+      const ancestorPath = parts.slice(0, index).join("/");
+      if (!isSpecialDirectoryPath(ancestorPath)) {
+        ancestors.add(ancestorPath);
+      }
     }
   });
 
@@ -380,6 +384,15 @@ function isConfirmedEmptyDirectoryResponse(
     gitignoredFiles.length === 0 &&
     gitignoredDirectories.length === 0 &&
     metadata.some((entry) => entry?.path === path && entry.child_state === "empty")
+  );
+}
+
+function hasWorkspaceDirectoryEntries(response: WorkspaceFilesResponse) {
+  return (
+    (Array.isArray(response.files) && response.files.length > 0) ||
+    (Array.isArray(response.directories) && response.directories.length > 0) ||
+    (Array.isArray(response.gitignored_files) && response.gitignored_files.length > 0) ||
+    (Array.isArray(response.gitignored_directories) && response.gitignored_directories.length > 0)
   );
 }
 
@@ -1476,24 +1489,73 @@ export function FileTreePanel({
       const requestWorkspaceId = workspaceId;
       const requestEpoch = lazyLoadEpochRef.current;
       try {
-        const response = await getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, path);
+        const isSpecialDirectory = isSpecialDirectoryPath(path);
+        const response = isSpecialDirectory
+          ? await getWorkspaceDirectoryChildren(requestWorkspaceId, path)
+          : await getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, path);
         if (
           activeWorkspaceIdRef.current !== requestWorkspaceId ||
           lazyLoadEpochRef.current !== requestEpoch
         ) {
           return;
         }
-        applyLazyDirectoryResponse(path, response);
-        finalizeLazyDirectoryLoad(path);
+        const visibleResponseConfirmedEmpty = isConfirmedEmptyDirectoryResponse(path, response);
+        applyLazyDirectoryResponse(path, response, {
+          allowParentStateOverride: !visibleResponseConfirmedEmpty,
+        });
         const directChildDirectories = (Array.isArray(response.directories) ? response.directories : [])
           .filter((childPath) => childPath.startsWith(`${path}/`))
           .filter((childPath) => childPath.slice(path.length + 1).length > 0)
           .filter((childPath) => !childPath.slice(path.length + 1).includes("/"));
         directChildDirectories.forEach((childPath) => queuePrefetchDirectoryLoad(childPath));
         void flushPrefetchDirectoryLoadQueue();
-        if (!isConfirmedEmptyDirectoryResponse(path, response)) {
-          queueIgnoredDirectoryLoad(path);
-          void flushIgnoredDirectoryLoadQueue();
+        if (isSpecialDirectory) {
+          finalizeLazyDirectoryLoad(path);
+          return;
+        }
+        let ignoredLoadSucceeded = true;
+        let ignoredResponseHasEntries = false;
+        try {
+          const ignoredResponse = await getWorkspaceDirectoryChildrenIgnored(
+            requestWorkspaceId,
+            path,
+          );
+          if (
+            activeWorkspaceIdRef.current !== requestWorkspaceId ||
+            lazyLoadEpochRef.current !== requestEpoch
+          ) {
+            return;
+          }
+          ignoredResponseHasEntries = hasWorkspaceDirectoryEntries(ignoredResponse);
+          applyLazyDirectoryResponse(path, ignoredResponse, {
+            allowParentStateOverride: visibleResponseConfirmedEmpty,
+          });
+        } catch (error) {
+          ignoredLoadSucceeded = false;
+          if (
+            activeWorkspaceIdRef.current !== requestWorkspaceId ||
+            lazyLoadEpochRef.current !== requestEpoch
+          ) {
+            return;
+          }
+          const message = error instanceof Error ? error.message : String(error);
+          setLazyDirectoryLoadErrors((prev) => {
+            const next = new Map(prev);
+            next.set(path, message);
+            return next;
+          });
+        }
+        if (
+          visibleResponseConfirmedEmpty &&
+          ignoredLoadSucceeded &&
+          !ignoredResponseHasEntries
+        ) {
+          applyLazyDirectoryResponse(path, response);
+        }
+        if (ignoredLoadSucceeded || !visibleResponseConfirmedEmpty) {
+          finalizeLazyDirectoryLoad(path);
+        } else {
+          clearLazyDirectoryLoading(path);
         }
       } catch (error) {
         if (

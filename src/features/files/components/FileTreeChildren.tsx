@@ -8,7 +8,9 @@ type FileTreeChildrenProps = {
 const FILE_TREE_CHILDREN_COLLAPSE_MS = 220;
 
 export function FileTreeChildren({ isExpanded, children }: FileTreeChildrenProps) {
-  const [renderedChildren, setRenderedChildren] = useState(children);
+  const [renderedChildren, setRenderedChildren] = useState<ReactNode>(
+    isExpanded ? children : null,
+  );
 
   useEffect(() => {
     if (isExpanded) {
