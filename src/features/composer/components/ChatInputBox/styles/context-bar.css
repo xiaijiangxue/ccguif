@@ -564,45 +564,69 @@
   position: relative;
 }
 
-.context-item.has-tooltip:hover::after {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  margin-bottom: 4px;
-
-  background: var(--tooltip-bg, #1a1c24);
-  color: var(--text-primary);
-  border: 1px solid var(--dropdown-border);
-  border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 12px;
-  line-height: 1.4;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-width: 300px;
-  width: max-content;
-
-  z-index: 1000;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  pointer-events: none;
-  opacity: 0;
-  animation: tooltip-fade-in 0.2s forwards;
+.context-item.has-tooltip:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--input-focus-border, #3b82f6) 70%, transparent);
+  outline-offset: 2px;
 }
 
-.context-item.has-tooltip:hover::before {
+.context-item-tooltip-popup {
+  position: fixed;
+  transform: translate(var(--tooltip-tx, -50%), -100%) translateY(-2px);
+  z-index: 99999;
+  width: max-content;
+  min-width: 180px;
+  max-width: min(380px, calc(100vw - 24px));
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--dropdown-border, #3c4353) 74%, transparent);
+  border-radius: 9px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--tooltip-bg, #1a1c24) 92%, white 8%),
+      var(--tooltip-bg, #1a1c24)
+    );
+  color: color-mix(in srgb, var(--text-primary, #f8fafc) 94%, transparent);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.24),
+    0 2px 8px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
+  font-size: 12px;
+  line-height: 1.42;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  animation: context-item-tooltip-in 0.14s ease-out both;
+}
+
+.context-item-tooltip-popup::before {
   content: '';
   position: absolute;
-  bottom: 100%;
-  left: 50%;
+  top: 100%;
+  left: var(--arrow-left, 50%);
   transform: translateX(-50%);
-  margin-bottom: -2px;
   border: 6px solid transparent;
-  border-top-color: var(--dropdown-border);
-  z-index: 1000;
-  opacity: 0;
-  animation: tooltip-fade-in 0.2s forwards;
+  border-top-color: color-mix(in srgb, var(--dropdown-border, #3c4353) 82%, transparent);
+}
+
+.context-item-tooltip-popup::after {
+  content: '';
+  position: absolute;
+  top: calc(100% - 1px);
+  left: var(--arrow-left, 50%);
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--tooltip-bg, #1a1c24);
+}
+
+@keyframes context-item-tooltip-in {
+  from {
+    opacity: 0;
+    transform: translate(var(--tooltip-tx, -50%), -100%) translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(var(--tooltip-tx, -50%), -100%) translateY(-2px);
+  }
 }
 
 /* Tooltip Popup (JS implementation, used to break out of overflow constraints in InputBox) */

@@ -1,4 +1,5 @@
 import React, { useRef, useCallback, useMemo, useState, useEffect, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import Crosshair from 'lucide-react/dist/esm/icons/crosshair';
 import ListCollapse from 'lucide-react/dist/esm/icons/list-collapse';
@@ -26,6 +27,15 @@ import { CODEX_AUTO_COMPACTION_THRESHOLD_OPTIONS } from '../../../codex/constant
 type CodexAutoCompactionSettingsPatch = {
   enabled?: boolean;
   thresholdPercent?: number;
+};
+
+type ContextItemTooltipState = {
+  text: string;
+  top: number;
+  left: number;
+  maxWidth: number;
+  tx: string;
+  arrowLeft: string;
 };
 
 interface ContextBarProps {
@@ -118,6 +128,8 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
   const [collapseLiveMiddleStepsEnabled, setCollapseLiveMiddleStepsEnabled] = useState(() =>
     readLocalBooleanFlag(MESSAGES_LIVE_COLLAPSE_MIDDLE_STEPS_FLAG_KEY, false),
   );
+  const [contextItemTooltip, setContextItemTooltip] =
+    useState<ContextItemTooltipState | null>(null);
   const manualCompactionMinSpinMs = 1200;
   const showLiveAutoFollowControl = Boolean(isLoading && showStatusPanelToggle);
   const showCollapseMiddleStepsControl = Boolean((isLoading || hasMessages) && showStatusPanelToggle);
@@ -129,6 +141,67 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
     e.stopPropagation();
     onAddAttachment?.();
   }, [onAddAttachment]);
+
+  const hideContextItemTooltip = useCallback(() => {
+    setContextItemTooltip(null);
+  }, []);
+
+  const showContextItemTooltip = useCallback((
+    event: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>,
+    text: string,
+  ) => {
+    const normalizedText = text.trim();
+    if (!normalizedText || typeof window === 'undefined') {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1024;
+    const gutter = 12;
+    const maxWidth = Math.min(380, Math.max(180, viewportWidth - gutter * 2));
+    const estimatedWidth = Math.min(
+      maxWidth,
+      Math.max(190, Math.min(normalizedText.length * 6.8 + 34, maxWidth)),
+    );
+    const anchorCenter = rect.left + rect.width / 2;
+    let left = anchorCenter;
+    let tx = '-50%';
+    let arrowOffset = estimatedWidth / 2;
+
+    if (anchorCenter - estimatedWidth / 2 < gutter) {
+      left = gutter;
+      tx = '0';
+      arrowOffset = anchorCenter - left;
+    } else if (anchorCenter + estimatedWidth / 2 > viewportWidth - gutter) {
+      left = viewportWidth - gutter;
+      tx = '-100%';
+      arrowOffset = anchorCenter - (left - estimatedWidth);
+    }
+
+    const arrowLeft = `${Math.max(16, Math.min(estimatedWidth - 16, arrowOffset))}px`;
+
+    setContextItemTooltip({
+      text: normalizedText,
+      top: Math.max(12, rect.top - 8),
+      left,
+      maxWidth,
+      tx,
+      arrowLeft,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!contextItemTooltip) {
+      return undefined;
+    }
+
+    window.addEventListener('resize', hideContextItemTooltip);
+    window.addEventListener('scroll', hideContextItemTooltip, true);
+    return () => {
+      window.removeEventListener('resize', hideContextItemTooltip);
+      window.removeEventListener('scroll', hideContextItemTooltip, true);
+    };
+  }, [contextItemTooltip, hideContextItemTooltip]);
 
   // Extract filename from path
   const getFileName = (path: string) => {
@@ -574,6 +647,11 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
           className="context-item has-tooltip"
           data-tooltip={chip.description || chip.name}
           style={{ cursor: 'default' }}
+          tabIndex={0}
+          onMouseEnter={(event) => showContextItemTooltip(event, chip.description || chip.name)}
+          onMouseLeave={hideContextItemTooltip}
+          onFocus={(event) => showContextItemTooltip(event, chip.description || chip.name)}
+          onBlur={hideContextItemTooltip}
         >
           <span
             className={`codicon ${chip.type === 'skill' ? 'codicon-tools' : 'codicon-wrench'}`}
@@ -596,6 +674,11 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
           className="context-item has-tooltip" 
           data-tooltip={selectedAgent.name}
           style={{ cursor: 'default' }}
+          tabIndex={0}
+          onMouseEnter={(event) => showContextItemTooltip(event, selectedAgent.name)}
+          onMouseLeave={hideContextItemTooltip}
+          onFocus={(event) => showContextItemTooltip(event, selectedAgent.name)}
+          onBlur={hideContextItemTooltip}
         >
           <AgentIcon
             icon={selectedAgent.icon}
@@ -625,6 +708,11 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
           className="context-item has-tooltip"
           data-tooltip={fullDisplayText}
           style={{ cursor: 'default' }}
+          tabIndex={0}
+          onMouseEnter={(event) => showContextItemTooltip(event, fullDisplayText)}
+          onMouseLeave={hideContextItemTooltip}
+          onFocus={(event) => showContextItemTooltip(event, fullDisplayText)}
+          onBlur={hideContextItemTooltip}
         >
           {activeFile && (
             <span
@@ -754,6 +842,25 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
           </button>
         )}
       </div>
+      {contextItemTooltip && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              className="context-item-tooltip-popup"
+              style={
+                {
+                  top: `${contextItemTooltip.top}px`,
+                  left: `${contextItemTooltip.left}px`,
+                  maxWidth: `${contextItemTooltip.maxWidth}px`,
+                  '--tooltip-tx': contextItemTooltip.tx,
+                  '--arrow-left': contextItemTooltip.arrowLeft,
+                } as React.CSSProperties
+              }
+            >
+              {contextItemTooltip.text}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 });
