@@ -419,7 +419,6 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     workspaces,
     groupedWorkspaces,
     hasWorkspaceGroups: workspaceGroups.length > 0,
-    onApplyWorkspaceSidebarOrganization: applyWorkspaceSidebarOrganization,
     deletingWorktreeIds,
     threadsByWorkspace,
     threadParentById,
