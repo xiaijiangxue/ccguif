@@ -62,6 +62,7 @@ type WorktreeSectionProps = {
   isExitedSessionsHidden?: (workspacePath: string) => boolean;
   onToggleExitedSessionsHidden?: (workspacePath: string) => void;
   onSelectThread: (workspaceId: string, threadId: string) => void;
+  onDeleteThread?: (workspaceId: string, threadId: string) => void;
   onShowThreadMenu: (
     event: MouseEvent,
     workspaceId: string,
@@ -115,6 +116,7 @@ export function WorktreeSection({
   isExitedSessionsHidden = () => false,
   onToggleExitedSessionsHidden = () => undefined,
   onSelectThread,
+  onDeleteThread,
   onShowThreadMenu,
   deleteConfirmThreadId = null,
   deleteConfirmWorkspaceId = null,
@@ -316,6 +318,7 @@ export function WorktreeSection({
                     onToggleExpanded={() => onToggleExpanded(worktree.id, totalWorktreeRoots)}
                     onLoadOlderThreads={onLoadOlderThreads}
                     onSelectThread={onSelectThread}
+                    onDeleteThread={onDeleteThread}
                     onShowThreadMenu={onShowThreadMenu}
                     deleteConfirmThreadId={deleteConfirmThreadId}
                     deleteConfirmWorkspaceId={deleteConfirmWorkspaceId}

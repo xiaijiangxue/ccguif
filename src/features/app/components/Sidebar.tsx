@@ -2526,6 +2526,7 @@ export function Sidebar({
             isExitedSessionsHidden={isExitedSessionsHidden}
             onToggleExitedSessionsHidden={toggleExitedSessionsHidden}
             onSelectThread={onSelectThread}
+            onDeleteThread={onDeleteThread}
             onShowThreadMenu={showThreadMenu}
             deleteConfirmThreadId={deleteConfirmThreadId}
             deleteConfirmWorkspaceId={deleteConfirmWorkspaceId}
@@ -2568,6 +2569,7 @@ export function Sidebar({
               onToggleExpanded: handleToggleExpanded,
               onLoadOlderThreads,
               onSelectThread,
+              onDeleteThread,
               onShowThreadMenu: showThreadMenu,
               deleteConfirmThreadId,
               deleteConfirmWorkspaceId,
@@ -2606,6 +2608,7 @@ export function Sidebar({
             onToggleExpanded={handleToggleExpanded}
             onLoadOlderThreads={onLoadOlderThreads}
             onSelectThread={onSelectThread}
+            onDeleteThread={onDeleteThread}
             onShowThreadMenu={showThreadMenu}
             deleteConfirmThreadId={deleteConfirmThreadId}
             deleteConfirmWorkspaceId={deleteConfirmWorkspaceId}
@@ -2660,6 +2663,7 @@ export function Sidebar({
     onCancelDeleteConfirm,
     onConfirmDeleteConfirm,
     onConnectWorkspace,
+    onDeleteThread,
     onLoadOlderThreads,
     onSelectWorkspace,
     onSelectThread,
@@ -2824,6 +2828,7 @@ export function Sidebar({
                   isThreadAutoNaming={isThreadAutoNaming}
                   onToggleThreadPin={handleToggleThreadPin}
                   onSelectThread={onSelectThread}
+                  onDeleteThread={onDeleteThread}
                   onShowThreadMenu={showThreadMenu}
                   deleteConfirmThreadId={deleteConfirmThreadId}
                   deleteConfirmWorkspaceId={deleteConfirmWorkspaceId}

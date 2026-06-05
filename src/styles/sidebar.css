@@ -2204,7 +2204,9 @@
   align-items: center;
   gap: 4px;
   margin-left: 6px;
+  min-width: 46px;
   flex-shrink: 0;
+  justify-content: flex-end;
 }
 
 .thread-time {
@@ -2212,10 +2214,50 @@
   color: var(--text-faint);
   font-weight: 350;
   font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .thread-time {
   opacity: 0.72;
+}
+
+.thread-delete-trigger {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-faint);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(2px);
+  transition:
+    opacity 0.14s ease,
+    color 0.14s ease,
+    background-color 0.14s ease,
+    transform 0.14s ease;
+}
+
+.thread-row:hover .thread-delete-trigger,
+.thread-row:focus-within .thread-delete-trigger,
+.thread-row.has-delete-confirm .thread-delete-trigger {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.thread-delete-trigger:hover,
+.thread-delete-trigger:focus-visible {
+  color: var(--status-danger, #ef4444);
+  background: color-mix(in srgb, var(--status-danger, #ef4444) 12%, transparent);
+  outline: none;
 }
 
 .thread-auto-naming {

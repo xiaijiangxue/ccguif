@@ -216,14 +216,6 @@
   color: color-mix(in srgb, var(--status-success, #22c55e) 64%, var(--text-strong));
 }
 
-.main .messages {
-  margin-top: calc(-1 * var(--main-topbar-height));
-}
-
-.main .messages-full {
-  padding-top: calc(12px + var(--main-topbar-height));
-}
-
 .messages-shell.has-anchor-rail .messages-full {
   padding-left: 0;
 }

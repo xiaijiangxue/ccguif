@@ -8,6 +8,7 @@ import {
   TooltipPopup,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import Trash2 from "lucide-react/dist/esm/icons/trash-2";
 import { memo, useCallback, useMemo, useState } from "react";
 import type { CSSProperties, KeyboardEvent, MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -67,6 +68,7 @@ type ThreadRowItemProps = {
   nestedWorkspaceId: string;
   onCancelDeleteConfirm?: () => void;
   onConfirmDeleteConfirm?: () => void;
+  onDeleteThread?: (workspaceId: string, threadId: string) => void;
   onSelectThread: (workspaceId: string, threadId: string) => void;
   onShowThreadMenu: ShowThreadMenuHandler;
   onToggleThreadPin?: (workspaceId: string, threadId: string) => void;
@@ -149,6 +151,7 @@ const ThreadRowItem = memo(function ThreadRowItem({
   nestedWorkspaceId,
   onCancelDeleteConfirm,
   onConfirmDeleteConfirm,
+  onDeleteThread,
   onSelectThread,
   onShowThreadMenu,
   onToggleThreadPin,
@@ -169,6 +172,7 @@ const ThreadRowItem = memo(function ThreadRowItem({
       ? ({ "--thread-indent": `${indentPx}px` } as CSSProperties)
       : undefined;
   const engineIconType = engineSource as EngineType;
+  const canDeleteThread = Boolean(onDeleteThread && !isPendingSubagent);
   return (
     <Popover
       open={isDeleteConfirmOpen}
@@ -288,6 +292,34 @@ const ThreadRowItem = memo(function ThreadRowItem({
                 <span className="thread-auto-naming">{t("threads.autoNaming")}</span>
               )}
               {relativeTime ? <span className="thread-time">{relativeTime}</span> : null}
+              {canDeleteThread ? (
+                <span
+                  className="thread-delete-trigger"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={t("threads.delete")}
+                  title={t("threads.delete")}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onDeleteThread?.(nestedWorkspaceId, thread.id);
+                  }}
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") {
+                      return;
+                    }
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onDeleteThread?.(nestedWorkspaceId, thread.id);
+                  }}
+                >
+                  <Trash2 size={12} aria-hidden />
+                </span>
+              ) : null}
             </div>
           </TooltipTrigger>
         </PopoverAnchor>
@@ -349,6 +381,7 @@ export type ThreadListProps = {
   onToggleExpanded: (workspaceId: string, shouldLoadOlder?: boolean) => void;
   onLoadOlderThreads: (workspaceId: string) => void;
   onSelectThread: (workspaceId: string, threadId: string) => void;
+  onDeleteThread?: (workspaceId: string, threadId: string) => void;
   onShowThreadMenu: ShowThreadMenuHandler;
   deleteConfirmThreadId?: string | null;
   deleteConfirmWorkspaceId?: string | null;
@@ -384,6 +417,7 @@ export function ThreadList({
   onToggleExpanded,
   onLoadOlderThreads,
   onSelectThread,
+  onDeleteThread,
   onShowThreadMenu,
   deleteConfirmThreadId = null,
   deleteConfirmWorkspaceId = null,
@@ -578,6 +612,7 @@ export function ThreadList({
         nestedWorkspaceId={workspaceId}
         onCancelDeleteConfirm={onCancelDeleteConfirm}
         onConfirmDeleteConfirm={onConfirmDeleteConfirm}
+        onDeleteThread={onDeleteThread}
         onSelectThread={onSelectThread}
         onShowThreadMenu={onShowThreadMenu}
         onToggleThreadPin={onToggleThreadPin}
