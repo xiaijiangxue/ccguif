@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 6
+- **Total Sessions**: 7
 - **Last Active**: 2026-06-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~231 | Active |
+| `journal-1.md` | ~289 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 7 | 2026-06-06 | 优化侧栏会话删除入口与消息滚动边界 | `94a7dedd` | `refactor/liquid-precision-ui` |
 | 6 | 2026-06-06 | 合并上游 v0.5.7 更新 | `2af19e2a` | `refactor/liquid-precision-ui` |
 | 5 | 2026-06-04 | Composer height and status scope fixes | `c693de76` | `refactor/liquid-precision-ui` |
 | 4 | 2026-06-04 | Workspace row drag action handling | `7a99c6e3` | `refactor/liquid-precision-ui` |

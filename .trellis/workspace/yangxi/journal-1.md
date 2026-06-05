@@ -237,3 +237,53 @@ Committed the latest composer resize and status panel scoping changes before tri
 ### Next Steps
 
 - None - task complete
+
+
+## Session 7: 优化侧栏会话删除入口与消息滚动边界
+
+**Date**: 2026-06-06
+**Task**: 优化侧栏会话删除入口与消息滚动边界
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+### Summary
+
+提交侧栏会话列表的删除入口与样式调整，并修正主消息流滚动容器顶进 topbar 导致滚动条出现在顶部 chrome 区域的问题。
+
+### Main Changes
+
+- 在普通、置顶与 worktree 会话列表中透传 `onDeleteThread`，为可删除会话添加 hover/focus 可见的删除图标入口。
+- 调整会话行右侧 meta 区域宽度与时间对齐，避免删除入口出现时挤压布局。
+- 删除 `.main .messages` 的负 topbar margin 与对应补偿 padding，让消息流 native scrollbar 从 topbar 下方开始。
+
+### Testing
+
+- 未运行 lint/test；本次按用户要求提交当前代码。
+
+### Status
+
+[OK] Code committed and session recorded.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `94a7dedd` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
