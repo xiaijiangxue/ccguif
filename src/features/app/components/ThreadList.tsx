@@ -63,6 +63,16 @@ function filterCollapsedThreadRows(
   return visibleRows;
 }
 
+function collectParentThreadIds(rows: ThreadRow[]) {
+  const parentThreadIds = new Set<string>();
+  rows.forEach((row) => {
+    if (row.hasChildren) {
+      parentThreadIds.add(row.thread.id);
+    }
+  });
+  return parentThreadIds;
+}
+
 export type ThreadListProps = {
   workspaceId: string;
   workspacePath: string;
@@ -142,7 +152,7 @@ export function ThreadList({
 }: ThreadListProps) {
   const { t } = useTranslation();
   const indentUnit = nested ? 10 : 14;
-  const [collapsedParentThreadIds, setCollapsedParentThreadIds] = useState<Set<string>>(
+  const [expandedParentThreadIds, setExpandedParentThreadIds] = useState<Set<string>>(
     () => new Set(),
   );
   const isExitedThread = useCallback((thread: ThreadSummary) => {
@@ -179,6 +189,16 @@ export function ThreadList({
   );
   const contextMenuMoveFolderTargets =
     moveFolderTargets.length > 0 ? moveFolderTargets : undefined;
+  const collapsedParentThreadIds = useMemo(() => {
+    const parentThreadIds = collectParentThreadIds([
+      ...visiblePinnedRows,
+      ...visibleUnpinnedRows,
+    ]);
+    expandedParentThreadIds.forEach((threadId) => {
+      parentThreadIds.delete(threadId);
+    });
+    return parentThreadIds;
+  }, [expandedParentThreadIds, visiblePinnedRows, visibleUnpinnedRows]);
   const displayedPinnedRows = useMemo(
     () => filterCollapsedThreadRows(visiblePinnedRows, collapsedParentThreadIds),
     [collapsedParentThreadIds, visiblePinnedRows],
@@ -199,7 +219,7 @@ export function ThreadList({
   const toggleSubagentParent = useCallback((event: MouseEvent, threadId: string) => {
     event.preventDefault();
     event.stopPropagation();
-    setCollapsedParentThreadIds((current) => {
+    setExpandedParentThreadIds((current) => {
       const next = new Set(current);
       if (next.has(threadId)) {
         next.delete(threadId);
@@ -216,7 +236,7 @@ export function ThreadList({
       }
       event.preventDefault();
       event.stopPropagation();
-      setCollapsedParentThreadIds((current) => {
+      setExpandedParentThreadIds((current) => {
         const next = new Set(current);
         if (next.has(threadId)) {
           next.delete(threadId);
