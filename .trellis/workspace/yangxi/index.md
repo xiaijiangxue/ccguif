@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 5
-- **Last Active**: 2026-06-04
+- **Total Sessions**: 6
+- **Last Active**: 2026-06-06
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~198 | Active |
+| `journal-1.md` | ~231 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 6 | 2026-06-06 | 合并上游 v0.5.7 更新 | `2af19e2a` | `refactor/liquid-precision-ui` |
 | 5 | 2026-06-04 | Composer height and status scope fixes | `c693de76` | `refactor/liquid-precision-ui` |
 | 4 | 2026-06-04 | Workspace row drag action handling | `7a99c6e3` | `refactor/liquid-precision-ui` |
 | 3 | 2026-06-04 | Daemon scoped directory listing build fix | `b94c5ff4` | `refactor/liquid-precision-ui` |

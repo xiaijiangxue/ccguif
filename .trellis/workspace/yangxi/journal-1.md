@@ -196,3 +196,44 @@ Committed the latest composer resize and status panel scoping changes before tri
 ### Next Steps
 
 - None - task complete
+
+
+## Session 6: 合并上游 v0.5.7 更新
+
+**Date**: 2026-06-06
+**Task**: 合并上游 v0.5.7 更新
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+将 upstream/main 6889c369 合入 refactor/liquid-precision-ui，语义合并 Sidebar、ThreadList、Markdown 和 status panel 冲突，并完成 focused 前端测试、lint、typecheck、runtime contract、session_management 与 claude_history Rust 验证。
+
+### Main Changes
+
+- Merged upstream/main `6889c369` into `refactor/liquid-precision-ui`.
+- Resolved semantic conflicts in Sidebar workspace drag/session folder projection, ThreadList subagent collapse rendering, Markdown lazy runtime/streaming inline-code fallback, and status panel scoped fallback parent derivation.
+- Cleaned upstream markdown EOF whitespace reported by `git diff --check`.
+- Removed interrupted temporary merge-check worktrees.
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2af19e2a` | (see git log) |
+
+### Testing
+
+- [OK] `npx vitest run src/features/status-panel/hooks/useStatusPanelData.test.ts src/features/app/components/ThreadList.test.tsx src/features/messages/components/Markdown.tool-call.test.tsx src/features/messages/components/Messages.rich-content.test.tsx`
+- [OK] `npm run lint` (0 errors, 4 existing hook warnings outside resolved conflict files)
+- [OK] `npm run typecheck`
+- [OK] `npm run check:runtime-contracts`
+- [OK] `cargo test --manifest-path src-tauri/Cargo.toml session_management`
+- [OK] `cargo test --manifest-path src-tauri/Cargo.toml claude_history`
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
