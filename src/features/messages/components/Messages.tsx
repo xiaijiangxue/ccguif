@@ -408,6 +408,7 @@ export const Messages = memo(function Messages({
   const messageNodeByIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const agentTaskNodeByTaskIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const agentTaskNodeByToolUseIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const anchorRowScrollerRef = useRef<((messageId: string) => boolean) | null>(null);
   const autoScrollRef = useRef(true);
   const anchorUpdateRafRef = useRef<number | null>(null);
   const historyStickyUpdateRafRef = useRef<number | null>(null);
@@ -586,12 +587,13 @@ export const Messages = memo(function Messages({
     if (!container) {
       return null;
     }
-    const viewportAnchorY =
-      container.scrollTop + Math.min(96, container.clientHeight * 0.32);
+    const containerRect = container.getBoundingClientRect();
+    const viewportAnchorY = containerRect.top + Math.min(96, container.clientHeight * 0.32);
     let bestId: string | null = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     for (const [messageId, node] of messageNodeByIdRef.current) {
-      const distance = Math.abs(node.offsetTop - viewportAnchorY);
+      const nodeRect = node.getBoundingClientRect();
+      const distance = Math.abs(nodeRect.top - viewportAnchorY);
       if (distance < bestDistance) {
         bestDistance = distance;
         bestId = messageId;
@@ -1664,6 +1666,7 @@ export const Messages = memo(function Messages({
         id: item.id,
         role: item.role,
         position,
+        preview: item.text.replace(/\s+/g, " ").trim().slice(0, 120),
       };
     });
   }, [timelinePresentationItems]);
@@ -2185,17 +2188,65 @@ export const Messages = memo(function Messages({
     setActiveAnchorId((previous) => (previous === messageId ? previous : messageId));
   }, []);
 
+  const handleAnchorRowScrollerReady = useCallback(
+    (scroller: ((messageId: string) => boolean) | null) => {
+      anchorRowScrollerRef.current = scroller;
+      if (scroller && pendingJumpMessageId && showAllHistoryItems) {
+        scroller(pendingJumpMessageId);
+      }
+    },
+    [pendingJumpMessageId, showAllHistoryItems],
+  );
+
+  const jumpToMessageAnchor = useCallback((messageId: string) => {
+    if (!messageNodeByIdRef.current.get(messageId)) {
+      setPendingJumpMessageId(messageId);
+      if (!showAllHistoryItems) {
+        handleShowAllHistoryItems();
+        return;
+      }
+      anchorRowScrollerRef.current?.(messageId);
+      return;
+    }
+    scrollToAnchor(messageId);
+  }, [handleShowAllHistoryItems, scrollToAnchor, showAllHistoryItems]);
+
   useEffect(() => {
     if (!pendingJumpMessageId) {
       return;
     }
     const targetNode = messageNodeByIdRef.current.get(pendingJumpMessageId);
-    if (!targetNode) {
+    if (targetNode) {
+      scrollToAnchor(pendingJumpMessageId);
+      setPendingJumpMessageId(null);
       return;
     }
-    scrollToAnchor(pendingJumpMessageId);
-    setPendingJumpMessageId(null);
-  }, [pendingJumpMessageId, timelinePresentationItems, scrollToAnchor]);
+    if (!showAllHistoryItems) {
+      return;
+    }
+    anchorRowScrollerRef.current?.(pendingJumpMessageId);
+    let attempts = 0;
+    let rafId = 0;
+    const retryUntilMounted = () => {
+      const nextTargetNode = messageNodeByIdRef.current.get(pendingJumpMessageId);
+      if (nextTargetNode) {
+        scrollToAnchor(pendingJumpMessageId);
+        setPendingJumpMessageId(null);
+        return;
+      }
+      attempts += 1;
+      if (attempts >= 90) {
+        return;
+      }
+      rafId = window.requestAnimationFrame(retryUntilMounted);
+    };
+    rafId = window.requestAnimationFrame(retryUntilMounted);
+    return () => {
+      if (rafId) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [pendingJumpMessageId, scrollToAnchor, showAllHistoryItems, timelinePresentationItems]);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -2207,18 +2258,13 @@ export const Messages = memo(function Messages({
       if (!messageId) {
         return;
       }
-      if (!messageNodeByIdRef.current.get(messageId) && !showAllHistoryItems) {
-        setPendingJumpMessageId(messageId);
-        handleShowAllHistoryItems();
-        return;
-      }
-      scrollToAnchor(messageId);
+      jumpToMessageAnchor(messageId);
     };
     document.addEventListener(MESSAGE_JUMP_EVENT_NAME, handleJumpToMessage);
     return () => {
       document.removeEventListener(MESSAGE_JUMP_EVENT_NAME, handleJumpToMessage);
     };
-  }, [handleShowAllHistoryItems, scrollToAnchor, showAllHistoryItems]);
+  }, [jumpToMessageAnchor]);
 
   return (
     <div
@@ -2240,16 +2286,23 @@ export const Messages = memo(function Messages({
                 tabIndex={0}
                 className={`messages-anchor-dot${isActive ? " is-active" : ""}`}
                 style={{ top: `${anchor.position * 100}%` }}
-                onClick={() => scrollToAnchor(anchor.id)}
+                onClick={() => jumpToMessageAnchor(anchor.id)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter" || event.key === " ") {
                     event.preventDefault();
-                    scrollToAnchor(anchor.id);
+                    jumpToMessageAnchor(anchor.id);
                   }
                 }}
                 aria-label={t("messages.anchorJumpToUser", { index: index + 1 })}
-                title={t("messages.anchorUserTitle", { index: index + 1 })}
-              />
+                title={anchor.preview || t("messages.anchorUserTitle", { index: index + 1 })}
+              >
+                <span className="messages-anchor-dot-core" aria-hidden />
+                {anchor.preview ? (
+                  <span className="messages-anchor-preview" role="tooltip">
+                    {anchor.preview}
+                  </span>
+                ) : null}
+              </div>
             );
           })}
         </div>
@@ -2286,6 +2339,7 @@ export const Messages = memo(function Messages({
           messageActionTargetByAssistantId={messageActionTargets.targetByAssistantId}
           messageCopyTextByAssistantId={messageActionTargets.copyTextByAssistantId}
           latestFinalAssistantMessageId={messageActionTargets.latestFinalAssistantMessageId}
+          onAnchorRowScrollerReady={handleAnchorRowScrollerReady}
           onForkFromMessage={onForkFromMessage}
           onRewindFromMessage={onRewindFromMessage}
           handleExitPlanModeExecuteForItem={handleExitPlanModeExecuteForItem}

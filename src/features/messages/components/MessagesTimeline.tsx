@@ -94,6 +94,7 @@ type MessagesTimelineProps = {
   messageActionTargetByAssistantId: Map<string, string>;
   messageCopyTextByAssistantId: Map<string, string>;
   latestFinalAssistantMessageId: string | null;
+  onAnchorRowScrollerReady?: (scroller: ((messageId: string) => boolean) | null) => void;
   onForkFromMessage?: (messageId: string) => void;
   onRewindFromMessage?: (messageId: string) => void;
   handleExitPlanModeExecuteForItem: (
@@ -202,6 +203,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   messageActionTargetByAssistantId,
   messageCopyTextByAssistantId,
   latestFinalAssistantMessageId,
+  onAnchorRowScrollerReady,
   onForkFromMessage,
   onRewindFromMessage,
   handleExitPlanModeExecuteForItem,
@@ -306,6 +308,36 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     observeElementOffset: observeTimelineElementOffset,
     overscan: 12,
   });
+  useEffect(() => {
+    if (!onAnchorRowScrollerReady) {
+      return;
+    }
+    if (!shouldVirtualizeTimeline) {
+      onAnchorRowScrollerReady(null);
+      return;
+    }
+    onAnchorRowScrollerReady((messageId: string) => {
+      const targetIndex = timelineProjectionRows.findIndex((row) =>
+        row.kind === "entry" && row.itemIds.includes(messageId),
+      );
+      if (targetIndex < 0) {
+        return false;
+      }
+      timelineVirtualizer.scrollToIndex(targetIndex, {
+        align: "start",
+        behavior: "smooth",
+      });
+      return true;
+    });
+    return () => {
+      onAnchorRowScrollerReady(null);
+    };
+  }, [
+    onAnchorRowScrollerReady,
+    shouldVirtualizeTimeline,
+    timelineProjectionRows,
+    timelineVirtualizer,
+  ]);
 
   const renderSingleItem = (item: ConversationItem) => {
     const renderItem = resolveLiveRenderItem(
