@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 11
+- **Total Sessions**: 12
 - **Last Active**: 2026-06-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~438 | Active |
+| `journal-1.md` | ~487 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 12 | 2026-06-06 | 提交消息状态浮层展示优化 | `9c2fc61a` | `refactor/liquid-precision-ui` |
 | 11 | 2026-06-06 | 提交输出时间线与输入框交互改动 | `b78818d3` | `refactor/liquid-precision-ui` |
 | 10 | 2026-06-06 | Add horizontal resize handles to input box | `ce9ee558` | `refactor/liquid-precision-ui` |
 | 9 | 2026-06-06 | Add className and containerRef to skill completion dropdown | `cc8d407d` | `refactor/liquid-precision-ui` |

@@ -436,3 +436,52 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 12: 提交消息状态浮层展示优化
+
+**Date**: 2026-06-06
+**Task**: 提交消息状态浮层展示优化
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+### Summary
+
+按用户要求提交当前消息区 UI 改动，聚焦消息状态浮层与时间线展示优化。
+
+### Main Changes
+
+- 更新 `Messages` 与 `MessagesTimeline` 的状态展示逻辑。
+- 调整 `messages.status-shell.css`，优化消息状态浮层视觉与布局。
+
+### Testing
+
+- 未运行 lint/test；用户要求提交当前代码。
+
+### Status
+
+[OK] Code committed and session recorded.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9c2fc61a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
