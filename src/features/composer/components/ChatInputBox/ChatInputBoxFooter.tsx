@@ -971,6 +971,8 @@ export function ChatInputBoxFooter({
         isVisible={skillCompletion.isOpen}
         position={skillCompletion.position}
         width={450}
+        className="completion-dropdown--command"
+        containerRef={containerRef}
         items={skillCompletion.items}
         selectedIndex={skillCompletion.activeIndex}
         loading={skillCompletion.loading}
