@@ -534,3 +534,53 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 14: 提交工具操作时间线展示优化
+
+**Date**: 2026-06-06
+**Task**: 提交工具操作时间线展示优化
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+### Summary
+
+按用户要求提交当前 tool blocks 改动，聚焦工具操作时间线、MCP/read/generic tool block 的展示与测试更新。
+
+### Main Changes
+
+- 优化 `ToolOperationTimelineBlock` 展示结构与样式。
+- 调整 Generic/MCP/Read tool block 的操作时间线接入。
+- 新增和更新相关 tool block 测试。
+
+### Testing
+
+- 未运行 lint/test；用户要求提交当前代码。
+
+### Status
+
+[OK] Code committed and session recorded.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `22d7b197` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
