@@ -584,3 +584,53 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 15: 提交消息时间线虚拟化展示优化
+
+**Date**: 2026-06-06
+**Task**: 提交消息时间线虚拟化展示优化
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+### Summary
+
+按用户要求提交当前消息 timeline 与 bash tool group 展示改动，聚焦虚拟化布局和 sticky/history 展示体验。
+
+### Main Changes
+
+- 更新 `Messages` / `MessagesTimeline` 与 virtualization helper。
+- 调整 Bash tool group block 展示与相关测试。
+- 补充消息 history sticky 样式。
+
+### Testing
+
+- 未运行 lint/test；用户要求提交当前代码。
+
+### Status
+
+[OK] Code committed and session recorded.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `8251bfd7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
