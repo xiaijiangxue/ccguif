@@ -620,8 +620,9 @@
   }
 }
 
-.home-chat-composer-host .resize-handle,
 .home-chat-composer-host .resize-handle-hover-zone,
+.home-chat-composer-host .resize-handle--n,
+.home-chat-composer-host .resize-handle-collapse-button,
 .home-chat-composer-host .open-source-banner {
   display: none;
 }

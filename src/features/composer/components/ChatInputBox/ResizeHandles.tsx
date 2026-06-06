@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import ArrowDownToLine from 'lucide-react/dist/esm/icons/arrow-down-to-line';
 
-type ResizeDirection = 'n';
+type ResizeDirection = 'n' | 'e' | 'w' | 'ne' | 'nw';
 
 export function ResizeHandles({
   getHandleProps,
@@ -11,7 +11,7 @@ export function ResizeHandles({
   onExpandCollapsed,
 }: {
   getHandleProps: (dir: ResizeDirection) => ComponentPropsWithoutRef<'div'>;
-  nudge: (delta: { wrapperHeightPx?: number }) => void;
+  nudge: (delta: { wrapperHeightPx?: number; containerWidthPx?: number }) => void;
   collapse: () => void;
   isCollapsed?: boolean;
   onExpandCollapsed?: () => void;
@@ -20,7 +20,7 @@ export function ResizeHandles({
     const step = e.shiftKey ? 24 : 8;
 
     const key = e.key;
-    if (key !== 'ArrowUp' && key !== 'ArrowDown') {
+    if (key !== 'ArrowUp' && key !== 'ArrowDown' && key !== 'ArrowLeft' && key !== 'ArrowRight') {
       return;
     }
 
@@ -29,6 +29,8 @@ export function ResizeHandles({
 
     if (key === 'ArrowUp') nudge({ wrapperHeightPx: step });
     if (key === 'ArrowDown') nudge({ wrapperHeightPx: -step });
+    if (key === 'ArrowRight') nudge({ containerWidthPx: step });
+    if (key === 'ArrowLeft') nudge({ containerWidthPx: -step });
   };
 
   const renderCollapseButton = () => {
@@ -52,30 +54,68 @@ export function ResizeHandles({
   };
 
   return (
-    <div className="resize-handle-hover-zone">
-      <div className="resize-handle-controls">
-        {renderCollapseButton()}
-        <div
-          className="resize-handle resize-handle--n"
-          {...getHandleProps('n')}
-          onClick={(event) => {
-            if (!isCollapsed) return;
-            event.preventDefault();
-            event.stopPropagation();
-            if (onExpandCollapsed) {
-              onExpandCollapsed();
-              return;
-            }
-            nudge({ wrapperHeightPx: 24 });
-          }}
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="Resize input height"
-          tabIndex={0}
-          onKeyDown={handleKeyDown}
-        />
-        {renderCollapseButton()}
+    <>
+      <div className="resize-handle-hover-zone">
+        <div className="resize-handle-controls">
+          {renderCollapseButton()}
+          <div
+            className="resize-handle resize-handle--n"
+            {...getHandleProps('n')}
+            onClick={(event) => {
+              if (!isCollapsed) return;
+              event.preventDefault();
+              event.stopPropagation();
+              if (onExpandCollapsed) {
+                onExpandCollapsed();
+                return;
+              }
+              nudge({ wrapperHeightPx: 24 });
+            }}
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize input height"
+            tabIndex={0}
+            onKeyDown={handleKeyDown}
+          />
+          {renderCollapseButton()}
+        </div>
       </div>
-    </div>
+      <div
+        className="resize-handle resize-handle--e"
+        {...getHandleProps('e')}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize input width"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      />
+      <div
+        className="resize-handle resize-handle--w"
+        {...getHandleProps('w')}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize input width"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      />
+      <div
+        className="resize-handle resize-handle--ne"
+        {...getHandleProps('ne')}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize input width and height"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      />
+      <div
+        className="resize-handle resize-handle--nw"
+        {...getHandleProps('nw')}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize input width and height"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+      />
+    </>
   );
 }

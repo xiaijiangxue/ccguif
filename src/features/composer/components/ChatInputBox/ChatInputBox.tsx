@@ -1496,15 +1496,13 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
           ref={containerRef}
           style={containerStyle}
         >
-          {showHeader && (
-            <ResizeHandles
-              getHandleProps={getHandleProps}
-              nudge={nudge}
-              collapse={collapse}
-              isCollapsed={isInputBoxCollapsed}
-              onExpandCollapsed={handleExpandCollapsedInputBox}
-            />
-          )}
+          <ResizeHandles
+            getHandleProps={getHandleProps}
+            nudge={nudge}
+            collapse={collapse}
+            isCollapsed={isInputBoxCollapsed}
+            onExpandCollapsed={handleExpandCollapsedInputBox}
+          />
 
           {!isInputBoxCollapsed && showHeader && (
             <ChatInputBoxHeader
