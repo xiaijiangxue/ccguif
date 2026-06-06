@@ -75,6 +75,14 @@
   will-change: transform;
 }
 
+.messages.is-scrolling .messages-history-sticky-header-bubble {
+  box-shadow:
+    0 6px 14px color-mix(in srgb, #020617 7%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 8%, transparent);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .messages-history-sticky-header-bubble.is-collapsed {
   flex: 0 0 var(--messages-history-sticky-peek-width);
   width: var(--messages-history-sticky-peek-width);

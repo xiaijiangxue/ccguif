@@ -115,6 +115,7 @@ type MessagesTimelineProps = {
   latestWorkingActivityLabel: string | null;
   liveAutoExpandedExploreId: string | null;
   messageNodeByIdRef: MutableRefObject<Map<string, HTMLDivElement>>;
+  onMessageAnchorNodesChanged?: () => void;
   onOpenDiffPath?: (path: string) => void;
   onRecoverThreadRuntime?: (
     workspaceId: string,
@@ -221,6 +222,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   latestWorkingActivityLabel,
   liveAutoExpandedExploreId,
   messageNodeByIdRef,
+  onMessageAnchorNodesChanged,
   onOpenDiffPath,
   onRecoverThreadRuntime,
   onRecoverThreadRuntimeAndResend,
@@ -429,10 +431,15 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         );
       };
       const bindMessageNode = (node: HTMLDivElement | null) => {
+        let didChangeAnchorNode = false;
         if (renderItem.role === "user" && node) {
+          didChangeAnchorNode = messageNodeByIdRef.current.get(renderItem.id) !== node;
           messageNodeByIdRef.current.set(renderItem.id, node);
         } else {
-          messageNodeByIdRef.current.delete(renderItem.id);
+          didChangeAnchorNode = messageNodeByIdRef.current.delete(renderItem.id);
+        }
+        if (didChangeAnchorNode) {
+          onMessageAnchorNodesChanged?.();
         }
         if (agentTaskNotification?.taskId && node) {
           agentTaskNodeByTaskIdRef.current.set(agentTaskNotification.taskId, node);

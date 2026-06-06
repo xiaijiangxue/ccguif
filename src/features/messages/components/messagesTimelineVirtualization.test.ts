@@ -7,6 +7,7 @@ import {
   shouldVirtualizeTimelineRows,
   TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT,
   TIMELINE_VIRTUALIZATION_MIN_ROWS,
+  TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS,
 } from "./messagesTimelineVirtualization";
 import type { TimelineProjectionRow } from "./messagesTimelineProjection";
 
@@ -22,11 +23,18 @@ describe("messagesTimelineVirtualization", () => {
     })).toBe(false);
   });
 
-  it("keeps active streaming timelines out of row-count virtualization", () => {
+  it("keeps short active streaming timelines out of row-count virtualization", () => {
     expect(shouldVirtualizeTimelineRows({
       isThinking: true,
-      rowCount: 1_000,
+      rowCount: TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS - 1,
     })).toBe(false);
+  });
+
+  it("enables virtualization for long active streaming timelines", () => {
+    expect(shouldVirtualizeTimelineRows({
+      isThinking: true,
+      rowCount: TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS,
+    })).toBe(true);
   });
 
   it("enables virtualization for image-heavy streaming timelines by render weight", () => {

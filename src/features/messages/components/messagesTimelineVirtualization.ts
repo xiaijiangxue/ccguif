@@ -4,6 +4,7 @@ import type { TimelineProjectionRow } from "./messagesTimelineProjection";
 
 export const TIMELINE_VIRTUALIZATION_MIN_ROWS = 200;
 export const TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT = 96;
+export const TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS = 80;
 
 export function shouldVirtualizeTimelineRows(input: {
   isThinking: boolean;
@@ -16,6 +17,9 @@ export function shouldVirtualizeTimelineRows(input: {
     input.renderWeight > input.rowCount * 2;
   if (hasHighRenderDensity) {
     return true;
+  }
+  if (input.isThinking) {
+    return input.rowCount >= TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS;
   }
   return input.rowCount >= TIMELINE_VIRTUALIZATION_MIN_ROWS && !input.isThinking;
 }

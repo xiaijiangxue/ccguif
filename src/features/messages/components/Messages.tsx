@@ -108,11 +108,17 @@ import {
 const MESSAGE_JUMP_EVENT_NAME = "ccgui:jump-to-message";
 const ASSISTANT_FINALIZING_LIVE_WINDOW_MS = 320;
 const CODEX_FINALIZING_LIVE_WINDOW_MS = 6_000;
+const MESSAGES_SCROLLING_CLASS_RESET_MS = 140;
 
 type MessageActionTargets = {
   targetByAssistantId: Map<string, string>;
   copyTextByAssistantId: Map<string, string>;
   latestFinalAssistantMessageId: string | null;
+};
+
+type MessageAnchorOffset = {
+  id: string;
+  offsetTop: number;
 };
 
 type MessagesProps = {
@@ -406,12 +412,17 @@ export const Messages = memo(function Messages({
   const pendingHistoryExpansionScrollSnapshotRef =
     useRef<HistoryExpansionScrollSnapshot | null>(null);
   const messageNodeByIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
+  const messageAnchorOffsetsRef = useRef<MessageAnchorOffset[]>([]);
   const agentTaskNodeByTaskIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const agentTaskNodeByToolUseIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const anchorRowScrollerRef = useRef<((messageId: string) => boolean) | null>(null);
   const autoScrollRef = useRef(true);
   const anchorUpdateRafRef = useRef<number | null>(null);
   const historyStickyUpdateRafRef = useRef<number | null>(null);
+  const anchorOffsetsRefreshRafRef = useRef<number | null>(null);
+  const messageAnchorResizeObserverRef = useRef<ResizeObserver | null>(null);
+  const observedMessageAnchorNodesRef = useRef<Set<HTMLDivElement>>(new Set());
+  const scrollingClassTimeoutRef = useRef<number | null>(null);
   const lastRenderSnapshotRef = useRef<{
     items: ConversationItem[];
     userInputRequests: RequestUserInputRequest[];
@@ -582,25 +593,132 @@ export const Messages = memo(function Messages({
     [],
   );
 
+  const refreshMessageAnchorOffsets = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) {
+      messageAnchorOffsetsRef.current = [];
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    messageAnchorOffsetsRef.current = Array.from(messageNodeByIdRef.current.entries())
+      .map(([id, node]) => {
+        const nodeRect = node.getBoundingClientRect();
+        return {
+          id,
+          offsetTop: container.scrollTop + nodeRect.top - containerRect.top,
+        };
+      })
+      .sort((left, right) => left.offsetTop - right.offsetTop);
+  }, []);
+
+  const findNearestAnchorByOffset = useCallback((targetOffset: number) => {
+    const offsets = messageAnchorOffsetsRef.current;
+    if (offsets.length === 0) {
+      return null;
+    }
+    let low = 0;
+    let high = offsets.length - 1;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      if ((offsets[mid]?.offsetTop ?? 0) < targetOffset) {
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    const before = offsets[Math.max(0, high)];
+    const after = offsets[Math.min(offsets.length - 1, low)];
+    if (!before) {
+      return after?.id ?? null;
+    }
+    if (!after) {
+      return before.id;
+    }
+    return Math.abs(before.offsetTop - targetOffset) <= Math.abs(after.offsetTop - targetOffset)
+      ? before.id
+      : after.id;
+  }, []);
+
+  const findActiveStickyAnchorByOffset = useCallback((targetOffset: number) => {
+    const offsets = messageAnchorOffsetsRef.current;
+    if (offsets.length === 0) {
+      return null;
+    }
+    let low = 0;
+    let high = offsets.length - 1;
+    let match: string | null = null;
+    while (low <= high) {
+      const mid = Math.floor((low + high) / 2);
+      const entry = offsets[mid];
+      if (!entry) {
+        break;
+      }
+      if (entry.offsetTop <= targetOffset) {
+        match = entry.id;
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return match;
+  }, []);
+
   const computeActiveAnchor = useCallback(() => {
     const container = containerRef.current;
     if (!container) {
       return null;
     }
-    const containerRect = container.getBoundingClientRect();
-    const viewportAnchorY = containerRect.top + Math.min(96, container.clientHeight * 0.32);
-    let bestId: string | null = null;
-    let bestDistance = Number.POSITIVE_INFINITY;
-    for (const [messageId, node] of messageNodeByIdRef.current) {
-      const nodeRect = node.getBoundingClientRect();
-      const distance = Math.abs(nodeRect.top - viewportAnchorY);
-      if (distance < bestDistance) {
-        bestDistance = distance;
-        bestId = messageId;
+    return findNearestAnchorByOffset(
+      container.scrollTop + Math.min(96, container.clientHeight * 0.32),
+    );
+  }, [findNearestAnchorByOffset]);
+
+  const scheduleMessageAnchorOffsetRefresh = useCallback(() => {
+    if (anchorOffsetsRefreshRafRef.current !== null) {
+      return;
+    }
+    anchorOffsetsRefreshRafRef.current = window.requestAnimationFrame(() => {
+      anchorOffsetsRefreshRafRef.current = null;
+      refreshMessageAnchorOffsets();
+    });
+  }, [refreshMessageAnchorOffsets]);
+
+  const syncMessageAnchorResizeObserver = useCallback(() => {
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const nextNodes = new Set(messageNodeByIdRef.current.values());
+    let observer = messageAnchorResizeObserverRef.current;
+    if (nextNodes.size === 0) {
+      observer?.disconnect();
+      messageAnchorResizeObserverRef.current = null;
+      observedMessageAnchorNodesRef.current.clear();
+      return;
+    }
+    if (!observer) {
+      observer = new ResizeObserver(() => {
+        scheduleMessageAnchorOffsetRefresh();
+      });
+      messageAnchorResizeObserverRef.current = observer;
+    }
+    for (const node of observedMessageAnchorNodesRef.current) {
+      if (!nextNodes.has(node)) {
+        observer.unobserve(node);
+        observedMessageAnchorNodesRef.current.delete(node);
       }
     }
-    return bestId;
-  }, []);
+    for (const node of nextNodes) {
+      if (!observedMessageAnchorNodesRef.current.has(node)) {
+        observer.observe(node);
+        observedMessageAnchorNodesRef.current.add(node);
+      }
+    }
+  }, [scheduleMessageAnchorOffsetRefresh]);
+
+  const handleMessageAnchorNodesChanged = useCallback(() => {
+    scheduleMessageAnchorOffsetRefresh();
+    syncMessageAnchorResizeObserver();
+  }, [scheduleMessageAnchorOffsetRefresh, syncMessageAnchorResizeObserver]);
 
   const requestAutoScroll = useCallback(() => {
     if (!liveAutoFollowEnabled) {
@@ -1685,20 +1803,23 @@ export const Messages = memo(function Messages({
       if (!container || candidates.length === 0) {
         return null;
       }
-      const topBoundaryY = container.scrollTop;
-      let nextStickyId: string | null = null;
-      for (const candidate of candidates) {
-        const node = messageNodeByIdRef.current.get(candidate.id);
-        if (!node) {
+      const candidateIds = new Set(candidates.map((candidate) => candidate.id));
+      let nextStickyId = findActiveStickyAnchorByOffset(container.scrollTop);
+      if (nextStickyId && candidateIds.has(nextStickyId)) {
+        return nextStickyId;
+      }
+      const offsets = messageAnchorOffsetsRef.current;
+      for (let index = offsets.length - 1; index >= 0; index -= 1) {
+        const entry = offsets[index];
+        if (!entry || entry.offsetTop > container.scrollTop || !candidateIds.has(entry.id)) {
           continue;
         }
-        if (node.offsetTop <= topBoundaryY) {
-          nextStickyId = candidate.id;
-        }
+        nextStickyId = entry.id;
+        break;
       }
-      return nextStickyId;
+      return nextStickyId && candidateIds.has(nextStickyId) ? nextStickyId : null;
     },
-    [],
+    [findActiveStickyAnchorByOffset],
   );
   const scheduleAnchorUpdate = useCallback(
     (reason: "scroll" | "sync") => {
@@ -1778,6 +1899,8 @@ export const Messages = memo(function Messages({
     setShowAllHistoryItems(true);
   }, [collapsedHistoryItemCount]);
   useLayoutEffect(() => {
+    refreshMessageAnchorOffsets();
+    syncMessageAnchorResizeObserver();
     if (!showAllHistoryItems) {
       pendingHistoryExpansionScrollSnapshotRef.current = null;
       return;
@@ -1794,6 +1917,8 @@ export const Messages = memo(function Messages({
     scheduleAnchorUpdate("sync");
     scheduleStickyHeaderUpdate("sync");
   }, [
+    refreshMessageAnchorOffsets,
+    syncMessageAnchorResizeObserver,
     timelinePresentationItems,
     scheduleAnchorUpdate,
     scheduleStickyHeaderUpdate,
@@ -1804,6 +1929,14 @@ export const Messages = memo(function Messages({
     if (!container) {
       return;
     }
+    container.classList.add("is-scrolling");
+    if (scrollingClassTimeoutRef.current !== null) {
+      window.clearTimeout(scrollingClassTimeoutRef.current);
+    }
+    scrollingClassTimeoutRef.current = window.setTimeout(() => {
+      scrollingClassTimeoutRef.current = null;
+      container.classList.remove("is-scrolling");
+    }, MESSAGES_SCROLLING_CLASS_RESET_MS);
     const nearBottom = isNearBottom(container);
     autoScrollRef.current = liveAutoFollowEnabled ? true : nearBottom;
     scheduleAnchorUpdate("scroll");
@@ -1827,6 +1960,20 @@ export const Messages = memo(function Messages({
       window.cancelAnimationFrame(historyStickyUpdateRafRef.current);
       historyStickyUpdateRafRef.current = null;
     }
+    if (anchorOffsetsRefreshRafRef.current !== null) {
+      window.cancelAnimationFrame(anchorOffsetsRefreshRafRef.current);
+      anchorOffsetsRefreshRafRef.current = null;
+    }
+    if (messageAnchorResizeObserverRef.current) {
+      messageAnchorResizeObserverRef.current.disconnect();
+      messageAnchorResizeObserverRef.current = null;
+    }
+    observedMessageAnchorNodesRef.current.clear();
+    if (scrollingClassTimeoutRef.current !== null) {
+      window.clearTimeout(scrollingClassTimeoutRef.current);
+      scrollingClassTimeoutRef.current = null;
+    }
+    containerRef.current?.classList.remove("is-scrolling");
     if (planPanelFocusRafRef.current !== null) {
       window.cancelAnimationFrame(planPanelFocusRafRef.current);
       planPanelFocusRafRef.current = null;
@@ -2357,6 +2504,7 @@ export const Messages = memo(function Messages({
           latestWorkingActivityLabel={latestWorkingActivityLabel}
           liveAutoExpandedExploreId={liveAutoExpandedExploreId}
           messageNodeByIdRef={messageNodeByIdRef}
+          onMessageAnchorNodesChanged={handleMessageAnchorNodesChanged}
           onOpenDiffPath={onOpenDiffPath}
           onRecoverThreadRuntime={onRecoverThreadRuntime}
           onRecoverThreadRuntimeAndResend={onRecoverThreadRuntimeAndResend}

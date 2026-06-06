@@ -25,6 +25,23 @@ describe("BashToolGroupBlock", () => {
     cleanup();
   });
 
+  it("keeps batch output rows unmounted until an item is expanded", () => {
+    render(
+      <BashToolGroupBlock
+        items={[
+          makeToolItem("bash-group-lazy-1", "npm run lint", "first line\nsecond line"),
+          makeToolItem("bash-group-lazy-2", "npm run test", "ok"),
+        ]}
+      />,
+    );
+
+    expect(document.querySelectorAll(".bash-output-line")).toHaveLength(0);
+
+    fireEvent.click(screen.getByText("npm run lint"));
+
+    expect(document.querySelectorAll(".bash-output-line").length).toBeGreaterThan(0);
+  });
+
   it("renders batch outputs in stacked lines when one item is expanded", () => {
     render(
       <BashToolGroupBlock

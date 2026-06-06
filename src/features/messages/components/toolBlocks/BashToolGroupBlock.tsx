@@ -175,10 +175,6 @@ export const BashToolGroupBlock = memo(function BashToolGroupBlock({
           {parsed.map((entry, index) => {
             const isLast = index === parsed.length - 1;
             const isItemExpanded = expandedItemId === entry.id;
-            const outputLines = entry.output
-              ? entry.output.split(/\r?\n/).slice(-MAX_OUTPUT_LINES)
-              : [];
-            const highlightedOutputLines = outputLines.map((line) => highlightLine(line, 'bash'));
 
             return (
               <div key={entry.id} className="bash-timeline-item">
@@ -210,51 +206,58 @@ export const BashToolGroupBlock = memo(function BashToolGroupBlock({
                       } bash-item-status`}
                     />
                   </div>
-                  {isItemExpanded && (
-                    <div className="bash-timeline-detail">
-                      {entry.command && (
-                        <div className="bash-command-block">{entry.command}</div>
-                      )}
-                      {outputLines.length > 0 && (
-                        <div className="bash-output-block normal">
-                          <div className="bash-output-toolbar">
-                            <button
-                              type="button"
-                              className="bash-command-copy-btn"
-                              onClick={async (event) => {
-                                event.stopPropagation();
-                                try {
-                                  await navigator.clipboard.writeText(entry.output ?? "");
-                                  setCopiedOutputId(entry.id);
-                                  window.setTimeout(() => setCopiedOutputId((prev) => (prev === entry.id ? null : prev)), 1200);
-                                } catch {
-                                  setCopiedOutputId(null);
-                                }
-                              }}
-                            >
-                              {copiedOutputId === entry.id ? t("messages.copied") : t("messages.copy")}
-                            </button>
-                          </div>
-                          {outputLines.map((line, i) => (
-                            <div
-                              key={`${i}-${line.slice(0, 20)}`}
-                              className="bash-output-line"
-                            >
-                              {ERROR_LINE_PATTERN.test(line) ? (
-                                <span className="bash-output-line-error">{line || ' '}</span>
-                              ) : line.length === 0 ? (
-                                <span>&nbsp;</span>
-                              ) : (
-                                <span
-                                  dangerouslySetInnerHTML={{ __html: highlightedOutputLines[i] ?? "" }}
-                                />
-                              )}
+                  {isItemExpanded ? (() => {
+                    const outputLines = entry.output
+                      ? entry.output.split(/\r?\n/).slice(-MAX_OUTPUT_LINES)
+                      : [];
+                    const highlightedOutputLines = outputLines.map((line) => highlightLine(line, 'bash'));
+
+                    return (
+                      <div className="bash-timeline-detail">
+                        {entry.command && (
+                          <div className="bash-command-block">{entry.command}</div>
+                        )}
+                        {outputLines.length > 0 && (
+                          <div className="bash-output-block normal">
+                            <div className="bash-output-toolbar">
+                              <button
+                                type="button"
+                                className="bash-command-copy-btn"
+                                onClick={async (event) => {
+                                  event.stopPropagation();
+                                  try {
+                                    await navigator.clipboard.writeText(entry.output ?? "");
+                                    setCopiedOutputId(entry.id);
+                                    window.setTimeout(() => setCopiedOutputId((prev) => (prev === entry.id ? null : prev)), 1200);
+                                  } catch {
+                                    setCopiedOutputId(null);
+                                  }
+                                }}
+                              >
+                                {copiedOutputId === entry.id ? t("messages.copied") : t("messages.copy")}
+                              </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                            {outputLines.map((line, i) => (
+                              <div
+                                key={`${i}-${line.slice(0, 20)}`}
+                                className="bash-output-line"
+                              >
+                                {ERROR_LINE_PATTERN.test(line) ? (
+                                  <span className="bash-output-line-error">{line || ' '}</span>
+                                ) : line.length === 0 ? (
+                                  <span>&nbsp;</span>
+                                ) : (
+                                  <span
+                                    dangerouslySetInnerHTML={{ __html: highlightedOutputLines[i] ?? "" }}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })() : null}
                 </div>
               </div>
             );
