@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 8
+- **Total Sessions**: 9
 - **Last Active**: 2026-06-06
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~322 | Active |
+| `journal-1.md` | ~355 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 9 | 2026-06-06 | Add className and containerRef to skill completion dropdown | `cc8d407d` | `refactor/liquid-precision-ui` |
 | 8 | 2026-06-06 | Replace CSS tooltip with portal-based implementation in ContextBar | `df3b9645` | `refactor/liquid-precision-ui` |
 | 7 | 2026-06-06 | 优化侧栏会话删除入口与消息滚动边界 | `94a7dedd` | `refactor/liquid-precision-ui` |
 | 6 | 2026-06-06 | 合并上游 v0.5.7 更新 | `2af19e2a` | `refactor/liquid-precision-ui` |
