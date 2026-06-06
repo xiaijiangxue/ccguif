@@ -634,3 +634,53 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 16: 提交消息渲染状态优化
+
+**Date**: 2026-06-06
+**Task**: 提交消息渲染状态优化
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+### Summary
+
+按用户要求提交当前消息渲染行为改动，包含 Messages 渲染状态、render utils 与相关测试更新。
+
+### Main Changes
+
+- 更新 `Messages` 渲染状态处理。
+- 调整 `messagesRenderUtils`。
+- 更新 Messages 行为与单元测试覆盖。
+
+### Testing
+
+- 未运行 lint/test；用户要求提交当前代码。
+
+### Status
+
+[OK] Code committed and session recorded.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6d70c150` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
