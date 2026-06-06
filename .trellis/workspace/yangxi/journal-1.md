@@ -353,3 +353,36 @@ Passed className='completion-dropdown--command' and containerRef props to the sk
 ### Next Steps
 
 - None - task complete
+
+
+## Session 10: Add horizontal resize handles to input box
+
+**Date**: 2026-06-06
+**Task**: Add horizontal resize handles to input box
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Extended the resize system to support east/west/ne/nw resize handles alongside the existing north handle. Added containerWidthPx to state persistence, computeHorizontalResize helper, pointer drag and keyboard nudge for horizontal resizing, focus-visible styles, and updated home-chat layout to hide north handle but keep horizontal ones.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ce9ee558` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
