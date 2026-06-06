@@ -18,7 +18,6 @@ import { sanitizeSvg } from './utils/sanitize';
 import {
   MESSAGES_LIVE_AUTO_FOLLOW_FLAG_KEY,
   MESSAGES_LIVE_COLLAPSE_MIDDLE_STEPS_FLAG_KEY,
-  MESSAGES_LIVE_RETAIN_COMPLETED_EXPLORE_FLAG_KEY,
   MESSAGES_LIVE_CONTROLS_UPDATED_EVENT,
   readLocalBooleanFlag,
   writeLocalBooleanFlag,
@@ -128,9 +127,6 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
   );
   const [collapseLiveMiddleStepsEnabled, setCollapseLiveMiddleStepsEnabled] = useState(() =>
     readLocalBooleanFlag(MESSAGES_LIVE_COLLAPSE_MIDDLE_STEPS_FLAG_KEY, false),
-  );
-  const [retainCompletedExploreEnabled, setRetainCompletedExploreEnabled] = useState(() =>
-    readLocalBooleanFlag(MESSAGES_LIVE_RETAIN_COMPLETED_EXPLORE_FLAG_KEY, true),
   );
   const [contextItemTooltip, setContextItemTooltip] =
     useState<ContextItemTooltipState | null>(null);
@@ -397,12 +393,6 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
         setCollapseLiveMiddleStepsEnabled(
           readLocalBooleanFlag(MESSAGES_LIVE_COLLAPSE_MIDDLE_STEPS_FLAG_KEY, false),
         );
-        return;
-      }
-      if (event.key === MESSAGES_LIVE_RETAIN_COMPLETED_EXPLORE_FLAG_KEY) {
-        setRetainCompletedExploreEnabled(
-          readLocalBooleanFlag(MESSAGES_LIVE_RETAIN_COMPLETED_EXPLORE_FLAG_KEY, true),
-        );
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -415,7 +405,6 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
     (detail: {
       liveAutoFollowEnabled?: boolean;
       collapseLiveMiddleStepsEnabled?: boolean;
-      retainCompletedExploreEnabled?: boolean;
     }) => {
       window.dispatchEvent(
         new CustomEvent(MESSAGES_LIVE_CONTROLS_UPDATED_EVENT, {
@@ -440,15 +429,6 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
       const next = !previous;
       writeLocalBooleanFlag(MESSAGES_LIVE_COLLAPSE_MIDDLE_STEPS_FLAG_KEY, next);
       emitLiveCanvasControlsUpdate({ collapseLiveMiddleStepsEnabled: next });
-      return next;
-    });
-  }, [emitLiveCanvasControlsUpdate]);
-
-  const handleToggleRetainCompletedExplore = useCallback(() => {
-    setRetainCompletedExploreEnabled((previous) => {
-      const next = !previous;
-      writeLocalBooleanFlag(MESSAGES_LIVE_RETAIN_COMPLETED_EXPLORE_FLAG_KEY, next);
-      emitLiveCanvasControlsUpdate({ retainCompletedExploreEnabled: next });
       return next;
     });
   }, [emitLiveCanvasControlsUpdate]);
@@ -831,30 +811,6 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
                   <span className="context-live-canvas-dot" />
                 </span>
                 <span className="context-tool-label">{t('messages.collapseMiddleStepsToggle')}</span>
-              </button>
-            )}
-            {showCollapseMiddleStepsControl && (
-              <button
-                type="button"
-                className={`context-tool-btn context-tool-btn--labeled context-live-canvas-btn context-live-canvas-btn--retain-explore has-tooltip${retainCompletedExploreEnabled ? ' is-active' : ''}`}
-                onClick={handleToggleRetainCompletedExplore}
-                data-tooltip={
-                  retainCompletedExploreEnabled
-                    ? t('messages.retainCompletedExploreDisable')
-                    : t('messages.retainCompletedExploreEnable')
-                }
-                aria-label={
-                  retainCompletedExploreEnabled
-                    ? t('messages.retainCompletedExploreDisable')
-                    : t('messages.retainCompletedExploreEnable')
-                }
-                aria-pressed={retainCompletedExploreEnabled}
-              >
-                <span className="context-live-canvas-icon" aria-hidden>
-                  <ListCollapse size={13} />
-                  <span className="context-live-canvas-dot" />
-                </span>
-                <span className="context-tool-label">{t('messages.retainCompletedExploreToggle')}</span>
               </button>
             )}
           </div>
