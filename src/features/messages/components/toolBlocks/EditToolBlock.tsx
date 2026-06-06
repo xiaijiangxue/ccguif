@@ -22,13 +22,16 @@ import { FileIcon } from './FileIcon';
 
 interface EditToolBlockProps {
   item: Extract<ConversationItem, { kind: 'tool' }>;
+  forceExpanded?: boolean;
 }
 
 export const EditToolBlock = memo(function EditToolBlock({
   item,
+  forceExpanded = false,
 }: EditToolBlockProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
+  const isExpanded = forceExpanded || expanded;
   const args = useMemo(() => parseToolArgs(item.detail), [item.detail]);
   const nestedInput = useMemo(() => asRecord(args?.input), [args]);
   const nestedArgs = useMemo(() => asRecord(args?.arguments), [args]);
@@ -84,7 +87,7 @@ export const EditToolBlock = memo(function EditToolBlock({
         className="task-header"
         onClick={() => setExpanded((prev) => !prev)}
         style={{
-          borderBottom: expanded ? '1px solid var(--border-primary)' : undefined,
+          borderBottom: isExpanded ? '1px solid var(--border-primary)' : undefined,
         }}
       >
         <div className="task-title-section">
@@ -107,7 +110,7 @@ export const EditToolBlock = memo(function EditToolBlock({
         <div className={`tool-status-indicator ${isError ? 'error' : isCompleted ? 'completed' : 'pending'}`} />
       </div>
 
-      {expanded && (
+      {isExpanded && (
         <div className="task-details tool-change-details edit-tool-change-details" style={{ border: 'none' }}>
           <div className="task-content-wrapper">
             {displayPath ? (

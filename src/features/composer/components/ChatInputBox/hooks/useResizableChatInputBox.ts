@@ -32,6 +32,7 @@ const COLLAPSE_OVERSHOOT_PX = 36;
 const EXPAND_DRAG_THRESHOLD_PX = 18;
 const COLLAPSE_EXPAND_HOLD_MS = 400;
 const EXPAND_RESIZE_HOLD_MS = 1000;
+const DEFAULT_SIZE: SizeState = { wrapperHeightPx: null, containerWidthPx: null, isCollapsed: false };
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -159,6 +160,7 @@ export function computeHorizontalResize(
 export interface UseResizableChatInputBoxOptions {
   containerRef: React.RefObject<HTMLDivElement | null>;
   editableWrapperRef: React.RefObject<HTMLDivElement | null>;
+  enabled?: boolean;
 }
 
 /**
@@ -169,6 +171,7 @@ export interface UseResizableChatInputBoxOptions {
 export function useResizableChatInputBox({
   containerRef,
   editableWrapperRef,
+  enabled = true,
 }: UseResizableChatInputBoxOptions): {
   isResizing: boolean;
   isCollapsed: boolean;
@@ -178,7 +181,7 @@ export function useResizableChatInputBox({
   nudge: (delta: { wrapperHeightPx?: number; containerWidthPx?: number }) => void;
   collapse: () => void;
 } {
-  const [size, setSize] = useState<SizeState>(readInitialSize);
+  const [size, setSize] = useState<SizeState>(() => (enabled ? readInitialSize() : DEFAULT_SIZE));
   const sizeRef = useRef<SizeState>(size);
   sizeRef.current = size;
 
@@ -227,6 +230,7 @@ export function useResizableChatInputBox({
   }, []);
 
   const scheduleExpandResizeUnlock = useCallback(() => {
+    if (!enabled) return;
     if (pendingExpandResizeRef.current) return;
 
     pendingExpandResizeRef.current = true;
@@ -255,9 +259,10 @@ export function useResizableChatInputBox({
         isCollapsed: false,
       }));
     }, EXPAND_RESIZE_HOLD_MS);
-  }, []);
+  }, [enabled]);
 
   const applyTransition = useCallback((intent: 'collapse' | 'expand') => {
+    if (!enabled) return;
     const start = startRef.current;
     const pointerY = start ? latestPointerYRef.current ?? start.startY : null;
 
@@ -286,7 +291,7 @@ export function useResizableChatInputBox({
       wrapperHeightPx: start.bounds.minWrapperHeightPx,
       isCollapsed: false,
     }));
-  }, [clearPendingExpandResizeUnlock]);
+  }, [clearPendingExpandResizeUnlock, enabled]);
 
   const scheduleTransition = useCallback(
     (next: 'collapse' | 'expand' | null) => {
@@ -311,15 +316,17 @@ export function useResizableChatInputBox({
 
   // Persist size changes (best-effort).
   useEffect(() => {
+    if (!enabled) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(size));
     } catch {
       // ignore
     }
-  }, [size]);
+  }, [enabled, size]);
 
   // Clamp persisted size on window resize (e.g., user shrinks the tool window).
   useEffect(() => {
+    if (!enabled) return;
     const onResize = () => {
       const bounds = getBounds(containerRef.current);
       setSize((prev) => {
@@ -350,10 +357,11 @@ export function useResizableChatInputBox({
 
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [containerRef]);
+  }, [containerRef, enabled]);
 
   const nudge = useCallback(
     (delta: { wrapperHeightPx?: number; containerWidthPx?: number }) => {
+      if (!enabled) return;
       const bounds = getBounds(containerRef.current);
       const wrapperEl = editableWrapperRef.current;
       const containerEl = containerRef.current;
@@ -415,10 +423,11 @@ export function useResizableChatInputBox({
         containerWidthPx: nextWidth,
       }));
     },
-    [containerRef, editableWrapperRef]
+    [containerRef, editableWrapperRef, enabled]
   );
 
   const collapse = useCallback(() => {
+    if (!enabled) return;
     const bounds = getBounds(containerRef.current);
     const wrapperEl = editableWrapperRef.current;
     const wrapperRectHeight = wrapperEl?.getBoundingClientRect().height ?? bounds.minWrapperHeightPx;
@@ -430,7 +439,7 @@ export function useResizableChatInputBox({
       containerWidthPx: sizeRef.current.containerWidthPx,
       isCollapsed: true,
     });
-  }, [containerRef, editableWrapperRef]);
+  }, [containerRef, editableWrapperRef, enabled]);
 
   const stopResize = useCallback(() => {
     const start = startRef.current;
@@ -447,6 +456,7 @@ export function useResizableChatInputBox({
   }, [clearPendingExpandResizeUnlock, clearPendingTransition]);
 
   useEffect(() => {
+    if (!enabled) return;
     const onMove = (e: PointerEvent) => {
       const start = startRef.current;
       if (!start) return;
@@ -542,6 +552,7 @@ export function useResizableChatInputBox({
     };
   }, [
     clearPendingExpandResizeUnlock,
+    enabled,
     scheduleExpandResizeUnlock,
     scheduleTransition,
     stopResize,
@@ -560,6 +571,7 @@ export function useResizableChatInputBox({
     (dir: ResizeDirection) => {
       return {
         onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => {
+          if (!enabled) return;
           e.preventDefault();
           e.stopPropagation();
 
@@ -614,24 +626,27 @@ export function useResizableChatInputBox({
       clearPendingTransition,
       containerRef,
       editableWrapperRef,
+      enabled,
       supportsVerticalResize,
     ]
   );
 
   const containerStyle = useMemo((): CSSProperties => {
+    if (!enabled) return {};
     return size.containerWidthPx == null ? {} : { width: `${size.containerWidthPx}px` };
-  }, [size.containerWidthPx]);
+  }, [enabled, size.containerWidthPx]);
 
   const editableWrapperStyle = useMemo((): CSSProperties => {
+    if (!enabled) return {};
     return {
       height: size.isCollapsed || size.wrapperHeightPx == null ? undefined : `${size.wrapperHeightPx}px`,
       maxHeight: size.isCollapsed || size.wrapperHeightPx == null ? undefined : `${size.wrapperHeightPx}px`,
     };
-  }, [size.isCollapsed, size.wrapperHeightPx]);
+  }, [enabled, size.isCollapsed, size.wrapperHeightPx]);
 
   return {
-    isResizing,
-    isCollapsed: size.isCollapsed,
+    isResizing: enabled ? isResizing : false,
+    isCollapsed: enabled ? size.isCollapsed : false,
     containerStyle,
     editableWrapperStyle,
     getHandleProps,

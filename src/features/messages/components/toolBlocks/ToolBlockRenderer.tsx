@@ -115,6 +115,7 @@ export const ToolBlockRenderer = memo(function ToolBlockRenderer({
     return (
       <EditToolBlock
         item={item}
+        forceExpanded={isExpanded}
       />
     );
   }

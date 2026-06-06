@@ -502,12 +502,16 @@ export interface ChatInputBoxHandle {
 // Component Props Types
 // ============================================================
 
+export type ChatInputResizeMode = 'resizable' | 'fixed';
+
 /**
  * ChatInputBox component props
  */
 export interface ChatInputBoxProps {
   /** Whether to show header area (ContextBar, attachments, banner, resize handles) */
   showHeader?: boolean;
+  /** Resize behavior for this input instance. Home composer uses fixed to keep its original layout. */
+  resizeMode?: ChatInputResizeMode;
   /** Whether loading */
   isLoading?: boolean;
   /** Stream activity phase for loading animation linkage */

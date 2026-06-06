@@ -32,6 +32,7 @@ import {
   EditToolGroupBlock,
   BashToolGroupBlock,
   SearchToolGroupBlock,
+  ToolOperationTimelineBlock,
 } from "./toolBlocks";
 import {
   DiffRow,
@@ -42,6 +43,7 @@ import {
   ReviewRow,
   WorkingIndicator,
 } from "./MessagesRows";
+import { isExitPlanModeConversationTool } from "./messagesExitPlan";
 import { parseReasoning } from "./messagesReasoning";
 import type { RuntimeReconnectRecoveryCallbackResult } from "./runtimeReconnect";
 import {
@@ -548,27 +550,43 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       const selectedExitPlanExecutionMode =
         selectedExitPlanExecutionByItemKey[`${threadId ?? "no-thread"}:${renderItem.id}`] ?? null;
       const provenanceLabel = resolveProvenanceEngineLabel(renderItem.engineSource);
-      return (
-        <div key={`tool:${renderItem.id}`} className="message-tool-block-shell">
-          {provenanceLabel ? (
-            <div className="message-provenance-row">
-              <span className="message-provenance-badge">{provenanceLabel}</span>
-            </div>
-          ) : null}
-          <ToolBlockRenderer
-            item={renderItem}
-            workspaceId={workspaceId}
-            isExpanded={isExpanded}
-            onToggle={toggleExpanded}
-            onRequestAutoScroll={requestAutoScroll}
-            activeCollaborationModeId={activeCollaborationModeId}
-            activeEngine={activeEngine}
-            hasPendingUserInputRequest={activeUserInputRequestId !== null}
-            onOpenDiffPath={onOpenDiffPath}
-            selectedExitPlanExecutionMode={selectedExitPlanExecutionMode}
-            onExitPlanModeExecute={handleExitPlanModeExecuteForItem}
-          />
+      const provenanceNode = provenanceLabel ? (
+        <div className="message-provenance-row">
+          <span className="message-provenance-badge">{provenanceLabel}</span>
         </div>
+      ) : null;
+      const renderToolBlockNode = (forceExpanded: boolean) => (
+        <ToolBlockRenderer
+          item={renderItem}
+          workspaceId={workspaceId}
+          isExpanded={forceExpanded ? true : isExpanded}
+          onToggle={toggleExpanded}
+          onRequestAutoScroll={requestAutoScroll}
+          activeCollaborationModeId={activeCollaborationModeId}
+          activeEngine={activeEngine}
+          hasPendingUserInputRequest={activeUserInputRequestId !== null}
+          onOpenDiffPath={onOpenDiffPath}
+          selectedExitPlanExecutionMode={selectedExitPlanExecutionMode}
+          onExitPlanModeExecute={handleExitPlanModeExecuteForItem}
+        />
+      );
+      if (isExitPlanModeConversationTool(renderItem)) {
+        return (
+          <div key={`tool:${renderItem.id}`} className="message-tool-block-shell">
+            {provenanceNode}
+            {renderToolBlockNode(false)}
+          </div>
+        );
+      }
+      return (
+        <ToolOperationTimelineBlock
+          key={`tool:${renderItem.id}`}
+          kind="single"
+          items={[renderItem]}
+          provenanceNode={provenanceNode}
+        >
+          {renderToolBlockNode(true)}
+        </ToolOperationTimelineBlock>
       );
     }
     if (renderKind === "explore" && renderItem.kind === "explore") {
@@ -606,17 +624,28 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     if (entry.kind === "readGroup") {
       const firstItem = entry.items[0];
       return renderWithAnchoredUserInput(
-        <ReadToolGroupBlock key={`rg-${firstItem?.id ?? "read-group"}`} items={entry.items} />,
+        <ToolOperationTimelineBlock
+          key={`rg-${firstItem?.id ?? "read-group"}`}
+          kind="readGroup"
+          items={entry.items}
+        >
+          <ReadToolGroupBlock items={entry.items} />
+        </ToolOperationTimelineBlock>,
       );
     }
     if (entry.kind === "editGroup") {
       const firstItem = entry.items[0];
       return renderWithAnchoredUserInput(
-        <EditToolGroupBlock
+        <ToolOperationTimelineBlock
           key={`eg-${firstItem?.id ?? "edit-group"}`}
+          kind="editGroup"
           items={entry.items}
-          onOpenDiffPath={onOpenDiffPath}
-        />,
+        >
+          <EditToolGroupBlock
+            items={entry.items}
+            onOpenDiffPath={onOpenDiffPath}
+          />
+        </ToolOperationTimelineBlock>,
       );
     }
     if (entry.kind === "bashGroup") {
@@ -628,17 +657,28 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       }
       const firstItem = entry.items[0];
       return renderWithAnchoredUserInput(
-        <BashToolGroupBlock
+        <ToolOperationTimelineBlock
           key={`bg-${firstItem?.id ?? "bash-group"}`}
+          kind="bashGroup"
           items={entry.items}
-          onRequestAutoScroll={requestAutoScroll}
-        />,
+        >
+          <BashToolGroupBlock
+            items={entry.items}
+            onRequestAutoScroll={requestAutoScroll}
+          />
+        </ToolOperationTimelineBlock>,
       );
     }
     if (entry.kind === "searchGroup") {
       const firstItem = entry.items[0];
       return renderWithAnchoredUserInput(
-        <SearchToolGroupBlock key={`sg-${firstItem?.id ?? "search-group"}`} items={entry.items} />,
+        <ToolOperationTimelineBlock
+          key={`sg-${firstItem?.id ?? "search-group"}`}
+          kind="searchGroup"
+          items={entry.items}
+        >
+          <SearchToolGroupBlock items={entry.items} />
+        </ToolOperationTimelineBlock>,
       );
     }
     return renderWithAnchoredUserInput(renderSingleItem(entry.item));

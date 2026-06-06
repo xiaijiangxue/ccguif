@@ -17,6 +17,259 @@
   box-shadow: 0 1px 3px color-mix(in srgb, #000 6%, transparent);
 }
 
+/* ============================================
+   Timeline operation shell
+   ============================================ */
+
+.tool-operation-timeline-block {
+  position: relative;
+  margin: 2px 0;
+  padding: 0 0 0 24px;
+}
+
+.tool-operation-timeline-block::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: -8px;
+  left: 8px;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--border-strong) 18%, transparent),
+    color-mix(in srgb, var(--border-subtle) 70%, transparent)
+  );
+}
+
+.tool-operation-timeline-node {
+  position: absolute;
+  top: 14px;
+  left: 4px;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-success, var(--status-success));
+  box-shadow:
+    0 0 0 4px var(--surface-messages),
+    0 0 0 1px color-mix(in srgb, var(--color-success, var(--status-success)) 40%, transparent);
+}
+
+.tool-operation-timeline-block--processing .tool-operation-timeline-node {
+  background: var(--color-warning, var(--status-warning));
+  box-shadow:
+    0 0 0 4px var(--surface-messages),
+    0 0 0 7px color-mix(in srgb, var(--color-warning, var(--status-warning)) 12%, transparent);
+  animation: tool-operation-node-pulse 1.7s ease-in-out infinite;
+}
+
+.tool-operation-timeline-block--failed .tool-operation-timeline-node {
+  background: var(--color-error, var(--status-error));
+  box-shadow:
+    0 0 0 4px var(--surface-messages),
+    0 0 0 7px color-mix(in srgb, var(--color-error, var(--status-error)) 14%, transparent);
+}
+
+.tool-operation-timeline-summary {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  gap: 9px;
+  color: var(--text-secondary, var(--text-muted));
+  background: color-mix(in srgb, var(--surface-card) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 76%, transparent);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.tool-operation-timeline-summary:hover {
+  background: color-mix(in srgb, var(--surface-card) 58%, transparent);
+  border-color: color-mix(in srgb, var(--border-strong) 48%, transparent);
+}
+
+.tool-operation-timeline-summary:focus-visible {
+  outline: 2px solid var(--border-accent);
+  outline-offset: 2px;
+}
+
+.tool-operation-timeline-block.is-expanded .tool-operation-timeline-summary,
+.tool-operation-timeline-block--processing .tool-operation-timeline-summary {
+  background: color-mix(in srgb, var(--surface-card) 66%, transparent);
+  border-color: color-mix(in srgb, var(--border-strong) 54%, transparent);
+}
+
+.tool-operation-timeline-block--failed .tool-operation-timeline-summary {
+  background: color-mix(in srgb, var(--color-error, var(--status-error)) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-error, var(--status-error)) 24%, transparent);
+}
+
+.tool-operation-timeline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  color: var(--text-faint);
+  background: color-mix(in srgb, var(--surface-control) 52%, transparent);
+  font-size: 13px;
+}
+
+.tool-operation-timeline-block--read .tool-operation-timeline-icon {
+  color: var(--message-link-color);
+}
+
+.tool-operation-timeline-block--edit .tool-operation-timeline-icon,
+.tool-operation-timeline-block--fileChange .tool-operation-timeline-icon {
+  color: var(--color-success, var(--status-success));
+}
+
+.tool-operation-timeline-block--bash .tool-operation-timeline-icon {
+  color: var(--color-warning, var(--status-warning));
+}
+
+.tool-operation-timeline-block--search .tool-operation-timeline-icon {
+  color: var(--text-accent);
+}
+
+.tool-operation-timeline-block--failed .tool-operation-timeline-icon {
+  color: var(--color-error, var(--status-error));
+}
+
+.tool-operation-timeline-copy {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.tool-operation-timeline-title {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 650;
+  min-width: 0;
+}
+
+.tool-operation-timeline-diff-stats {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tool-operation-timeline-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.tool-operation-timeline-meta {
+  justify-self: end;
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
+.tool-operation-timeline-failure {
+  margin: 2px 0 8px 34px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--color-error, var(--status-error)) 22%, transparent);
+  border-radius: 7px;
+  color: color-mix(in srgb, var(--color-error, var(--status-error)) 72%, var(--text-primary));
+  background: color-mix(in srgb, var(--color-error, var(--status-error)) 7%, transparent);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.tool-operation-timeline-detail {
+  margin: 3px 0 10px -18px;
+}
+
+.tool-operation-timeline-detail .message-provenance-row {
+  margin: 0 0 6px;
+}
+
+.tool-operation-timeline-detail > .task-container {
+  margin: 0;
+}
+
+.tool-operation-timeline-detail .task-container {
+  box-shadow: none;
+}
+
+.tool-operation-timeline-detail .task-header {
+  min-height: 34px;
+}
+
+.tool-operation-timeline-detail--edit > .task-container > .task-header,
+.tool-operation-timeline-detail--fileChange > .task-container > .task-header {
+  display: none;
+}
+
+.tool-operation-timeline-detail--edit > .task-container,
+.tool-operation-timeline-detail--fileChange > .task-container {
+  background: transparent;
+  border-color: transparent;
+}
+
+.tool-operation-timeline-detail--edit > .task-container > .task-details,
+.tool-operation-timeline-detail--fileChange > .task-container > .task-details {
+  display: block;
+  background: transparent;
+}
+
+.tool-operation-timeline-detail--edit .task-content-wrapper,
+.tool-operation-timeline-detail--fileChange .task-content-wrapper {
+  padding: 0;
+}
+
+@keyframes tool-operation-node-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tool-operation-timeline-block--processing .tool-operation-timeline-node {
+    animation: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .tool-operation-timeline-summary {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+
+  .tool-operation-timeline-meta {
+    display: none;
+  }
+
+  .tool-operation-timeline-copy {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
 /* 折叠态（无详情体）— 轻微底色 + 圆角，提供容器感 */
 .task-container.task-container-collapsed,
 .task-container:not(:has(.task-details)) {

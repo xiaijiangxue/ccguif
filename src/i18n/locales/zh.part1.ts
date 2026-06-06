@@ -2624,6 +2624,18 @@ const zhPart1 = {
       parameters: "参数",
       rawPayload: "原始 XML",
     },
+    operationTimeline: {
+      readGroup: "读取 {{count}} 个文件",
+      editGroup: "编辑 {{count}} 个文件",
+      bashGroup: "执行 {{count}} 条命令",
+      searchGroup: "搜索 {{count}} 个模式",
+      operationCount: "{{count}} 个操作",
+      status: {
+        completed: "已完成",
+        processing: "执行中",
+        failed: "失败",
+      },
+    },
     exitPlanCard: {
       ariaLabel: "计划完成卡片",
       title: "执行计划已就绪",

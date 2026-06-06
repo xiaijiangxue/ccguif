@@ -18,6 +18,7 @@ export { ReadToolGroupBlock } from './ReadToolGroupBlock';
 export { EditToolGroupBlock } from './EditToolGroupBlock';
 export { BashToolGroupBlock } from './BashToolGroupBlock';
 export { SearchToolGroupBlock } from './SearchToolGroupBlock';
+export { ToolOperationTimelineBlock } from './ToolOperationTimelineBlock';
 
 // 辅助组件
 export { FileIcon } from './FileIcon';

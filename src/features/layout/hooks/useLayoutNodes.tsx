@@ -1924,6 +1924,7 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
 
   const renderComposerNode = (
     showStatusPanelToggleOverride?: boolean,
+    chatInputResizeMode: "resizable" | "fixed" = "resizable",
   ) =>
     options.showComposer ? (
       <Composer
@@ -2104,10 +2105,11 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
         onReviewPromptConfirmCommit={options.onReviewPromptConfirmCommit}
         onReviewPromptUpdateCustomInstructions={options.onReviewPromptUpdateCustomInstructions}
         onReviewPromptConfirmCustom={options.onReviewPromptConfirmCustom}
+        chatInputResizeMode={chatInputResizeMode}
       />
     ) : null;
   const composerNode = renderComposerNode(false);
-  const homeComposerNode = renderComposerNode(false);
+  const homeComposerNode = renderComposerNode(false, "fixed");
   const approvalToastsNode = null;
   const topbarTabContextMenuNode = topbarTabContextMenu ? (
     <RendererContextMenu

@@ -2687,6 +2687,18 @@ const enPart1 = {
       parameters: "Parameters",
       rawPayload: "Raw XML",
     },
+    operationTimeline: {
+      readGroup: "Read {{count}} files",
+      editGroup: "Edit {{count}} files",
+      bashGroup: "Run {{count}} commands",
+      searchGroup: "Search {{count}} patterns",
+      operationCount: "{{count}} ops",
+      status: {
+        completed: "done",
+        processing: "running",
+        failed: "failed",
+      },
+    },
     exitPlanCard: {
       ariaLabel: "Plan ready card",
       title: "Execution Plan Ready",

@@ -21,6 +21,7 @@ import { ChatInputBox } from './ChatInputBox';
 import type {
   ChatInputBoxHandle,
   Attachment,
+  ChatInputResizeMode,
   CodexSpeedMode,
   ClaudeContextUsageViewModel,
   ContextSelectionChip,
@@ -446,6 +447,7 @@ export interface ChatInputBoxAdapterProps {
   disabled?: boolean;
   isProcessing: boolean;
   streamActivityPhase?: StreamActivityPhase;
+  resizeMode?: ChatInputResizeMode;
   canStop: boolean;
 
   // Callbacks
@@ -945,6 +947,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
       disabled,
       isProcessing,
       streamActivityPhase = 'idle',
+      resizeMode,
       onTextChange,
       onSend,
       onStop,
@@ -1931,6 +1934,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
         ref={chatInputRef}
         isLoading={isProcessing}
         streamActivityPhase={streamActivityPhase}
+        resizeMode={resizeMode}
         disabled={disabled}
         value={text}
         workspaceId={workspaceId}

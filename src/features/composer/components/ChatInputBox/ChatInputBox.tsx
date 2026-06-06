@@ -173,6 +173,7 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
   (
     {
       showHeader = true,
+      resizeMode = 'resizable',
       isLoading = false,
       streamActivityPhase = 'idle',
       selectedModel = '',
@@ -1330,10 +1331,16 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
     } = useResizableChatInputBox({
       containerRef,
       editableWrapperRef,
+      enabled: resizeMode === 'resizable',
     });
+    const resizeEnabled = resizeMode === 'resizable';
+    const effectiveIsResizingInputBox = resizeEnabled && isResizingInputBox;
+    const effectiveIsInputBoxCollapsed = resizeEnabled && isInputBoxCollapsed;
+    const effectiveContainerStyle = resizeEnabled ? containerStyle : undefined;
+    const effectiveEditableWrapperStyle = resizeEnabled ? editableWrapperStyle : undefined;
 
     useEffect(() => {
-      if (isInputBoxCollapsed) {
+      if (effectiveIsInputBoxCollapsed) {
         return;
       }
 
@@ -1343,9 +1350,9 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       return () => window.cancelAnimationFrame(frame);
     }, [
       adjustHeight,
-      isInputBoxCollapsed,
-      editableWrapperStyle.height,
-      editableWrapperStyle.maxHeight,
+      effectiveIsInputBoxCollapsed,
+      effectiveEditableWrapperStyle?.height,
+      effectiveEditableWrapperStyle?.maxHeight,
     ]);
 
     const handleExpandCollapsedInputBox = useCallback(() => {
@@ -1484,9 +1491,9 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
     return (
       <div className="chat-input-box-wrapper">
         <div
-          className={`chat-input-box ${isResizingInputBox ? 'is-resizing' : ''}${isInputBoxCollapsed ? ' is-collapsed' : ''}${isDragOver ? " is-drag-over" : ""}`}
+          className={`chat-input-box ${effectiveIsResizingInputBox ? 'is-resizing' : ''}${effectiveIsInputBoxCollapsed ? ' is-collapsed' : ''}${isDragOver ? " is-drag-over" : ""}`}
           onClick={() => {
-            if (isInputBoxCollapsed) return;
+            if (effectiveIsInputBoxCollapsed) return;
             focusInput();
           }}
           onDragOver={handleDragOver}
@@ -1494,17 +1501,19 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           ref={containerRef}
-          style={containerStyle}
+          style={effectiveContainerStyle}
         >
-          <ResizeHandles
-            getHandleProps={getHandleProps}
-            nudge={nudge}
-            collapse={collapse}
-            isCollapsed={isInputBoxCollapsed}
-            onExpandCollapsed={handleExpandCollapsedInputBox}
-          />
+          {resizeEnabled ? (
+            <ResizeHandles
+              getHandleProps={getHandleProps}
+              nudge={nudge}
+              collapse={collapse}
+              isCollapsed={effectiveIsInputBoxCollapsed}
+              onExpandCollapsed={handleExpandCollapsedInputBox}
+            />
+          ) : null}
 
-          {!isInputBoxCollapsed && showHeader && (
+          {!effectiveIsInputBoxCollapsed && showHeader && (
             <ChatInputBoxHeader
               sdkStatusLoading={sdkStatusLoading}
               sdkInstalled={sdkInstalled}
@@ -1523,14 +1532,14 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
             />
           )}
 
-          {!isInputBoxCollapsed && shouldShowContextToolbarSurface ? (
+          {!effectiveIsInputBoxCollapsed && shouldShowContextToolbarSurface ? (
             <div className="chat-input-context-surface" aria-live="polite">
               {contextToolbarSurface}
             </div>
           ) : null}
 
           {/* Input area */}
-          {!isInputBoxCollapsed && (
+          {!effectiveIsInputBoxCollapsed && (
             <div
               ref={editableWrapperRef}
               className={`input-editable-wrapper${isDragOver ? " is-drag-over" : ""}`}
@@ -1540,7 +1549,7 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              style={editableWrapperStyle}
+              style={effectiveEditableWrapperStyle}
             >
               {isDragOver ? (
                 <div className="input-drag-overlay" aria-hidden>

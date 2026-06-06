@@ -48,6 +48,7 @@ import {
 import { ReviewInlinePrompt } from "./ReviewInlinePrompt";
 import type {
   ClaudeContextUsageViewModel,
+  ChatInputResizeMode,
   CodexCompactionSource,
   ContextSelectionChip,
   MemoryReferenceMode,
@@ -330,6 +331,7 @@ type ComposerProps = {
   ) => void | Promise<void>;
   rewindDialogRequest?: ComposerRewindDialogRequest | null;
   onRewindDialogRequestConsumed?: (requestId: number) => void;
+  chatInputResizeMode?: ChatInputResizeMode;
   showStatusPanelToggleOverride?: boolean;
   statusPanelExpandedOverride?: boolean;
   onToggleStatusPanelOverride?: () => void;
@@ -566,6 +568,7 @@ export const Composer = memo(function Composer({
   onRewind,
   rewindDialogRequest = null,
   onRewindDialogRequestConsumed,
+  chatInputResizeMode = "resizable",
   showStatusPanelToggleOverride,
   statusPanelExpandedOverride,
   onToggleStatusPanelOverride,
@@ -2313,6 +2316,7 @@ export const Composer = memo(function Composer({
               disabled={disabled}
               isProcessing={isProcessing}
               streamActivityPhase={resolvedComposerStreamActivityPhase}
+              resizeMode={chatInputResizeMode}
               canStop={canStop}
               onSend={handleSend}
               onStop={onStop}
