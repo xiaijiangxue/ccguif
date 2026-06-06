@@ -3081,7 +3081,6 @@ export function FileTreePanel({
           <div className="new-file-prompt-backdrop" onClick={cancelRename} />
           <div className="new-file-prompt-card">
             <div className="new-file-prompt-title">{t("files.renameItem")}</div>
-            <div className="new-file-prompt-path">{renamePrompt.currentName}</div>
             <input
               id="rename-file-tree-item"
               ref={renameInputRef}

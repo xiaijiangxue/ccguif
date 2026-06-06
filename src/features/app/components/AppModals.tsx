@@ -96,7 +96,6 @@ export const AppModals = memo(function AppModals({
       {renamePrompt && (
         <Suspense fallback={null}>
           <RenameThreadPrompt
-            currentName={renamePrompt.originalName}
             name={renamePrompt.name}
             onChange={onRenamePromptChange}
             onCancel={onRenamePromptCancel}

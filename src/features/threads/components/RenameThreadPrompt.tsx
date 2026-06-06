@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 type RenameThreadPromptProps = {
-  currentName: string;
   name: string;
   onChange: (value: string) => void;
   onCancel: () => void;
@@ -10,7 +9,6 @@ type RenameThreadPromptProps = {
 };
 
 export function RenameThreadPrompt({
-  currentName,
   name,
   onChange,
   onCancel,
@@ -25,43 +23,44 @@ export function RenameThreadPrompt({
   }, []);
 
   return (
-    <div className="worktree-modal" role="dialog" aria-modal="true">
-      <div className="worktree-modal-backdrop" onClick={onCancel} />
-      <div className="worktree-modal-card">
-        <div className="worktree-modal-title">{t("threads.renameThread")}</div>
-        <div className="worktree-modal-subtitle">
-          {t("threads.currentName")} "{currentName}"
+    <div className="thread-rename-dialog" role="dialog" aria-modal="true">
+      <div className="thread-rename-dialog-backdrop" onClick={onCancel} />
+      <div className="thread-rename-dialog-card">
+        <div className="thread-rename-dialog-header">
+          <h2 className="thread-rename-dialog-title">{t("threads.renameThread")}</h2>
         </div>
-        <label className="worktree-modal-label" htmlFor="thread-rename">
-          {t("threads.newName")}
-        </label>
-        <input
-          id="thread-rename"
-          ref={inputRef}
-          className="worktree-modal-input"
-          value={name}
-          onChange={(event) => onChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              onCancel();
-            }
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onConfirm();
-            }
-          }}
-        />
-        <div className="worktree-modal-actions">
+        <div className="thread-rename-dialog-field">
+          <label className="thread-rename-dialog-label" htmlFor="thread-rename">
+            {t("threads.newName")}
+          </label>
+          <input
+            id="thread-rename"
+            ref={inputRef}
+            className="thread-rename-dialog-input"
+            value={name}
+            onChange={(event) => onChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                onCancel();
+              }
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onConfirm();
+              }
+            }}
+          />
+        </div>
+        <div className="thread-rename-dialog-actions">
           <button
-            className="ghost worktree-modal-button"
+            className="thread-rename-dialog-button ghost"
             onClick={onCancel}
             type="button"
           >
             {t("common.cancel")}
           </button>
           <button
-            className="primary worktree-modal-button"
+            className="thread-rename-dialog-button primary"
             onClick={onConfirm}
             type="button"
             disabled={name.trim().length === 0}

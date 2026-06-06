@@ -37,6 +37,7 @@ import "./styles/browser-agent-window.css";
 import "./styles/client-documentation.css";
 import "./styles/tabbar.css";
 import "./styles/worktree-modal.css";
+import "./styles/thread-rename-dialog.css";
 import "./styles/clone-modal.css";
 import "./styles/settings.css";
 import "./styles/compact-base.css";
