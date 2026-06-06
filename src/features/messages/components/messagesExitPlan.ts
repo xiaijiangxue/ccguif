@@ -5,12 +5,9 @@ function normalizeToolIdentifier(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-export function isExitPlanModeConversationTool(
-  item: ConversationItem,
-): item is Extract<ConversationItem, { kind: "tool" }> {
-  if (item.kind !== "tool") {
-    return false;
-  }
+export function isExitPlanModeToolItem(
+  item: Extract<ConversationItem, { kind: "tool" }>,
+): boolean {
   const normalizedToolName = normalizeToolIdentifier(extractToolName(item.title));
   const normalizedTitle = normalizeToolIdentifier(item.title);
   return (
@@ -18,6 +15,12 @@ export function isExitPlanModeConversationTool(
     normalizedToolName.endsWith("exitplanmode") ||
     normalizedTitle.includes("exitplanmode")
   );
+}
+
+export function isExitPlanModeConversationTool(
+  item: ConversationItem,
+): item is Extract<ConversationItem, { kind: "tool" }> {
+  return item.kind === "tool" && isExitPlanModeToolItem(item);
 }
 
 export function buildExitPlanDeduplicationKey(

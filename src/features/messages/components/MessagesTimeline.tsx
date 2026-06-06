@@ -43,7 +43,7 @@ import {
   ReviewRow,
   WorkingIndicator,
 } from "./MessagesRows";
-import { isExitPlanModeConversationTool } from "./messagesExitPlan";
+import { isExitPlanModeToolItem } from "./messagesExitPlan";
 import { parseReasoning } from "./messagesReasoning";
 import type { RuntimeReconnectRecoveryCallbackResult } from "./runtimeReconnect";
 import {
@@ -609,7 +609,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           onExitPlanModeExecute={handleExitPlanModeExecuteForItem}
         />
       );
-      if (isExitPlanModeConversationTool(renderItem)) {
+      if (isExitPlanModeToolItem(renderItem)) {
         return (
           <div key={`tool:${renderItem.id}`} className="message-tool-block-shell">
             {provenanceNode}
