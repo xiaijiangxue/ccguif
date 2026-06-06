@@ -1161,7 +1161,7 @@ describe("Messages", () => {
   });
 
   it("collapses earlier items and reveals them on demand", () => {
-    const items: ConversationItem[] = Array.from({ length: 32 }, (_, index) => ({
+    const items: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
       id: `history-item-${index + 1}`,
       kind: "message",
       role: index % 2 === 0 ? "user" : "assistant",
@@ -1196,13 +1196,13 @@ describe("Messages", () => {
   });
 
   it("resets collapsed state when conversation head changes", () => {
-    const firstBatch: ConversationItem[] = Array.from({ length: 32 }, (_, index) => ({
+    const firstBatch: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
       id: `session-a-${index + 1}`,
       kind: "message",
       role: index % 2 === 0 ? "user" : "assistant",
       text: `session A message ${index + 1}`,
     }));
-    const secondBatch: ConversationItem[] = Array.from({ length: 32 }, (_, index) => ({
+    const secondBatch: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
       id: `session-b-${index + 1}`,
       kind: "message",
       role: index % 2 === 0 ? "user" : "assistant",
@@ -1239,6 +1239,55 @@ describe("Messages", () => {
     );
 
     expect(screen.queryByText("session B message 1")).toBeNull();
+    const secondIndicator = container.querySelector(".messages-collapsed-indicator");
+    expect(secondIndicator).toBeTruthy();
+    expect(secondIndicator?.getAttribute("data-collapsed-count")).toBe("2");
+  });
+
+  it("resets collapsed state when thread changes even if the conversation head is reused", () => {
+    const firstThreadItems: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
+      id: index === 0 ? "shared-history-head" : `thread-a-${index + 1}`,
+      kind: "message",
+      role: index % 2 === 0 ? "user" : "assistant",
+      text: `thread A message ${index + 1}`,
+    }));
+    const secondThreadItems: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
+      id: index === 0 ? "shared-history-head" : `thread-b-${index + 1}`,
+      kind: "message",
+      role: index % 2 === 0 ? "user" : "assistant",
+      text: `thread B message ${index + 1}`,
+    }));
+
+    const { container, rerender } = render(
+      <Messages
+        items={firstThreadItems}
+        threadId="thread-history-a"
+        workspaceId="ws-1"
+        isThinking={false}
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    const firstIndicator = container.querySelector(".messages-collapsed-indicator");
+    expect(firstIndicator).toBeTruthy();
+    if (firstIndicator) {
+      fireEvent.click(firstIndicator);
+    }
+    expect(screen.getByText("thread A message 1")).toBeTruthy();
+
+    rerender(
+      <Messages
+        items={secondThreadItems}
+        threadId="thread-history-b"
+        workspaceId="ws-1"
+        isThinking={false}
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    expect(screen.queryByText("thread B message 1")).toBeNull();
     const secondIndicator = container.querySelector(".messages-collapsed-indicator");
     expect(secondIndicator).toBeTruthy();
     expect(secondIndicator?.getAttribute("data-collapsed-count")).toBe("2");

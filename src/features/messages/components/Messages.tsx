@@ -92,6 +92,7 @@ import {
   resolveRenderableItems,
   resolveWorkingActivityLabel,
   SCROLL_THRESHOLD_PX,
+  STREAMING_VISIBLE_MESSAGE_WINDOW,
   scrollKeyForItems,
   shouldDisplayWorkingActivityLabel,
   shouldHideClaudeReasoningModule,
@@ -438,6 +439,12 @@ export const Messages = memo(function Messages({
     renderedItems: [],
     visibleCollapsedHistoryItemCount: 0,
   });
+  const historyExpansionScopeKey = `${workspaceId ?? "no-workspace"}:${threadId ?? "no-thread"}:${items[0]?.id ?? "no-first-item"}`;
+  const historyExpansionScopeKeyRef = useRef(historyExpansionScopeKey);
+  const [expandedHistoryScopeKey, setExpandedHistoryScopeKey] = useState<string | null>(null);
+  const showAllHistoryItems =
+    historyExpansionScopeKeyRef.current === historyExpansionScopeKey &&
+    expandedHistoryScopeKey === historyExpansionScopeKey;
   const [expandedItems, setExpandedItems] = useState<Set<string>>(() => new Set());
   const [selectedExitPlanExecutionByItemKey, setSelectedExitPlanExecutionByItemKey] = useState<
     Record<string, Extract<AccessMode, "default" | "full-access">>
@@ -445,7 +452,6 @@ export const Messages = memo(function Messages({
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
   const [activeAnchorId, setActiveAnchorId] = useState<string | null>(null);
   const [activeStickyMessageId, setActiveStickyMessageId] = useState<string | null>(null);
-  const [showAllHistoryItems, setShowAllHistoryItems] = useState(false);
   const [pendingJumpMessageId, setPendingJumpMessageId] = useState<string | null>(null);
   const [liveAutoFollowEnabled, setLiveAutoFollowEnabled] = useState(() =>
     readLocalBooleanFlag(MESSAGES_LIVE_AUTO_FOLLOW_FLAG_KEY, true),
@@ -530,14 +536,13 @@ export const Messages = memo(function Messages({
       buildLiveTailWorkingSet(effectiveItems, {
         isThinking,
         showAllHistoryItems,
-        visibleWindow: VISIBLE_MESSAGE_WINDOW,
+        visibleWindow: STREAMING_VISIBLE_MESSAGE_WINDOW,
         enableCollaborationBadge,
       }),
     [effectiveItems, enableCollaborationBadge, isThinking, showAllHistoryItems],
   );
   const renderSourceItems = liveTailWorkingSet.items;
   const deferredRenderSourceItems = useDeferredValue(renderSourceItems);
-  const firstItemIdRef = useRef<string | null>(items[0]?.id ?? null);
   const activeUserInputRequest =
     threadId && userInputRequests.length
       ? (userInputRequests.find(
@@ -861,14 +866,14 @@ export const Messages = memo(function Messages({
     autoScrollRef.current = true;
     requestAutoScroll();
   }, [liveAutoFollowEnabled, requestAutoScroll]);
-  useEffect(() => {
-    const currentFirstId = effectiveItems[0]?.id ?? null;
-    if (currentFirstId !== firstItemIdRef.current) {
-      setShowAllHistoryItems(false);
-      pendingHistoryExpansionScrollSnapshotRef.current = null;
+  useLayoutEffect(() => {
+    if (historyExpansionScopeKeyRef.current === historyExpansionScopeKey) {
+      return;
     }
-    firstItemIdRef.current = currentFirstId;
-  }, [effectiveItems]);
+    historyExpansionScopeKeyRef.current = historyExpansionScopeKey;
+    setExpandedHistoryScopeKey(null);
+    pendingHistoryExpansionScrollSnapshotRef.current = null;
+  }, [historyExpansionScopeKey]);
   const toggleExpanded = useCallback((id: string) => {
     setExpandedItems((prev) => {
       const next = new Set(prev);
@@ -1896,8 +1901,8 @@ export const Messages = memo(function Messages({
       collapsedHistoryItemCount > 0
         ? readHistoryExpansionScrollSnapshot(containerRef.current)
         : null;
-    setShowAllHistoryItems(true);
-  }, [collapsedHistoryItemCount]);
+    setExpandedHistoryScopeKey(historyExpansionScopeKey);
+  }, [collapsedHistoryItemCount, historyExpansionScopeKey]);
   useLayoutEffect(() => {
     refreshMessageAnchorOffsets();
     syncMessageAnchorResizeObserver();

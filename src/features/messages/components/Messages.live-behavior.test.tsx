@@ -185,7 +185,7 @@ describe("Messages live behavior", () => {
   });
 
   it("expands collapsed history before jumping to an older message", async () => {
-    const items: ConversationItem[] = Array.from({ length: 35 }, (_, index) => ({
+    const items: ConversationItem[] = Array.from({ length: 65 }, (_, index) => ({
       id: `u${index + 1}`,
       kind: "message" as const,
       role: "user" as const,
@@ -1674,7 +1674,7 @@ describe("Messages live behavior", () => {
   });
 
   it("preserves the current viewport position when revealing collapsed history", async () => {
-    const items: ConversationItem[] = Array.from({ length: 32 }, (_, index) => ({
+    const items: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
       id: `history-reveal-${index + 1}`,
       kind: "message",
       role: index % 2 === 0 ? "user" : "assistant",
@@ -1715,7 +1715,7 @@ describe("Messages live behavior", () => {
   });
 
   it("skips scroll restoration when scroller metrics are non-finite", async () => {
-    const items: ConversationItem[] = Array.from({ length: 32 }, (_, index) => ({
+    const items: ConversationItem[] = Array.from({ length: 62 }, (_, index) => ({
       id: `history-reveal-invalid-${index + 1}`,
       kind: "message",
       role: index % 2 === 0 ? "user" : "assistant",
