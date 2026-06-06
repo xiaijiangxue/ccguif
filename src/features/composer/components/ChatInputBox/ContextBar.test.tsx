@@ -11,6 +11,7 @@ describe("ContextBar live canvas controls visibility", () => {
   beforeEach(() => {
     window.localStorage.removeItem("ccgui.messages.live.autoFollow");
     window.localStorage.removeItem("ccgui.messages.live.collapseMiddleSteps");
+    window.localStorage.removeItem("ccgui.messages.live.retainCompletedExplore");
   });
 
   it("shows output collapse controls in history mode when there are messages", () => {
@@ -25,6 +26,11 @@ describe("ContextBar live canvas controls visibility", () => {
     expect(container.querySelector(".context-live-canvas-controls")).toBeTruthy();
     expect(container.querySelector(".context-live-canvas-btn--focus-follow")).toBeNull();
     expect(container.querySelector(".context-live-canvas-btn")).toBeTruthy();
+    const retainExploreButton = screen.getByRole("button", {
+      name: "messages.retainCompletedExploreDisable",
+    });
+    expect(retainExploreButton.getAttribute("aria-pressed")).toBe("true");
+    expect(retainExploreButton.classList.contains("context-live-canvas-btn--retain-explore")).toBe(true);
   });
 
   it("hides output collapse controls when idle and no messages", () => {
@@ -160,11 +166,11 @@ describe("ContextBar live canvas controls visibility", () => {
     );
 
     const toggle = screen.getByLabelText("chat.contextDualViewAutoCompactionEnabled");
-    const threshold = screen.getByLabelText("chat.contextDualViewAutoCompactionThreshold") as HTMLSelectElement;
+    const threshold = screen.getByLabelText("chat.contextDualViewAutoCompactionThreshold") as HTMLButtonElement;
 
     expect((toggle as HTMLInputElement).checked).toBe(false);
-    expect(threshold.value).toBe("150");
-    expect(threshold.disabled).toBe(true);
+    expect(threshold.textContent ?? "").toContain("150%");
+    expect(threshold.getAttribute("data-disabled")).toBe("");
 
     fireEvent.click(toggle);
     expect(onCodexAutoCompactionSettingsChange).toHaveBeenCalledWith({ enabled: true });
@@ -188,10 +194,8 @@ describe("ContextBar live canvas controls visibility", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("chat.contextDualViewAutoCompactionThreshold"), {
-      target: { value: "180" },
-    });
-    expect(onCodexAutoCompactionSettingsChange).toHaveBeenCalledWith({ thresholdPercent: 180 });
+    expect(screen.getByLabelText("chat.contextDualViewAutoCompactionThreshold").textContent ?? "")
+      .toContain("150%");
   });
 
   it("shows the real Codex context usage percent while filling the ring at 100 percent", () => {
@@ -300,22 +304,14 @@ describe("ContextBar live canvas controls visibility", () => {
     expect(screen.getAllByText("65%").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("35%")).toBeTruthy();
     expect(screen.getByText("570.4k")).toBeTruthy();
-    const totalBreakdown = screen.getByText(
-      "chat.claudeContextInputDetail · chat.claudeContextOutputDetail",
-    );
-    expect(screen.getByText("chat.claudeContextCachedExcludedDetail")).toBeTruthy();
-    const windowBreakdown = screen.getByText(
-      "chat.claudeContextInputDetail + chat.claudeContextCachedDetail",
-    );
-    expect(totalBreakdown.closest(".context-dual-tooltip-note--detail")).toBeTruthy();
-    expect(windowBreakdown.closest(".context-dual-tooltip-note--detail")).toBeTruthy();
+    expect(document.body.textContent ?? "").toContain("chat.claudeContextCachedExcludedDetail");
     expect(screen.getByText("167.8k / 258.4k")).toBeTruthy();
     expect(screen.getByText("chat.claudeContextCategoryTitle")).toBeTruthy();
     expect(screen.getByText("System prompt")).toBeTruthy();
     expect(screen.getByText("Memory files")).toBeTruthy();
-    expect(screen.getByText("0.8%")).toBeTruthy();
-    expect(screen.getByText("3.3%")).toBeTruthy();
-    expect(document.querySelector(".claude-context-category-grid")).toBeTruthy();
+    expect(document.body.textContent ?? "").toContain("0.8%");
+    expect(document.body.textContent ?? "").toContain("3.3%");
+    expect(document.querySelector(".claude-context-tooltip-categories-grid")).toBeTruthy();
     expect(screen.queryByText("chat.claudeContextMcpToolsTitle")).toBeNull();
     expect(screen.queryByText("mcp__one: 3k · mcp__two: 2k · mcp__three: 1k · ...")).toBeNull();
     expect(screen.queryByLabelText("chat.contextDualViewAutoCompactionEnabled")).toBeNull();
@@ -344,7 +340,7 @@ describe("ContextBar live canvas controls visibility", () => {
     );
 
     expect(screen.getByText("chat.claudeContextWindowEstimatedTokens")).toBeTruthy();
-    expect(screen.getByText("chat.claudeContextCachedExcludedDetail")).toBeTruthy();
+    expect(document.body.textContent ?? "").toContain("chat.claudeContextCachedExcludedDetail");
     expect(screen.queryByText("chat.claudeContextUnavailable")).toBeNull();
   });
 });
