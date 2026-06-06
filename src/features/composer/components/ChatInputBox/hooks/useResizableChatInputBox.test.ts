@@ -21,7 +21,46 @@ function createWrapperElement(height: number): HTMLDivElement {
   return element;
 }
 
+function createContainerElement(width: number, parentWidth = width): HTMLDivElement {
+  const parent = document.createElement('div');
+  const parentRect = {
+    x: 0,
+    y: 0,
+    width: parentWidth,
+    height: 180,
+    top: 0,
+    right: parentWidth,
+    bottom: 180,
+    left: 0,
+    toJSON: () => ({}),
+  };
+  vi.spyOn(parent, 'getBoundingClientRect').mockImplementation(() => parentRect as DOMRect);
+
+  const element = document.createElement('div');
+  const rect = {
+    x: 0,
+    y: 0,
+    width,
+    height: 180,
+    top: 0,
+    right: width,
+    bottom: 180,
+    left: 0,
+    toJSON: () => ({}),
+  };
+  vi.spyOn(element, 'getBoundingClientRect').mockImplementation(() => rect as DOMRect);
+  parent.appendChild(element);
+  return element;
+}
+
 function getHeightPx(value: string | number | undefined): number | null {
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getWidthPx(value: string | number | undefined): number | null {
   if (typeof value === 'number') return value;
   if (typeof value !== 'string') return null;
   const parsed = Number.parseFloat(value);
@@ -201,6 +240,51 @@ describe('useResizableChatInputBox', () => {
     );
 
     expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(134);
+  });
+
+  it('drops v3 persisted width while keeping height during v4 migration', () => {
+    localStorage.setItem(
+      'chat-input-box:size-v3',
+      JSON.stringify({ wrapperHeightPx: 180, containerWidthPx: 420, isCollapsed: false }),
+    );
+
+    const editableWrapperRef = { current: createWrapperElement(140) };
+    const containerRef = { current: createContainerElement(640) };
+
+    const { result } = renderHook(() =>
+      useResizableChatInputBox({
+        containerRef,
+        editableWrapperRef,
+      })
+    );
+
+    expect(getHeightPx(result.current.editableWrapperStyle.height)).toBe(180);
+    expect(getWidthPx(result.current.containerStyle.width)).toBeNull();
+  });
+
+  it('does not overwrite preferred composer width when the parent narrows', () => {
+    localStorage.setItem(
+      'chat-input-box:size-v4',
+      JSON.stringify({ wrapperHeightPx: 140, containerWidthPx: 720, isCollapsed: false }),
+    );
+
+    const editableWrapperRef = { current: createWrapperElement(140) };
+    const containerRef = { current: createContainerElement(360, 360) };
+
+    const { result } = renderHook(() =>
+      useResizableChatInputBox({
+        containerRef,
+        editableWrapperRef,
+      })
+    );
+
+    expect(getWidthPx(result.current.containerStyle.width)).toBe(720);
+
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    expect(getWidthPx(result.current.containerStyle.width)).toBe(720);
   });
 
   it('collapses from the explicit collapse control', () => {

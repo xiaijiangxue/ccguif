@@ -16,9 +16,10 @@ interface Bounds {
   maxContainerWidthPx: number;
 }
 
-// Use v3 key to migrate the editable area two lines shorter without mutating the old v2 record.
-const STORAGE_KEY = 'chat-input-box:size-v3';
-const LEGACY_STORAGE_KEY = 'chat-input-box:size-v2';
+// Use v4 key to stop persisting viewport-clamped composer widths from the old v3 resize handler.
+const STORAGE_KEY = 'chat-input-box:size-v4';
+const LEGACY_WIDTH_CLAMPED_STORAGE_KEY = 'chat-input-box:size-v3';
+const LEGACY_HEIGHT_STORAGE_KEY = 'chat-input-box:size-v2';
 
 const VIEWPORT_HEIGHT_FALLBACK_PX = 800;
 const MAX_WRAPPER_HEIGHT_VIEWPORT_RATIO = 0.55;
@@ -114,12 +115,20 @@ function migrateLegacyLoadedSize(raw: unknown): SizeState {
   return { wrapperHeightPx, containerWidthPx: null, isCollapsed };
 }
 
+function migrateWidthClampedLoadedSize(raw: unknown): SizeState {
+  const migrated = sanitizeLoadedSize(raw);
+  return { ...migrated, containerWidthPx: null };
+}
+
 function readInitialSize(): SizeState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) return sanitizeLoadedSize(JSON.parse(raw));
 
-    const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
+    const widthClampedRaw = localStorage.getItem(LEGACY_WIDTH_CLAMPED_STORAGE_KEY);
+    if (widthClampedRaw) return migrateWidthClampedLoadedSize(JSON.parse(widthClampedRaw));
+
+    const legacyRaw = localStorage.getItem(LEGACY_HEIGHT_STORAGE_KEY);
     if (legacyRaw) return migrateLegacyLoadedSize(JSON.parse(legacyRaw));
   } catch {
     // fall through to default size
@@ -324,7 +333,8 @@ export function useResizableChatInputBox({
     }
   }, [enabled, size]);
 
-  // Clamp persisted size on window resize (e.g., user shrinks the tool window).
+  // Clamp persisted height on window resize. Width is a user preference; CSS max-width handles
+  // temporary parent shrink without overwriting the preferred width.
   useEffect(() => {
     if (!enabled) return;
     const onResize = () => {
@@ -334,20 +344,12 @@ export function useResizableChatInputBox({
           prev.wrapperHeightPx == null
             ? null
             : clamp(prev.wrapperHeightPx, bounds.minWrapperHeightPx, bounds.maxWrapperHeightPx);
-        const nextContainerWidthPx =
-          prev.containerWidthPx == null
-            ? null
-            : clamp(prev.containerWidthPx, bounds.minContainerWidthPx, bounds.maxContainerWidthPx);
-        if (
-          nextWrapperHeightPx === prev.wrapperHeightPx &&
-          nextContainerWidthPx === prev.containerWidthPx
-        ) {
+        if (nextWrapperHeightPx === prev.wrapperHeightPx) {
           return prev;
         }
         return {
           ...prev,
           wrapperHeightPx: nextWrapperHeightPx,
-          containerWidthPx: nextContainerWidthPx,
         };
       });
     };

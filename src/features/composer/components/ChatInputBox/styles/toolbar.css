@@ -8,6 +8,8 @@
   align-items: stretch;
   justify-content: space-between;
   gap: 0;
+  width: 100%;
+  min-width: 0;
   min-height: var(--composer-control-band-height, 44px);
   padding: 2px 8px;
   background: color-mix(in srgb, var(--input-bg) 78%, transparent);
@@ -20,6 +22,7 @@
   /* Bottom border-radius since ButtonArea is now the last element inside the box */
   border-bottom-left-radius: 14px;
   border-bottom-right-radius: 14px;
+  box-sizing: border-box;
 }
 
 .button-area-primary-row {
@@ -42,6 +45,7 @@
 }
 
 .button-area-left--primary {
+  flex: 1 1 auto;
   gap: var(--composer-toolbar-icon-gap);
   padding-right: 4px;
 }
@@ -120,7 +124,9 @@
   align-items: center;
   flex-wrap: nowrap;
   gap: 1px;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   animation: button-area-inline-tools-enter 0.14s ease-out;
 }
 
