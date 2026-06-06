@@ -175,6 +175,38 @@
   font-size: 11px;
 }
 
+.tool-operation-timeline-file-targets {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.tool-operation-timeline-file-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: min(24vw, 220px);
+  flex-shrink: 1;
+}
+
+.tool-operation-timeline-file-target-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-operation-timeline-file-target-more {
+  flex-shrink: 0;
+  color: var(--text-faint);
+  font-size: 10px;
+}
+
 .tool-operation-timeline-meta {
   justify-self: end;
   max-width: 190px;
@@ -216,25 +248,49 @@
   min-height: 34px;
 }
 
+.tool-operation-timeline-detail--read > .task-container > .task-header,
 .tool-operation-timeline-detail--edit > .task-container > .task-header,
-.tool-operation-timeline-detail--fileChange > .task-container > .task-header {
+.tool-operation-timeline-detail--bash > .task-container > .task-header,
+.tool-operation-timeline-detail--search > .task-container > .task-header,
+.tool-operation-timeline-detail--web > .task-container > .task-header,
+.tool-operation-timeline-detail--fileChange > .task-container > .task-header,
+.tool-operation-timeline-detail--mcp > .task-container > .task-header,
+.tool-operation-timeline-detail--other > .task-container > .task-header {
   display: none;
 }
 
+.tool-operation-timeline-detail--read > .task-container,
 .tool-operation-timeline-detail--edit > .task-container,
-.tool-operation-timeline-detail--fileChange > .task-container {
+.tool-operation-timeline-detail--bash > .task-container,
+.tool-operation-timeline-detail--search > .task-container,
+.tool-operation-timeline-detail--web > .task-container,
+.tool-operation-timeline-detail--fileChange > .task-container,
+.tool-operation-timeline-detail--mcp > .task-container,
+.tool-operation-timeline-detail--other > .task-container {
   background: transparent;
   border-color: transparent;
 }
 
+.tool-operation-timeline-detail--read > .task-container > .task-details,
 .tool-operation-timeline-detail--edit > .task-container > .task-details,
-.tool-operation-timeline-detail--fileChange > .task-container > .task-details {
+.tool-operation-timeline-detail--bash > .task-container > .task-details,
+.tool-operation-timeline-detail--search > .task-container > .task-details,
+.tool-operation-timeline-detail--web > .task-container > .task-details,
+.tool-operation-timeline-detail--fileChange > .task-container > .task-details,
+.tool-operation-timeline-detail--mcp > .task-container > .task-details,
+.tool-operation-timeline-detail--other > .task-container > .task-details {
   display: block;
   background: transparent;
 }
 
+.tool-operation-timeline-detail--read .task-content-wrapper,
 .tool-operation-timeline-detail--edit .task-content-wrapper,
-.tool-operation-timeline-detail--fileChange .task-content-wrapper {
+.tool-operation-timeline-detail--bash .task-content-wrapper,
+.tool-operation-timeline-detail--search .task-content-wrapper,
+.tool-operation-timeline-detail--web .task-content-wrapper,
+.tool-operation-timeline-detail--fileChange .task-content-wrapper,
+.tool-operation-timeline-detail--mcp .task-content-wrapper,
+.tool-operation-timeline-detail--other .task-content-wrapper {
   padding: 0;
 }
 

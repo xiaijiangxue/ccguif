@@ -66,10 +66,10 @@ function getStatus(item: Extract<ConversationItem, { kind: 'tool' }>): 'complete
 
 export const McpToolBlock = memo(function McpToolBlock({
   item,
-  isExpanded: _isExpanded,
+  isExpanded,
   onToggle: _onToggle,
 }: McpToolBlockProps) {
-  const [expanded, setExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
   const args = useMemo(() => parseToolArgs(item.detail), [item.detail]);
 
   const displayName = formatMcpToolName(item.title);
@@ -91,12 +91,13 @@ export const McpToolBlock = memo(function McpToolBlock({
   }, [args, omitFields]);
 
   const hasDetails = otherParams.length > 0 || item.output;
+  const expanded = isExpanded || internalExpanded;
 
   return (
     <div className="task-container">
       <div
         className="task-header"
-        onClick={() => setExpanded(prev => !prev)}
+        onClick={() => setInternalExpanded(prev => !prev)}
         style={{
           cursor: 'pointer',
           borderBottom: expanded && hasDetails ? '1px solid var(--border-primary)' : undefined,

@@ -56,4 +56,16 @@ describe("ReadToolBlock", () => {
     expect(screen.getByText(/const value = 1;/)).toBeTruthy();
     expect(screen.getByText(/console\.log\(value\);/)).toBeTruthy();
   });
+
+  it("honors external expansion from the operation timeline", () => {
+    const item = createReadItem(
+      "tool-read-external-expanded",
+      { file_path: "src/main.ts" },
+      "export const value = 1;",
+    );
+
+    render(<ReadToolBlock item={item} isExpanded={true} onToggle={() => {}} />);
+
+    expect(screen.getByText(/export const value = 1;/)).toBeTruthy();
+  });
 });

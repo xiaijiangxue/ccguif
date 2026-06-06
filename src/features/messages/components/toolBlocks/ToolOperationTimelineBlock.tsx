@@ -32,6 +32,7 @@ import {
   computeDiffStats,
   type DiffStats,
 } from "../../utils/diffUtils";
+import { FileIcon } from "./FileIcon";
 
 type ToolItem = Extract<ConversationItem, { kind: "tool" }>;
 
@@ -227,18 +228,25 @@ function getItemTargets(item: ToolItem, category: ToolCategory): string[] {
   return [getItemTarget(item, category)].filter(Boolean);
 }
 
-function summarizeTargets(items: ToolItem[], category: ToolCategory): string {
+function isFileTargetCategory(category: ToolCategory): boolean {
+  return category === "read" || category === "edit" || category === "fileChange";
+}
+
+function getTimelineTargets(items: ToolItem[], category: ToolCategory): string[] {
   const targets = items
     .flatMap((item) => getItemTargets(item, category))
-    .map((target) => {
-      if (category === "read" || category === "edit" || category === "fileChange") {
-        return getFileName(target) || target;
-      }
-      return target;
-    })
     .map((target) => target.trim())
     .filter(Boolean);
-  const uniqueTargets = Array.from(new Set(targets));
+  return Array.from(new Set(targets));
+}
+
+function summarizeTargets(targets: string[], category: ToolCategory): string {
+  const uniqueTargets = targets.map((target) => {
+    if (isFileTargetCategory(category)) {
+      return getFileName(target) || target;
+    }
+    return target;
+  });
   if (uniqueTargets.length === 0) {
     return "";
   }
@@ -251,6 +259,22 @@ function summarizeTargets(items: ToolItem[], category: ToolCategory): string {
   return hiddenCount > 0
     ? `${visibleTargets.join(", ")} +${hiddenCount}`
     : visibleTargets.join(", ");
+}
+
+function getVisibleFileTargets(targets: string[], category: ToolCategory) {
+  if (!isFileTargetCategory(category)) {
+    return [];
+  }
+  const visibleTargetLimit =
+    category === "edit" || category === "fileChange" ? 5 : 3;
+  return targets.slice(0, visibleTargetLimit).map((target) => {
+    const fileName = getFileName(target) || target;
+    return {
+      displayName: truncateText(fileName, 28),
+      fileName,
+      fullPath: target,
+    };
+  });
 }
 
 function getFailureSummary(items: ToolItem[]): string {
@@ -303,10 +327,19 @@ export const ToolOperationTimelineBlock = memo(function ToolOperationTimelineBlo
       }),
     [category, firstItem, items.length, kind, t],
   );
-  const targetSummary = useMemo(
-    () => summarizeTargets(items, category),
+  const timelineTargets = useMemo(
+    () => getTimelineTargets(items, category),
     [category, items],
   );
+  const targetSummary = useMemo(
+    () => summarizeTargets(timelineTargets, category),
+    [category, timelineTargets],
+  );
+  const visibleFileTargets = useMemo(
+    () => getVisibleFileTargets(timelineTargets, category),
+    [category, timelineTargets],
+  );
+  const hiddenFileTargetCount = Math.max(0, timelineTargets.length - visibleFileTargets.length);
   const diffStats = useMemo(
     () => getTimelineDiffStats(items, category),
     [category, items],
@@ -361,7 +394,27 @@ export const ToolOperationTimelineBlock = memo(function ToolOperationTimelineBlo
               <span className="diff-stat-del">-{diffStats.deletions}</span>
             </span>
           ) : null}
-          {targetSummary ? (
+          {visibleFileTargets.length > 0 ? (
+            <span className="tool-operation-timeline-file-targets">
+              {visibleFileTargets.map((target) => (
+                <span
+                  key={target.fullPath}
+                  className="tool-operation-timeline-file-target"
+                  title={target.fullPath}
+                >
+                  <FileIcon fileName={target.fileName} size={14} />
+                  <span className="tool-operation-timeline-file-target-name">
+                    {target.displayName}
+                  </span>
+                </span>
+              ))}
+              {hiddenFileTargetCount > 0 ? (
+                <span className="tool-operation-timeline-file-target-more">
+                  +{hiddenFileTargetCount}
+                </span>
+              ) : null}
+            </span>
+          ) : targetSummary ? (
             <span className="tool-operation-timeline-target">{targetSummary}</span>
           ) : null}
         </span>

@@ -1059,7 +1059,7 @@ export const GenericToolBlock = memo(function GenericToolBlock({
   const [copiedPlanMarkdown, setCopiedPlanMarkdown] = useState(false);
   const isExpanded = isExitPlanTool
     ? externalExpanded
-    : isCollapsible ? internalExpanded : externalExpanded;
+    : externalExpanded || (isCollapsible ? internalExpanded : externalExpanded);
   const shouldShowExitPlanRawOutput = exitPlanContent
     ? shouldRenderExitPlanRawOutput(exitPlanContent)
     : false;

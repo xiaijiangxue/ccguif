@@ -106,6 +106,16 @@ const blockedModeItem: Extract<ConversationItem, { kind: "tool" }> = {
     "requestUserInput is blocked while effective_mode=code\n\nSwitch to Plan mode and resend the prompt when user input is needed.",
 };
 
+const skillItem: Extract<ConversationItem, { kind: "tool" }> = {
+  id: "tool-skill",
+  kind: "tool",
+  toolType: "toolCall",
+  title: "Tool: Skill",
+  detail: JSON.stringify({ skill: "trellis:record-session" }),
+  output: "Launching skill: trellis:record-session",
+  status: "completed",
+};
+
 const exitPlanModeItem: Extract<ConversationItem, { kind: "tool" }> = {
   id: "tool-5",
   kind: "tool",
@@ -238,6 +248,18 @@ describe("GenericToolBlock", () => {
     );
 
     expect(screen.getByText("This feature requires Plan mode")).toBeTruthy();
+  });
+
+  it("honors external expansion for collapsible generic tools", () => {
+    render(
+      <GenericToolBlock
+        item={skillItem}
+        isExpanded={true}
+        onToggle={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Launching skill: trellis:record-session")).toBeTruthy();
   });
 
   it("hides plan-mode hint when collaboration mode is plan", () => {

@@ -56,11 +56,11 @@ function isMarkdownPath(path: string): boolean {
 
 export const ReadToolBlock = memo(function ReadToolBlock({
   item,
-  isExpanded: _isExpanded,
+  isExpanded,
   onToggle: _onToggle,
 }: ReadToolBlockProps) {
   const { t } = useTranslation();
-  const [expanded, setExpanded] = useState(false);
+  const [internalExpanded, setInternalExpanded] = useState(false);
   const args = useMemo(() => parseToolArgs(item.detail), [item.detail]);
   const nestedInput = useMemo(() => asRecord(args?.input), [args]);
   const nestedArgs = useMemo(() => asRecord(args?.arguments), [args]);
@@ -108,12 +108,13 @@ export const ReadToolBlock = memo(function ReadToolBlock({
   const status = resolveToolStatus(item.status, Boolean(renderedOutput));
   const isCompleted = status === 'completed';
   const isError = status === 'failed';
+  const expanded = isExpanded || internalExpanded;
 
   return (
     <div className="task-container">
       <div
         className="task-header"
-        onClick={() => setExpanded((prev) => !prev)}
+        onClick={() => setInternalExpanded((prev) => !prev)}
         style={{
           borderBottom: expanded ? '1px solid var(--border-primary)' : undefined,
         }}
