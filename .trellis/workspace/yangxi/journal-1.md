@@ -386,3 +386,53 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 11: 提交输出时间线与输入框交互改动
+
+**Date**: 2026-06-06
+**Task**: 提交输出时间线与输入框交互改动
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+### Summary
+
+按用户要求提交当前工作区全部代码，包含输出时间线、输入框交互、文档与设计 mockup 相关改动。
+
+### Main Changes
+
+- 提交 `ChatInputBox`、`Composer`、layout/messages/tool block 相关 UI 变更。
+- 新增输出操作时间线 tool block 组件及对应样式/i18n 文案。
+- 纳入本轮 brainstorm、plan 与 design mockup 文档。
+
+### Testing
+
+- 未运行 lint/test；用户明确要求只提交当前代码。
+
+### Status
+
+[OK] Code committed and session recorded.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b78818d3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
