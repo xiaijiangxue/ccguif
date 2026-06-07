@@ -953,3 +953,44 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 23: Auto-select first search match in FileViewPanel
+
+**Date**: 2026-06-08
+**Task**: Auto-select first search match in FileViewPanel
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Auto-select first match | Added `selectFirstSearchMatch` to find and highlight the first match on query change |
+| ViewPlugin | New `selectFirstSearchMatchOnQueryChange` plugin listens to search panel inputs and triggers selection via RAF debounce |
+| Scroll into view | Matched selection is scrolled into view centered vertically |
+
+**Updated Files**:
+- `src/features/files/components/FileViewPanel.tsx`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fafe9b0d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
