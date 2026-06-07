@@ -742,12 +742,14 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
         const nextHeight = Math.min(el.scrollHeight, wrapperHeight);
         el.style.height = `${nextHeight}px`;
         el.style.maxHeight = `${wrapperHeight}px`;
+        el.style.overflowX = 'hidden';
         el.style.overflowY = 'auto';
         return;
       }
 
       el.style.maxHeight = '';
       // Hide inner scrollbar, completely rely on outer container scrolling
+      el.style.overflowX = 'hidden';
       el.style.overflowY = 'hidden';
     }, [editableWrapperRef]);
 
