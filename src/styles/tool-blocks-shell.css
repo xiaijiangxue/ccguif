@@ -9,7 +9,7 @@
    ============================================ */
 
 .task-container {
-  background: var(--bg-primary, var(--surface-card));
+  background: color-mix(in srgb, var(--surface-card-strong) 78%, var(--surface-messages));
   border: 1px solid color-mix(in srgb, var(--border-primary, var(--border-subtle)) 70%, transparent);
   border-radius: 8px;
   margin: 8px 0;

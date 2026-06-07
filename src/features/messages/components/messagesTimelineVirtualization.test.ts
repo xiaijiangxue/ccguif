@@ -4,10 +4,10 @@ import {
   estimateTimelineProjectionRowSize,
   estimateTimelineProjectionRenderWeight,
   observeTimelineElementOffset,
+  shouldIncludeTimelineProjectionRowInVirtualWindow,
   shouldVirtualizeTimelineRows,
   TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT,
   TIMELINE_VIRTUALIZATION_MIN_ROWS,
-  TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS,
 } from "./messagesTimelineVirtualization";
 import type { TimelineProjectionRow } from "./messagesTimelineProjection";
 
@@ -23,29 +23,30 @@ describe("messagesTimelineVirtualization", () => {
     })).toBe(false);
   });
 
-  it("keeps short active streaming timelines out of row-count virtualization", () => {
+  it("keeps active streaming timelines out of row-count virtualization", () => {
     expect(shouldVirtualizeTimelineRows({
       isThinking: true,
-      rowCount: TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS - 1,
+      rowCount: TIMELINE_VIRTUALIZATION_MIN_ROWS * 2,
     })).toBe(false);
   });
 
-  it("enables virtualization for long active streaming timelines", () => {
+  it("keeps active streaming timelines out of render-weight virtualization", () => {
     expect(shouldVirtualizeTimelineRows({
       isThinking: true,
-      rowCount: TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS,
-    })).toBe(true);
+      rowCount: 12,
+      renderWeight: TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT,
+    })).toBe(false);
   });
 
-  it("enables virtualization for image-heavy streaming timelines by render weight", () => {
+  it("enables render-weight virtualization only for stable timelines", () => {
     expect(shouldVirtualizeTimelineRows({
-      isThinking: true,
+      isThinking: false,
       rowCount: 12,
       renderWeight: TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT,
     })).toBe(true);
   });
 
-  it("estimates grouped rows higher than a single item row", () => {
+  it("estimates grouped tool rows near their collapsed timeline height", () => {
     const singleRow: TimelineProjectionRow = {
       kind: "entry",
       key: "item:message:1",
@@ -84,9 +85,43 @@ describe("messagesTimelineVirtualization", () => {
       hasActiveUserInputAnchor: false,
     };
 
-    expect(estimateTimelineProjectionRowSize(groupRow)).toBeGreaterThan(
+    expect(estimateTimelineProjectionRowSize(groupRow)).toBeLessThan(
       estimateTimelineProjectionRowSize(singleRow),
     );
+  });
+
+  it("estimates compact file-change groups near their collapsed timeline height", () => {
+    const groupRow: TimelineProjectionRow = {
+      kind: "entry",
+      key: "fileChangeGroup:1:2:2",
+      entry: {
+        kind: "fileChangeGroup",
+        items: [
+          {
+            id: "tool-1",
+            kind: "tool",
+            toolType: "fileChange",
+            title: "File changes",
+            detail: "",
+            status: "completed",
+            changes: [{ path: "a.ts", kind: "modified", diff: "@@ -1 +1 @@\n-a\n+b" }],
+          },
+          {
+            id: "tool-2",
+            kind: "tool",
+            toolType: "fileChange",
+            title: "File changes",
+            detail: "",
+            status: "completed",
+            changes: [{ path: "b.ts", kind: "modified", diff: "@@ -1 +1 @@\n-a\n+b" }],
+          },
+        ],
+      },
+      itemIds: ["tool-1", "tool-2"],
+      hasActiveUserInputAnchor: false,
+    };
+
+    expect(estimateTimelineProjectionRowSize(groupRow)).toBeLessThan(96);
   });
 
   it("assigns high render weight to image-heavy message rows", () => {
@@ -108,6 +143,122 @@ describe("messagesTimelineVirtualization", () => {
     };
 
     expect(estimateTimelineProjectionRenderWeight(imageRow)).toBeGreaterThan(40);
+  });
+
+  it("excludes rows that render as null from the virtual window", () => {
+    const bashGroupRow: TimelineProjectionRow = {
+      kind: "entry",
+      key: "bashGroup:1:2:2",
+      entry: {
+        kind: "bashGroup",
+        items: [
+          {
+            id: "tool-1",
+            kind: "tool",
+            toolType: "commandExecution",
+            title: "Bash",
+            detail: "npm test",
+            status: "completed",
+          },
+          {
+            id: "tool-2",
+            kind: "tool",
+            toolType: "commandExecution",
+            title: "Bash",
+            detail: "npm run typecheck",
+            status: "completed",
+          },
+        ],
+      },
+      itemIds: ["tool-1", "tool-2"],
+      hasActiveUserInputAnchor: false,
+    };
+    const commandToolRow: TimelineProjectionRow = {
+      kind: "entry",
+      key: "item:tool:tool-3:",
+      entry: {
+        kind: "item",
+        item: {
+          id: "tool-3",
+          kind: "tool",
+          toolType: "commandExecution",
+          title: "Bash",
+          detail: "npm test",
+          status: "completed",
+        },
+      },
+      itemIds: ["tool-3"],
+      hasActiveUserInputAnchor: false,
+    };
+    const encryptedReasoningRow: TimelineProjectionRow = {
+      kind: "entry",
+      key: "item:reasoning:reasoning-1:",
+      entry: {
+        kind: "item",
+        item: {
+          id: "reasoning-1",
+          kind: "reasoning",
+          summary: "Encrypted reasoning",
+          content: "",
+        },
+      },
+      itemIds: ["reasoning-1"],
+      hasActiveUserInputAnchor: false,
+    };
+    const visibleMessageRow: TimelineProjectionRow = {
+      kind: "entry",
+      key: "item:message:message-1:",
+      entry: {
+        kind: "item",
+        item: { id: "message-1", kind: "message", role: "assistant", text: "hello" },
+      },
+      itemIds: ["message-1"],
+      hasActiveUserInputAnchor: false,
+    };
+    const codexInput = {
+      activeEngine: "codex" as const,
+      claudeHistoryTranscriptFallbackActive: false,
+    };
+
+    expect(
+      shouldIncludeTimelineProjectionRowInVirtualWindow(bashGroupRow, codexInput),
+    ).toBe(false);
+    expect(
+      shouldIncludeTimelineProjectionRowInVirtualWindow(commandToolRow, codexInput),
+    ).toBe(false);
+    expect(
+      shouldIncludeTimelineProjectionRowInVirtualWindow(encryptedReasoningRow, codexInput),
+    ).toBe(false);
+    expect(
+      shouldIncludeTimelineProjectionRowInVirtualWindow(visibleMessageRow, codexInput),
+    ).toBe(true);
+  });
+
+  it("keeps hidden rows in the virtual window when they carry the active input anchor", () => {
+    const commandToolRow: TimelineProjectionRow = {
+      kind: "entry",
+      key: "item:tool:tool-anchored:",
+      entry: {
+        kind: "item",
+        item: {
+          id: "tool-anchored",
+          kind: "tool",
+          toolType: "commandExecution",
+          title: "Bash",
+          detail: "npm test",
+          status: "completed",
+        },
+      },
+      itemIds: ["tool-anchored"],
+      hasActiveUserInputAnchor: true,
+    };
+
+    expect(
+      shouldIncludeTimelineProjectionRowInVirtualWindow(commandToolRow, {
+        activeEngine: "codex",
+        claudeHistoryTranscriptFallbackActive: false,
+      }),
+    ).toBe(true);
   });
 
   it("clears pending scroll-end fallback when virtualizer unmounts", () => {

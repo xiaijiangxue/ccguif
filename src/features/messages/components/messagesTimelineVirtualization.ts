@@ -1,16 +1,22 @@
 import type { Virtualizer } from "@tanstack/react-virtual";
 import type { ConversationItem } from "../../../types";
+import {
+  shouldHideCodexCanvasCommandCard,
+  type MessagesEngine,
+} from "./messagesRenderUtils";
 import type { TimelineProjectionRow } from "./messagesTimelineProjection";
 
 export const TIMELINE_VIRTUALIZATION_MIN_ROWS = 200;
 export const TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT = 96;
-export const TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS = 80;
 
 export function shouldVirtualizeTimelineRows(input: {
   isThinking: boolean;
   rowCount: number;
   renderWeight?: number;
 }) {
+  if (input.isThinking) {
+    return false;
+  }
   const hasHighRenderDensity =
     typeof input.renderWeight === "number" &&
     input.renderWeight >= TIMELINE_VIRTUALIZATION_MIN_RENDER_WEIGHT &&
@@ -18,10 +24,7 @@ export function shouldVirtualizeTimelineRows(input: {
   if (hasHighRenderDensity) {
     return true;
   }
-  if (input.isThinking) {
-    return input.rowCount >= TIMELINE_STREAMING_VIRTUALIZATION_MIN_ROWS;
-  }
-  return input.rowCount >= TIMELINE_VIRTUALIZATION_MIN_ROWS && !input.isThinking;
+  return input.rowCount >= TIMELINE_VIRTUALIZATION_MIN_ROWS;
 }
 
 function estimateConversationItemRenderWeight(
@@ -73,10 +76,63 @@ export function estimateTimelineProjectionRenderWeight(row: TimelineProjectionRo
   );
 }
 
+export function shouldIncludeTimelineProjectionRowInVirtualWindow(
+  row: TimelineProjectionRow,
+  input: {
+    activeEngine: MessagesEngine;
+    claudeHistoryTranscriptFallbackActive: boolean;
+  },
+) {
+  if (row.kind !== "entry") {
+    return true;
+  }
+  if (row.hasActiveUserInputAnchor) {
+    return true;
+  }
+  if (
+    row.entry.kind === "bashGroup" &&
+    (input.activeEngine === "codex" ||
+      (input.activeEngine === "claude" && !input.claudeHistoryTranscriptFallbackActive))
+  ) {
+    return false;
+  }
+  if (
+    row.entry.kind === "item" &&
+    row.entry.item.kind === "tool" &&
+    shouldHideCodexCanvasCommandCard(row.entry.item, input.activeEngine)
+  ) {
+    return false;
+  }
+  if (
+    row.entry.kind === "item" &&
+    row.entry.item.kind === "reasoning" &&
+    input.activeEngine === "codex" &&
+    (row.entry.item.content || row.entry.item.summary).trim() === "Encrypted reasoning"
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export function estimateTimelineProjectionRowSize(row: TimelineProjectionRow) {
   switch (row.kind) {
     case "entry":
-      return row.entry.kind === "item" ? 112 : 168;
+      if (row.entry.kind === "item") {
+        if (row.entry.item.kind === "tool") {
+          return 56;
+        }
+        return 112;
+      }
+      if (
+        row.entry.kind === "readGroup" ||
+        row.entry.kind === "editGroup" ||
+        row.entry.kind === "fileChangeGroup" ||
+        row.entry.kind === "bashGroup" ||
+        row.entry.kind === "searchGroup"
+      ) {
+        return 64;
+      }
+      return 112;
     case "dockedReasoning":
       return 96;
     case "tailUserInput":

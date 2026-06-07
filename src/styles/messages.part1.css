@@ -3,8 +3,13 @@
 .message {
   display: flex;
   margin-bottom: 12px;
-  content-visibility: auto;
-  contain-intrinsic-block-size: auto 120px;
+}
+
+@media (min-width: 1200px) {
+  .message:not(.assistant):not(.message-agent-task) {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 72px;
+  }
 }
 
 .app.windows-desktop .messages-shell.claude-render-safe .message,
@@ -271,10 +276,10 @@
 .message.assistant .bubble {
   max-width: 100%;
   width: 100%;
-  padding: 4px 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--surface-card-strong) 72%, var(--surface-messages));
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 78%, transparent);
+  border-radius: 8px;
   box-shadow: none;
 }
 

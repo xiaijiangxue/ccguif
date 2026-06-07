@@ -1,8 +1,10 @@
 import {
   Fragment,
+  useCallback,
   memo,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type MutableRefObject,
   type ReactNode,
@@ -58,6 +60,7 @@ import {
   estimateTimelineProjectionRowSize,
   estimateTimelineProjectionRenderWeight,
   observeTimelineElementOffset,
+  shouldIncludeTimelineProjectionRowInVirtualWindow,
   shouldVirtualizeTimelineRows,
 } from "./messagesTimelineVirtualization";
 
@@ -255,6 +258,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
 }: MessagesTimelineProps) {
   const { t } = useTranslation();
   const [isStickyHeaderCollapsed, setIsStickyHeaderCollapsed] = useState(false);
+  const virtualRowRefCallbacksByKeyRef = useRef(
+    new Map<string, (node: HTMLDivElement | null) => void>(),
+  );
+  const virtualRowResizeObserversRef = useRef(new Map<Element, ResizeObserver>());
+  const virtualRowNodesByKeyRef = useRef(new Map<string, HTMLDivElement>());
 
   useEffect(() => {
     setIsStickyHeaderCollapsed(false);
@@ -297,52 +305,138 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       0,
     ),
   });
+  const virtualTimelineProjectionRows = useMemo(
+    () =>
+      shouldVirtualizeTimeline
+        ? timelineProjectionRows.filter((row) =>
+            shouldIncludeTimelineProjectionRowInVirtualWindow(row, {
+              activeEngine,
+              claudeHistoryTranscriptFallbackActive,
+            }),
+          )
+        : timelineProjectionRows,
+    [
+      activeEngine,
+      claudeHistoryTranscriptFallbackActive,
+      shouldVirtualizeTimeline,
+      timelineProjectionRows,
+    ],
+  );
   const timelineVirtualizer = useVirtualizer({
-    count: shouldVirtualizeTimeline ? timelineProjectionRows.length : 0,
+    count: shouldVirtualizeTimeline ? virtualTimelineProjectionRows.length : 0,
     enabled: shouldVirtualizeTimeline,
     estimateSize: (index) =>
-      estimateTimelineProjectionRowSize(timelineProjectionRows[index] ?? {
+      estimateTimelineProjectionRowSize(virtualTimelineProjectionRows[index] ?? {
         kind: "bottomAnchor",
         key: "bottom-anchor",
       }),
-    getItemKey: (index) => timelineProjectionRows[index]?.key ?? `missing:${index}`,
+    getItemKey: (index) => virtualTimelineProjectionRows[index]?.key ?? `missing:${index}`,
     getScrollElement: () => scrollElementRef.current,
     observeElementOffset: observeTimelineElementOffset,
     overscan: 12,
   });
   const timelineProjectionMeasureKey = useMemo(
-    () => timelineProjectionRows.map((row) => row.key).join("|"),
-    [timelineProjectionRows],
+    () => virtualTimelineProjectionRows.map((row) => row.key).join("|"),
+    [virtualTimelineProjectionRows],
   );
+  const remeasureVirtualTimelineRows = useCallback(() => {
+    virtualRowNodesByKeyRef.current.forEach((node) => {
+      if (node.isConnected) {
+        timelineVirtualizer.measureElement(node);
+      }
+    });
+  }, [timelineVirtualizer]);
   useEffect(() => {
     if (!shouldVirtualizeTimeline) {
+      const observers = virtualRowResizeObserversRef.current;
+      observers.forEach((observer) => {
+        observer.disconnect();
+      });
+      observers.clear();
+      virtualRowRefCallbacksByKeyRef.current.clear();
+      virtualRowNodesByKeyRef.current.clear();
       return;
     }
     const frameId = window.requestAnimationFrame(() => {
-      timelineVirtualizer.measure();
+      remeasureVirtualTimelineRows();
     });
     return () => {
       window.cancelAnimationFrame(frameId);
     };
   }, [
+    remeasureVirtualTimelineRows,
     shouldVirtualizeTimeline,
     timelineProjectionMeasureKey,
-    timelineVirtualizer,
   ]);
+  useEffect(() => {
+    const observers = virtualRowResizeObserversRef.current;
+    const nodesByKey = virtualRowNodesByKeyRef.current;
+    return () => {
+      observers.forEach((observer) => {
+        observer.disconnect();
+      });
+      observers.clear();
+      virtualRowRefCallbacksByKeyRef.current.clear();
+      nodesByKey.clear();
+    };
+  }, []);
+  const getVirtualTimelineRowRef = useCallback(
+    (rowKey: string) => {
+      const existingCallback = virtualRowRefCallbacksByKeyRef.current.get(rowKey);
+      if (existingCallback) {
+        return existingCallback;
+      }
+      const callback = (node: HTMLDivElement | null) => {
+        const previousNode = virtualRowNodesByKeyRef.current.get(rowKey);
+        if (previousNode && previousNode !== node) {
+          const previousObserver = virtualRowResizeObserversRef.current.get(previousNode);
+          if (previousObserver) {
+            previousObserver.disconnect();
+            virtualRowResizeObserversRef.current.delete(previousNode);
+          }
+        }
+        if (!node) {
+          if (previousNode) {
+            const previousObserver = virtualRowResizeObserversRef.current.get(previousNode);
+            if (previousObserver) {
+              previousObserver.disconnect();
+              virtualRowResizeObserversRef.current.delete(previousNode);
+            }
+          }
+          virtualRowNodesByKeyRef.current.delete(rowKey);
+          virtualRowRefCallbacksByKeyRef.current.delete(rowKey);
+          return;
+        }
+        virtualRowNodesByKeyRef.current.set(rowKey, node);
+        timelineVirtualizer.measureElement(node);
+        if (typeof ResizeObserver === "undefined" || virtualRowResizeObserversRef.current.has(node)) {
+          return;
+        }
+        const observer = new ResizeObserver(() => {
+          timelineVirtualizer.measureElement(node);
+        });
+        observer.observe(node);
+        virtualRowResizeObserversRef.current.set(node, observer);
+      };
+      virtualRowRefCallbacksByKeyRef.current.set(rowKey, callback);
+      return callback;
+    },
+    [timelineVirtualizer],
+  );
   useEffect(() => {
     if (!shouldVirtualizeTimeline) {
       return;
     }
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        timelineVirtualizer.measure();
+        remeasureVirtualTimelineRows();
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [shouldVirtualizeTimeline, timelineVirtualizer]);
+  }, [remeasureVirtualTimelineRows, shouldVirtualizeTimeline]);
   useEffect(() => {
     if (!onAnchorRowScrollerReady) {
       return;
@@ -352,7 +446,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       return;
     }
     onAnchorRowScrollerReady((messageId: string) => {
-      const targetIndex = timelineProjectionRows.findIndex((row) =>
+      const targetIndex = virtualTimelineProjectionRows.findIndex((row) =>
         row.kind === "entry" && row.itemIds.includes(messageId),
       );
       if (targetIndex < 0) {
@@ -370,8 +464,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   }, [
     onAnchorRowScrollerReady,
     shouldVirtualizeTimeline,
-    timelineProjectionRows,
     timelineVirtualizer,
+    virtualTimelineProjectionRows,
   ]);
 
   const renderSingleItem = (item: ConversationItem) => {
@@ -740,7 +834,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         activeEngine === "codex" ||
         (activeEngine === "claude" && !claudeHistoryTranscriptFallbackActive)
       ) {
-        return null;
+        return renderWithAnchoredUserInput(null);
       }
       const firstItem = entry.items[0];
       return renderWithAnchoredUserInput(
@@ -871,13 +965,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       }}
     >
       {timelineVirtualizer.getVirtualItems().map((virtualRow) => {
-        const row = timelineProjectionRows[virtualRow.index];
+        const row = virtualTimelineProjectionRows[virtualRow.index];
         return (
           <div
             key={virtualRow.key}
             data-index={virtualRow.index}
             data-timeline-row-kind={row?.kind}
-            ref={timelineVirtualizer.measureElement}
+            ref={getVirtualTimelineRowRef(String(virtualRow.key))}
             style={{
               left: 0,
               position: "absolute",

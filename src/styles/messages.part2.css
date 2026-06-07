@@ -1,6 +1,6 @@
 /* Thinking Block - Minimalist (synced with idea-claude-code-gui) */
 .thinking-block {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
   font-size: 12.5px;
 }
 
@@ -40,9 +40,10 @@
 }
 
 .thinking-block.is-expanded {
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--surface-card) 50%, var(--surface-messages));
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 80%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-card-strong) 78%, var(--surface-messages));
 }
 
 .thinking-header:hover {
@@ -64,9 +65,9 @@
 
 .thinking-content {
   margin-top: 8px;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-family: inherit;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -77,9 +78,9 @@
   position: relative;
   margin-left: 4px;
   border: none;
-  border-left: 2px solid color-mix(in srgb, var(--color-thinking-border, var(--border-subtle)) 88%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--color-thinking-border, var(--border-subtle)) 72%, var(--text-muted));
   border-radius: 0;
-  padding: 2px 0 2px 16px;
+  padding: 2px 0 2px 14px;
   background: transparent;
   box-shadow: none;
 }
@@ -93,9 +94,9 @@
 }
 
 .reasoning-markdown {
-  font-size: 11px;
-  line-height: 1.4;
-  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-quiet);
 }
 
 .reasoning-markdown > * {
@@ -103,7 +104,7 @@
 }
 
 .reasoning-markdown > * + * {
-  margin-top: 10px;
+  margin-top: 6px;
 }
 
 .reasoning-markdown > :first-child {
@@ -149,6 +150,10 @@
 
 .reasoning-markdown :where(p, blockquote) {
   white-space: pre-wrap;
+}
+
+.reasoning-markdown :where(p:empty) {
+  display: none;
 }
 
 .reasoning-markdown :where(ul, ol) {
@@ -316,6 +321,8 @@
 .markdown pre {
   margin: 0;
   white-space: pre-wrap;
+  max-height: min(52vh, 520px);
+  overflow: auto;
 }
 
 .markdown code {

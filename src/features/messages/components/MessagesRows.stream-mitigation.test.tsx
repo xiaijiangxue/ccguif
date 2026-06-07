@@ -646,4 +646,27 @@ describe("MessagesRows stream mitigation", () => {
 
     expect(screen.getByTestId("markdown").getAttribute("data-throttle")).toBe("260");
   });
+
+  it("compresses excessive blank lines in expanded reasoning display text", () => {
+    const reasoningItem = {
+      id: "reasoning-whitespace",
+      kind: "reasoning" as const,
+      summary: "Planning",
+      content: "Planning\n\n先检查入口。\n\n\n\n再检查样式。\n\n\n最后确认。",
+    };
+
+    render(
+      <ReasoningRow
+        item={reasoningItem}
+        parsed={parseReasoning(reasoningItem)}
+        isExpanded
+        isLive={false}
+        onToggle={vi.fn()}
+      />,
+    );
+
+    expect(markdownCalls.calls.at(-1)?.value).toBe(
+      "先检查入口。\n\n再检查样式。\n\n最后确认。",
+    );
+  });
 });

@@ -393,6 +393,7 @@ function shouldUseLongFoldedMarkdownStreamingSurface(
 const STREAMING_PLAIN_TEXT_COLLAPSE_THRESHOLD = 20_000;
 const STREAMING_PLAIN_TEXT_HEAD_CHARS = 4_000;
 const STREAMING_PLAIN_TEXT_TAIL_CHARS = 2_000;
+const REASONING_DISPLAY_MAX_CONSECUTIVE_BLANK_LINES = 1;
 
 function resolveStreamingPlainTextCollapsedView({
   text,
@@ -414,6 +415,14 @@ function resolveStreamingPlainTextCollapsedView({
     `\n\n${marker}\n\n`,
     text.slice(-STREAMING_PLAIN_TEXT_TAIL_CHARS),
   ].join("");
+}
+
+function normalizeReasoningDisplayText(text: string) {
+  if (!text) {
+    return "";
+  }
+  const maxBlankLines = REASONING_DISPLAY_MAX_CONSECUTIVE_BLANK_LINES;
+  return text.replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n".repeat(maxBlankLines + 1));
 }
 
 function areGeneratedImageItemsEqual(
@@ -1768,9 +1777,10 @@ export const ReasoningRow = memo(function ReasoningRow({
     item.content.trim().length > 0 &&
     item.summary.trim() === item.content.trim() &&
     item.content.includes("\n");
-  const thinkingText = shouldPreferRawClaudeContent
+  const rawThinkingText = shouldPreferRawClaudeContent
     ? item.content
     : bodyText || item.content || item.summary || "";
+  const thinkingText = normalizeReasoningDisplayText(rawThinkingText);
   if (activeEngine === "codex" && thinkingText.trim() === "Encrypted reasoning") {
     return null;
   }
