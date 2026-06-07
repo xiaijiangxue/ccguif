@@ -66,7 +66,7 @@ export function renderAppShell(ctx: any) {
     handleStageGitAll, handleStageGitFile, handleStartGuidedConversation, handleStartSharedConversation, handleStartWorkspaceConversation, handleSwitchAccount, handleSync, handleTestNotificationSound, handleToggleDictation,
     handleToggleRuntimeConsole, handleToggleSearchContentFilter, handleToggleSearchPalette, handleToggleTerminal, handleToggleTerminalPanel, handleUnlockPanel, handleUnstageGitFile, handleUpdatePrompt,
     handleUserInputSubmit, handleUserInputSubmitWithPlanApply, handleWorkspaceDragEnter, handleWorkspaceDragLeave, handleWorkspaceDragOver, handleWorkspaceDrop, handleWorktreeCreated, hasActivePlan,
-    hasLoaded, hasPlanData, highlightedBranchIndex, highlightedCommitIndex, highlightedPresetIndex, historySearchItems, homeNode, globalRuntimeNoticeDockNode, hydratedThreadListWorkspaceIdsRef,
+    hasLoaded, hasMoreContentResults, hasPlanData, highlightedBranchIndex, highlightedCommitIndex, highlightedPresetIndex, historySearchItems, homeNode, globalRuntimeNoticeDockNode, hydratedThreadListWorkspaceIdsRef,
     installedEngines, interruptTurn, isCompact, isDeleteThreadPromptBusy, isEditorFileMaximized, isFilesLoading, isLoadingLatestAgents, isMacDesktop,
     isPanelLocked, isPhone, isPlanMode, isPlanPanelDismissed, isProcessing, isProcessingNow, isPullRequestComposer, isPullRequestComposerFromSections,
     isReviewing, isSearchPaletteOpen, isSoloMode, isTablet, isThreadAutoNaming, isThreadPinned, isValid, isWindowsDesktop,
@@ -74,7 +74,7 @@ export function renderAppShell(ctx: any) {
     kanbanReorderTask, kanbanTasks, kanbanUpdatePanel, kanbanUpdateTask, kanbanViewState, key, label, lastAgent,
     lastAgentMessageByThread, lastAgentTimestamp, lastCodexModeSyncThreadRef, lastDurationMs, lastFrameAt, latestAgentRuns, latestClampedHeight, latestRawHeight,
     latestSnippet, launchScriptState, launchScriptsState, listThreadsForWorkspace, listThreadsForWorkspaceTracked, liveEditPreviewEnabled, loadOlderThreadsForWorkspace, lockLiveSessions,
-    loadingProgressDialog,
+    loadingProgressDialog, loadMoreContentResults,
     main, mainHeaderNode, mainWidth, mappedMode, markWorkspaceConnected, maxHeight, messagesNode, minHeight,
     models, monitor, movePrompt, moveWorkspaceGroup, navigateToThread, next, nextDefault, nextDraft,
     nextFiles, nextHeight, nextScope, nextSettings, normalizePath, normalized, onCloseTerminal, onDebugPanelResizeStart,
@@ -92,7 +92,7 @@ export function renderAppShell(ctx: any) {
     resolveCloneProjectContext, resolveCollaborationRuntimeMode, resolveCollaborationUiMode, resolveOpenCodeAgentForThread, resolveOpenCodeVariantForThread, resolvedEffort, resolvedModel, response,
     restartTerminalSession, result, resumePrompt, retryReleaseNotesLoad, reviewPrompt, rightPanelAvailable, rightPanelCollapsed, rightPanelToolbarNode,
     rightPanelWidth, runtimeMode, runtimeRunState, scaleShortcutText, scaleShortcutTitle, scanGitRoots, scheduleDraggedHeightFlush, scopedKanbanTasks,
-    searchContentFilters, searchPaletteQuery, searchPaletteSelectedIndex, searchResults, searchScope, sections, selectBranch, selectBranchAtIndex,
+    searchContentFilters, searchPaletteQuery, searchPaletteSelectedIndex, searchResults, searchScope, contentSearchError, contentSearchStatus, sections, selectBranch, selectBranchAtIndex,
     selectCommit, selectCommitAtIndex, selectHome, selectWorkspace, selected, selectedAgent, selectedAnswer, selectedCollaborationMode,
     selectedCollaborationModeId, selectedCommitSha, selectedComposerKanbanPanelId, selectedDiffPath, selectedEffort, selectedKanbanTaskId, selectedModelId, selectedOpenCodeAgent,
     selectedOpenCodeVariant, selectedPath, selectedPullRequest, selection, sendUserMessage, sendUserMessageToThread, sessions, setAccessMode,
@@ -460,6 +460,9 @@ export function renderAppShell(ctx: any) {
         query={searchPaletteQuery}
         results={searchResults}
         selectedIndex={searchPaletteSelectedIndex}
+        contentSearchStatus={contentSearchStatus}
+        contentSearchError={contentSearchError}
+        hasMoreContentResults={hasMoreContentResults}
         onQueryChange={setSearchPaletteQuery}
         onMoveSelection={handleSearchPaletteMoveSelection}
         onSelect={(result) => {
@@ -470,6 +473,7 @@ export function renderAppShell(ctx: any) {
           setSearchPaletteSelectedIndex(0);
         }}
         onContentFilterToggle={handleToggleSearchContentFilter}
+        onLoadMoreContentResults={loadMoreContentResults}
         onClose={closeSearchPalette}
       />
       <ReleaseNotesModal

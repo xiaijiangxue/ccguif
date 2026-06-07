@@ -259,6 +259,19 @@ export function useAppShellSearchAndComposerSection(ctx: ComposerSearchShellBoun
             handleOpenFile(result.filePath);
           }
           break;
+        case "content":
+          if (result.filePath) {
+            if (result.workspaceId && result.workspaceId !== activeWorkspaceId) {
+              selectWorkspace(result.workspaceId);
+            }
+            handleOpenFile(
+              result.filePath,
+              typeof result.line === "number" && typeof result.column === "number"
+                ? { line: result.line, column: result.column }
+                : undefined,
+            );
+          }
+          break;
         case "thread":
           if (result.workspaceId && result.threadId) {
             const preserveEditor = shouldPreserveEditorOnThreadSelect({

@@ -24,6 +24,7 @@ import { searchThreads } from "../providers/threadProvider";
 import { loadSearchRecencyMap } from "../ranking/recencyStore";
 import { compareSearchResults } from "../ranking/score";
 import type { SearchContentFilter, SearchResult } from "../types";
+import { searchResultMatchesContentFilters } from "../utils/contentFilters";
 
 type WorkspaceSearchSource = {
   workspaceId: string;
@@ -36,6 +37,7 @@ type UseUnifiedSearchOptions = {
   query: string;
   contentFilters: SearchContentFilter[];
   workspaceSources: WorkspaceSearchSource[];
+  externalResults?: SearchResult[];
   kanbanTasks: KanbanTask[];
   threadItemsByThread: Record<string, ConversationItem[]>;
   historyItems: HistoryItem[];
@@ -82,6 +84,7 @@ export function useUnifiedSearch({
   query,
   contentFilters,
   workspaceSources,
+  externalResults = [],
   kanbanTasks,
   threadItemsByThread,
   historyItems,
@@ -109,6 +112,7 @@ export function useUnifiedSearch({
       query: debouncedQuery,
       contentFilters,
       workspaceSources,
+      externalResults,
       kanbanTasks,
       threadItemsByThread,
       historyItems,
@@ -127,6 +131,7 @@ export function useUnifiedSearch({
     maxResults,
     contentFilters,
     commands,
+    externalResults,
     skills,
     activeWorkspaceId,
     threadItemsByThread,
@@ -141,6 +146,7 @@ export function computeUnifiedSearchResults({
   query,
   contentFilters,
   workspaceSources,
+  externalResults = [],
   kanbanTasks,
   threadItemsByThread,
   historyItems,
@@ -164,6 +170,11 @@ export function computeUnifiedSearchResults({
   );
 
   const merged: SearchResult[] = [];
+  merged.push(
+    ...externalResults.filter((result) =>
+      searchResultMatchesContentFilters(result, contentFilters),
+    ),
+  );
 
   for (const source of workspaceSources) {
     if (shouldIncludeSection(contentFilters, "files")) {
@@ -222,7 +233,9 @@ export function computeUnifiedSearchResults({
   }
 
   const withScopeLabel = merged.map((entry) => attachWorkspaceLabel(entry, workspaceNameById, workspaceNameByPath));
-  withScopeLabel.sort((a, b) => compareSearchResults(a, b, recentOpenMap));
+  withScopeLabel.sort((a, b) =>
+    compareSearchResults(a, b, recentOpenMap, { activeWorkspaceId }),
+  );
   const sliced = withScopeLabel.slice(0, maxResults);
 
   if (reportMetrics) {

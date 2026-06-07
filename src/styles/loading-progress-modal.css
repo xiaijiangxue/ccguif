@@ -7,8 +7,8 @@
 .loading-progress-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 12, 20, 0.52);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, rgba(8, 12, 20, 0.58) 88%, var(--surface-base) 12%);
+  backdrop-filter: blur(14px) saturate(0.92);
 }
 
 .app.reduced-transparency .loading-progress-modal-backdrop {
@@ -21,15 +21,18 @@
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(380px, calc(100vw - 28px));
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--border-stronger), transparent 28%);
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--border-stronger) 74%, transparent);
   background:
     linear-gradient(
       180deg,
       color-mix(in srgb, var(--surface-card-strong), #0f172a 5%) 0%,
       color-mix(in srgb, var(--surface-card), #0b1320 4%) 100%
     );
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 color-mix(in srgb, white 14%, transparent);
   padding: 16px;
   box-sizing: border-box;
 }
@@ -55,10 +58,10 @@
   justify-content: center;
   width: 34px;
   height: 34px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--border-accent), transparent 34%);
-  background: color-mix(in srgb, var(--surface-active), transparent 40%);
-  color: #93c5fd;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-accent) 56%, transparent);
+  background: color-mix(in srgb, var(--surface-active) 72%, transparent);
+  color: color-mix(in srgb, var(--border-accent) 82%, var(--text-strong));
   flex: 0 0 auto;
 }
 
@@ -92,7 +95,7 @@
   min-width: 84px;
   min-height: 32px;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   flex: 0 0 auto;
   font-size: 12px;
   line-height: 1;

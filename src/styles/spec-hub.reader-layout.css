@@ -5,9 +5,13 @@
   height: 100vh;
   min-width: 0;
   min-height: 0;
-  background: var(--surface-messages);
-  --detached-menubar-bg: color-mix(in srgb, var(--surface-topbar) 82%, var(--surface-messages) 18%);
-  --detached-menubar-border: color-mix(in srgb, var(--border-subtle) 88%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-topbar) 54%, var(--surface-messages) 46%) 0%,
+    var(--surface-messages) 100%
+  );
+  --detached-menubar-bg: color-mix(in srgb, var(--surface-topbar) 88%, var(--surface-card) 12%);
+  --detached-menubar-border: color-mix(in srgb, var(--border-subtle) 78%, transparent);
 }
 
 .detached-spec-hub-menubar {
@@ -17,6 +21,7 @@
   padding: 0 10px;
   border-bottom: 1px solid var(--detached-menubar-border);
   background: var(--detached-menubar-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
   flex: 0 0 auto;
   position: relative;
   z-index: 8;

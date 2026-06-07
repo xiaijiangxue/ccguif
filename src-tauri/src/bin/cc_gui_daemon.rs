@@ -114,6 +114,8 @@ mod utils;
 mod web_service_runtime;
 #[path = "cc_gui_daemon/workspace_io.rs"]
 mod workspace_io;
+#[path = "../workspaces/files.rs"]
+mod workspace_files;
 #[path = "../workspaces/settings.rs"]
 mod workspace_settings;
 
@@ -851,6 +853,23 @@ async fn handle_rpc_request(
             let workspace_id = parse_string(&params, "workspaceId")?;
             let files = state.list_workspace_files(workspace_id).await?;
             serde_json::to_value(files).map_err(|err| err.to_string())
+        }
+        "search_workspace_text" => {
+            let workspace_id = parse_string(&params, "workspaceId")?;
+            let query = parse_string(&params, "query")?;
+            let options = workspace_files::WorkspaceTextSearchOptions {
+                case_sensitive: parse_bool(&params, "caseSensitive")?,
+                whole_word: parse_bool(&params, "wholeWord")?,
+                is_regex: parse_bool(&params, "isRegex")?,
+                include_pattern: parse_optional_string(&params, "includePattern"),
+                exclude_pattern: parse_optional_string(&params, "excludePattern"),
+                limit: parse_optional_usize(&params, "limit"),
+                cursor: parse_optional_string(&params, "cursor"),
+            };
+            let response = state
+                .search_workspace_text(workspace_id, query, options)
+                .await?;
+            serde_json::to_value(response).map_err(|err| err.to_string())
         }
         "list_workspace_directory_children" => {
             let workspace_id = parse_string(&params, "workspaceId")?;

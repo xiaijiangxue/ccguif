@@ -3,9 +3,11 @@
   flex-direction: column;
   min-width: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 90% 0%, rgba(37, 99, 235, 0.14), transparent 32%),
-    var(--surface-base);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-topbar) 54%, var(--surface-base) 46%) 0%,
+    var(--surface-base) 100%
+  );
   color: var(--text-primary);
 }
 
@@ -14,10 +16,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 68px;
-  padding: 18px 22px 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--surface-base) 92%, transparent);
+  min-height: 56px;
+  padding: 14px 18px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 78%, transparent);
+  background: color-mix(in srgb, var(--surface-topbar) 88%, var(--surface-card) 12%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
 }
 
 .macos-desktop .browser-agent-detached-menubar {
@@ -33,8 +36,8 @@
 
 .browser-agent-detached-menubar-label {
   color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 800;
+  font-size: 13px;
+  font-weight: 720;
   letter-spacing: 0.01em;
 }
 
@@ -60,7 +63,7 @@
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 18px;
+  padding: 16px;
   overflow: auto;
 }
 
@@ -85,7 +88,7 @@
   width: 100%;
   min-height: 420px;
   border: 1px dashed var(--border-subtle);
-  border-radius: 18px;
+  border-radius: 16px;
   color: var(--text-muted);
   background: color-mix(in srgb, var(--surface-muted) 70%, transparent);
   font-size: 13px;
@@ -93,9 +96,7 @@
 }
 
 :root[data-theme="light"] .browser-agent-detached-window {
-  background:
-    radial-gradient(circle at 90% 0%, rgba(37, 99, 235, 0.1), transparent 34%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--surface-base));
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--surface-base));
 }
 
 :root[data-theme="light"] .browser-agent-detached-menubar {
@@ -113,9 +114,7 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) .browser-agent-detached-window {
-    background:
-      radial-gradient(circle at 90% 0%, rgba(37, 99, 235, 0.1), transparent 34%),
-      linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--surface-base));
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), var(--surface-base));
   }
 
   :root:not([data-theme]) .browser-agent-detached-menubar {

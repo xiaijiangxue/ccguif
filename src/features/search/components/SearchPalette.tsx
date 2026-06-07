@@ -1,10 +1,18 @@
 import { useEffect, useMemo, useRef } from "react";
+import type { UIEvent } from "react";
 import { useTranslation } from "react-i18next";
 import projectIconUrl from "../../../../icon.png";
 import { isComposingEvent } from "../../../utils/keys";
-import type { SearchContentFilter, SearchResult, SearchScope } from "../types";
+import { PALETTE_CONTENT_SEARCH_MIN_QUERY_LENGTH } from "../perf/limits";
+import type {
+  PaletteContentSearchStatus,
+  SearchContentFilter,
+  SearchResult,
+  SearchScope,
+} from "../types";
 
 const INVISIBLE_QUERY_CHARS_REGEX = /[\u200B-\u200D\uFEFF]/g;
+const LOAD_MORE_SCROLL_THRESHOLD_PX = 72;
 
 function sanitizeSearchQueryInput(value: string): string {
   return value.replace(INVISIBLE_QUERY_CHARS_REGEX, "");
@@ -18,11 +26,15 @@ type SearchPaletteProps = {
   query: string;
   results: SearchResult[];
   selectedIndex: number;
+  contentSearchStatus?: PaletteContentSearchStatus;
+  contentSearchError?: string | null;
+  hasMoreContentResults?: boolean;
   onQueryChange: (value: string) => void;
   onMoveSelection: (direction: "up" | "down") => void;
   onSelect: (result: SearchResult) => void;
   onScopeChange: (scope: SearchScope) => void;
   onContentFilterToggle: (filter: SearchContentFilter) => void;
+  onLoadMoreContentResults?: () => void;
   onClose: () => void;
 };
 
@@ -34,19 +46,25 @@ export function SearchPalette({
   query,
   results,
   selectedIndex,
+  contentSearchStatus = "idle",
+  contentSearchError = null,
+  hasMoreContentResults = false,
   onQueryChange,
   onMoveSelection,
   onSelect,
   onScopeChange,
   onContentFilterToggle,
+  onLoadMoreContentResults,
   onClose,
 }: SearchPaletteProps) {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const isComposingRef = useRef(false);
   const lastCompositionEndAtRef = useRef(0);
+  const loadMoreArmedRef = useRef(true);
   const badgeLabelByKind: Record<SearchResult["kind"], string> = {
     file: t("searchPalette.typeFile"),
+    content: t("searchPalette.typeContent"),
     kanban: t("searchPalette.typeKanban"),
     thread: t("searchPalette.typeThread"),
     message: t("searchPalette.typeMessage"),
@@ -60,6 +78,7 @@ export function SearchPalette({
     kanban: t("searchPalette.sourceKanban"),
     threads: t("searchPalette.sourceThreads"),
     messages: t("searchPalette.sourceMessages"),
+    content: t("searchPalette.sourceContent"),
     history: t("searchPalette.sourceHistory"),
     skills: t("searchPalette.sourceSkills"),
     commands: t("searchPalette.sourceCommands"),
@@ -76,6 +95,7 @@ export function SearchPalette({
     { value: "history", label: t("searchPalette.contentHistory") },
     { value: "skills", label: t("searchPalette.contentSkills") },
     { value: "commands", label: t("searchPalette.contentCommands") },
+    { value: "content", label: t("searchPalette.contentFileContent") },
   ];
   const selectedContentLabels = contentFilterOptions
     .filter((option) => option.value !== "all" && contentFilters.includes(option.value))
@@ -84,11 +104,62 @@ export function SearchPalette({
     ? t("searchPalette.placeholderFiltered", { content: selectedContentLabels.join(" / ") })
     : t("searchPalette.placeholder");
   const normalizedVisibleQuery = sanitizeSearchQueryInput(query);
-  const shouldShowResults = normalizedVisibleQuery.trim().length > 0;
+  const trimmedVisibleQuery = normalizedVisibleQuery.trim();
+  const shouldShowResults = trimmedVisibleQuery.length > 0;
+  const isContentOnlyFilter =
+    contentFilters.length === 1 && contentFilters.includes("content");
+  const shouldShowContentMinLengthHint =
+    isContentOnlyFilter &&
+    trimmedVisibleQuery.length > 0 &&
+    trimmedVisibleQuery.length < PALETTE_CONTENT_SEARCH_MIN_QUERY_LENGTH;
   const visibleResults = useMemo(
     () => (shouldShowResults ? results : []),
     [results, shouldShowResults],
   );
+  const contentStatusText = useMemo(() => {
+    if (!shouldShowResults) {
+      return null;
+    }
+    if (contentSearchStatus === "loading") {
+      return t("searchPalette.contentSearching");
+    }
+    if (contentSearchStatus === "degraded") {
+      return contentSearchError
+        ? t("searchPalette.contentDegradedWithReason", { reason: contentSearchError })
+        : t("searchPalette.contentDegraded");
+    }
+    if (hasMoreContentResults) {
+      return t("searchPalette.contentMoreAvailable");
+    }
+    return null;
+  }, [
+    contentSearchError,
+    contentSearchStatus,
+    hasMoreContentResults,
+    shouldShowResults,
+    t,
+  ]);
+
+  useEffect(() => {
+    loadMoreArmedRef.current = true;
+  }, [query, scope, contentFilters, visibleResults.length, hasMoreContentResults]);
+
+  const handleResultsScroll = (event: UIEvent<HTMLDivElement>) => {
+    if (!hasMoreContentResults || !onLoadMoreContentResults || !shouldShowResults) {
+      return;
+    }
+    const target = event.currentTarget;
+    const distanceToBottom = target.scrollHeight - target.scrollTop - target.clientHeight;
+    if (distanceToBottom > LOAD_MORE_SCROLL_THRESHOLD_PX) {
+      loadMoreArmedRef.current = true;
+      return;
+    }
+    if (!loadMoreArmedRef.current) {
+      return;
+    }
+    loadMoreArmedRef.current = false;
+    onLoadMoreContentResults();
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -215,12 +286,20 @@ export function SearchPalette({
             ))}
           </div>
         </div>
-        <div className="search-palette-results">
+        <div className="search-palette-results" onScroll={handleResultsScroll}>
           {visibleResults.length === 0 ? (
             <div className="search-palette-empty">
-              <div className="search-palette-empty-title">{t("searchPalette.noResults")}</div>
+              <div className="search-palette-empty-title">
+                {shouldShowContentMinLengthHint
+                  ? t("searchPalette.contentMinLengthTitle")
+                  : t("searchPalette.noResults")}
+              </div>
               <div className="search-palette-empty-hint">
-                {t("searchPalette.noResultsHint")}
+                {shouldShowContentMinLengthHint
+                  ? t("searchPalette.contentMinLengthHint", {
+                    count: PALETTE_CONTENT_SEARCH_MIN_QUERY_LENGTH,
+                  })
+                  : t("searchPalette.noResultsHint")}
               </div>
             </div>
           ) : (
@@ -233,7 +312,9 @@ export function SearchPalette({
               >
                 <span className="search-palette-result-main">
                   <span className="search-palette-result-title">{result.title}</span>
-                  {result.subtitle ? (
+                  {result.kind === "content" && result.preview ? (
+                    <span className="search-palette-result-preview">{result.preview}</span>
+                  ) : result.subtitle ? (
                     <span className="search-palette-result-subtitle">{result.subtitle}</span>
                   ) : null}
                   <span className="search-palette-result-tags">
@@ -265,6 +346,11 @@ export function SearchPalette({
           )}
         </div>
         <div className="search-palette-footer">
+          {contentStatusText ? (
+            <span className="search-palette-content-status">
+              {contentStatusText}
+            </span>
+          ) : null}
           <span className="search-palette-key-hint">
             <kbd>↑↓</kbd> {t("searchPalette.navigate")}
           </span>

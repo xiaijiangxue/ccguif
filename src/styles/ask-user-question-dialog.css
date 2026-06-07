@@ -25,15 +25,18 @@
   pointer-events: auto;
   width: min(980px, calc(100vw - 32px));
   max-height: min(54vh, 500px);
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.34);
+  border-radius: 16px;
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.3),
+    0 6px 18px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 color-mix(in srgb, white 12%, transparent);
 }
 
 .ask-user-question-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 12, 20, 0.64);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, rgba(8, 12, 20, 0.64) 88%, var(--surface-base) 12%);
+  backdrop-filter: blur(14px) saturate(0.92);
 }
 
 .app.reduced-transparency .ask-user-question-backdrop {
@@ -46,14 +49,22 @@
   width: min(920px, calc(100vw - 48px));
   max-height: 80vh;
   overflow-y: auto;
-  background: var(--surface-card-strong);
-  border: 1px solid var(--border-stronger);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--surface-card-strong) 96%, white 4%),
+      color-mix(in srgb, var(--surface-card) 94%, transparent)
+    );
+  border: 1px solid color-mix(in srgb, var(--border-stronger) 76%, transparent);
   border-radius: 16px;
   padding: 14px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    0 28px 72px rgba(0, 0, 0, 0.32),
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 14%, transparent);
   animation: askDialogSlideIn 0.2s ease-out;
 }
 
@@ -95,8 +106,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-card-muted);
-  border: 0;
+  background: color-mix(in srgb, var(--surface-card-muted) 84%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
   border-radius: 999px;
   cursor: pointer;
   color: var(--text-strong);
@@ -178,9 +189,9 @@
   padding: 8px 10px;
   border: 1px solid var(--border-subtle);
   border-radius: 11px;
-  background: var(--surface-card-muted);
+  background: color-mix(in srgb, var(--surface-card-muted) 86%, transparent);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   text-align: left;
   min-height: 74px;
 }
@@ -191,8 +202,9 @@
 }
 
 .user-input-question-option.ask-user-question-option.is-selected {
-  border-color: rgba(77, 163, 255, 0.7);
-  background: rgba(77, 163, 255, 0.12);
+  border-color: color-mix(in srgb, var(--border-accent) 72%, transparent);
+  background: color-mix(in srgb, var(--surface-active) 72%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
 }
 
 .user-input-question-option.ask-user-question-option.is-other {
@@ -288,19 +300,28 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    box-shadow 0.15s,
+    opacity 0.15s,
+    transform 0.15s;
   white-space: nowrap;
   border: 1px solid transparent;
 }
 
 .ask-user-question-btn.is-primary {
-  background: var(--primary, #7a9dcc);
+  background: color-mix(in srgb, var(--primary, #7a9dcc) 88%, var(--surface-card) 12%);
   color: var(--primary-foreground, #0d0f14);
   border-color: var(--primary, #7a9dcc);
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--primary, #7a9dcc) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
 }
 
 .ask-user-question-btn.is-primary:hover:not(:disabled) {
   opacity: 0.88;
+  transform: translateY(-1px);
 }
 
 .ask-user-question-btn.is-primary:disabled {
@@ -309,7 +330,7 @@
 }
 
 .ask-user-question-btn.is-secondary {
-  background: var(--surface-card-muted);
+  background: color-mix(in srgb, var(--surface-card-muted) 86%, transparent);
   color: var(--text-subtle);
   border-color: var(--border-subtle);
 }

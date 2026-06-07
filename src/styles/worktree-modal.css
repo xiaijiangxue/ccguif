@@ -7,8 +7,8 @@
 .worktree-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 12, 20, 0.64);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, rgba(8, 12, 20, 0.64) 88%, var(--surface-base) 12%);
+  backdrop-filter: blur(14px) saturate(0.92);
 }
 
 .app.reduced-transparency .worktree-modal-backdrop {
@@ -25,14 +25,16 @@
   overflow: hidden;
   overflow-x: hidden;
   border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--border-stronger), transparent 36%);
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.3);
+  border: 1px solid color-mix(in srgb, var(--border-stronger) 72%, transparent);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.32),
+    0 8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 color-mix(in srgb, white 14%, transparent);
   background:
-    radial-gradient(120% 150% at -10% -10%, rgba(37, 99, 235, 0.14) 0%, rgba(37, 99, 235, 0) 42%),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--surface-card-strong), #0f172a 4%) 0%,
-      color-mix(in srgb, var(--surface-card), #0b1320 2%) 100%
+      color-mix(in srgb, var(--surface-card-strong) 96%, white 4%) 0%,
+      color-mix(in srgb, var(--surface-card) 94%, transparent) 100%
     );
   padding: 12px;
   box-sizing: border-box;
@@ -79,8 +81,8 @@
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  border: 1px solid rgba(37, 99, 235, 0.32);
-  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid color-mix(in srgb, var(--border-accent) 46%, transparent);
+  background: color-mix(in srgb, var(--surface-active) 64%, transparent);
   color: color-mix(in srgb, var(--text-strong), #ffffff 10%);
   font-size: 10px;
   font-weight: 700;
@@ -166,9 +168,9 @@
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  border: 1px solid rgba(37, 99, 235, 0.46);
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.18), rgba(37, 99, 235, 0.08));
-  color: #bfdbfe;
+  border: 1px solid color-mix(in srgb, var(--border-accent) 54%, transparent);
+  background: color-mix(in srgb, var(--surface-active) 74%, transparent);
+  color: color-mix(in srgb, var(--border-accent) 80%, var(--text-strong));
 }
 
 .worktree-modal-guide-icon-svg {
@@ -949,9 +951,12 @@
 }
 
 .worktree-modal-button.primary {
-  border: 1px solid color-mix(in srgb, #2563eb, transparent 18%);
-  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
-  color: #eef4ff;
+  border: 1px solid color-mix(in srgb, var(--button-primary, var(--border-accent, #2563eb)) 82%, transparent);
+  background: color-mix(in srgb, var(--button-primary, var(--border-accent, #2563eb)) 88%, var(--surface-card) 12%);
+  color: var(--button-primary-text, #eef4ff);
+  box-shadow:
+    0 6px 16px color-mix(in srgb, var(--button-primary, var(--border-accent, #2563eb)) 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, white 18%, transparent);
 }
 
 .worktree-result-modal {
@@ -963,8 +968,8 @@
 .worktree-result-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(8, 12, 20, 0.66);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, rgba(8, 12, 20, 0.64) 88%, var(--surface-base) 12%);
+  backdrop-filter: blur(14px) saturate(0.92);
 }
 
 .worktree-result-modal-card {

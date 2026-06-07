@@ -1,11 +1,29 @@
 // @vitest-environment jsdom
 import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { SearchResult } from "../features/search/types";
 import type { AppSettings, WorkspaceInfo } from "../types";
 import { useAppShellSearchRadarSection } from "./useAppShellSearchRadarSection";
 
+type PaletteContentSearchMockResult = {
+  contentResults: SearchResult[];
+  status: "idle" | "loading" | "ready" | "degraded";
+  error: string | null;
+  hasMore: boolean;
+  loadMore: () => void;
+};
+
 const prewarmSessionRadarForWorkspaceMock = vi.hoisted(() => vi.fn());
 const useUnifiedSearchMock = vi.hoisted(() => vi.fn(() => []));
+const usePaletteContentSearchMock = vi.hoisted(() =>
+  vi.fn<() => PaletteContentSearchMockResult>(() => ({
+    contentResults: [],
+    status: "idle",
+    error: null,
+    hasMore: false,
+    loadMore: vi.fn(),
+  })),
+);
 const isBackgroundRenderGatingEnabledMock = vi.hoisted(() => vi.fn(() => true));
 
 vi.mock("../features/app/hooks/useComposerInsert", () => ({
@@ -18,6 +36,10 @@ vi.mock("../features/composer/hooks/useInputHistoryStore", () => ({
 
 vi.mock("../features/search/hooks/useUnifiedSearch", () => ({
   useUnifiedSearch: useUnifiedSearchMock,
+}));
+
+vi.mock("../features/search/hooks/usePaletteContentSearch", () => ({
+  usePaletteContentSearch: usePaletteContentSearchMock,
 }));
 
 vi.mock("../features/threads/utils/realtimePerfFlags", () => ({
@@ -82,11 +104,60 @@ function createWorkspace(id: string, name: string): WorkspaceInfo {
   } as unknown as WorkspaceInfo;
 }
 
+function createBaseOptions(workspace = createWorkspace("ws-1", "Workspace 1")) {
+  return {
+    activeDraft: "",
+    activeItems: [],
+    activeThreadId: null,
+    activeWorkspace: workspace,
+    activeWorkspaceId: workspace.id,
+    appSettings: { systemNotificationEnabled: false } as AppSettings,
+    commands: [],
+    composerInputRef: { current: null },
+    completionTrackerBySessionRef: { current: {} },
+    completionTrackerReadyRef: { current: false },
+    directories: [],
+    filePanelMode: "git" as const,
+    files: [],
+    globalSearchFilesByWorkspace: {},
+    handleDraftChange: vi.fn(),
+    isCompact: false,
+    isFilesLoading: false,
+    isProcessing: false,
+    isSearchPaletteOpen: true,
+    kanbanTasks: [],
+    lastAgentMessageByThread: {},
+    listThreadsForWorkspace: vi.fn(async () => {}),
+    rightPanelCollapsed: false,
+    searchContentFilters: ["all" as const],
+    searchPaletteQuery: "needle",
+    searchScope: "active-workspace" as const,
+    setGlobalSearchFilesByWorkspace: vi.fn(),
+    skills: [],
+    t: (key: string) => key,
+    threadItemsByThread: {},
+    threadListLoadingByWorkspace: {},
+    threadParentById: {},
+    threadStatusById: {},
+    threadsByWorkspace: {},
+    workspaces: [workspace],
+    workspacesById: new Map([[workspace.id, workspace]]),
+  };
+}
+
 describe("useAppShellSearchRadarSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     prewarmSessionRadarForWorkspaceMock.mockReset();
     useUnifiedSearchMock.mockClear();
+    usePaletteContentSearchMock.mockClear();
+    usePaletteContentSearchMock.mockReturnValue({
+      contentResults: [],
+      status: "idle",
+      error: null,
+      hasMore: false,
+      loadMore: vi.fn(),
+    });
     isBackgroundRenderGatingEnabledMock.mockReset();
     isBackgroundRenderGatingEnabledMock.mockReturnValue(true);
   });
@@ -287,6 +358,45 @@ describe("useAppShellSearchRadarSection", () => {
     expect(useUnifiedSearchMock).toHaveBeenCalledWith(
       expect.objectContaining({
         threadItemsByThread: {},
+      }),
+    );
+  });
+
+  it("passes palette content results into unified search for shared sorting", () => {
+    const workspace = createWorkspace("ws-1", "Workspace 1");
+    const contentResult: SearchResult = {
+      id: "content:ws-1:file.ts:1:1:needle",
+      kind: "content" as const,
+      title: "file.ts",
+      subtitle: "needle",
+      score: 100,
+      workspaceId: "ws-1",
+      sourceKind: "content" as const,
+    };
+    usePaletteContentSearchMock.mockReturnValue({
+      contentResults: [contentResult],
+      status: "ready",
+      error: null,
+      hasMore: false,
+      loadMore: vi.fn(),
+    });
+
+    renderHook(() =>
+      useAppShellSearchRadarSection(createBaseOptions(workspace)),
+    );
+
+    expect(usePaletteContentSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: "needle",
+        scope: "active-workspace",
+        contentFilters: ["all"],
+        activeWorkspaceId: "ws-1",
+        isPaletteOpen: true,
+      }),
+    );
+    expect(useUnifiedSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalResults: [contentResult],
       }),
     );
   });

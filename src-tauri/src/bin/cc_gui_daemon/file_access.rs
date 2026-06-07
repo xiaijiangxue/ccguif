@@ -7,6 +7,9 @@ use crate::workspace_io::{
     write_external_absolute_file_inner, write_external_spec_file_inner, ExternalSpecFileResponse,
     WorkspaceFileResponse, WorkspaceFilesResponse,
 };
+use crate::workspace_files::{
+    search_workspace_text_inner, WorkspaceTextSearchOptions, WorkspaceTextSearchResponse,
+};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
@@ -124,6 +127,18 @@ impl DaemonState {
                 .await
                 .map_err(|err| format!("failed to join workspace file scan task: {err}"))?,
         )
+    }
+
+    pub(crate) async fn search_workspace_text(
+        &self,
+        workspace_id: String,
+        query: String,
+        options: WorkspaceTextSearchOptions,
+    ) -> Result<WorkspaceTextSearchResponse, String> {
+        let root = workspaces_core::resolve_workspace_root(&self.workspaces, &workspace_id).await?;
+        tokio::task::spawn_blocking(move || search_workspace_text_inner(&root, &query, &options))
+            .await
+            .map_err(|err| format!("failed to join workspace text search task: {err}"))?
     }
 
     pub(crate) async fn list_workspace_directory_children(

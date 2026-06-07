@@ -6,9 +6,13 @@
   height: 100vh;
   min-width: 0;
   min-height: 0;
-  background: var(--surface-messages);
-  --detached-menubar-bg: color-mix(in srgb, var(--surface-topbar) 82%, var(--surface-messages) 18%);
-  --detached-menubar-border: color-mix(in srgb, var(--border-subtle) 88%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--surface-topbar) 54%, var(--surface-messages) 46%) 0%,
+    var(--surface-messages) 100%
+  );
+  --detached-menubar-bg: color-mix(in srgb, var(--surface-topbar) 88%, var(--surface-card) 12%);
+  --detached-menubar-border: color-mix(in srgb, var(--border-subtle) 78%, transparent);
 }
 
 .detached-file-explorer-titlebar {
@@ -16,8 +20,9 @@
   align-items: center;
   min-height: var(--titlebar-height, 44px);
   padding: 0 18px 0 calc(18px + var(--titlebar-inset-left, 0px));
-  background: var(--surface-topbar);
-  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 82%, transparent);
+  background: color-mix(in srgb, var(--surface-topbar) 92%, var(--surface-card) 8%);
+  border-bottom: 1px solid var(--detached-menubar-border);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 8%, transparent);
   flex: 0 0 auto;
 }
 
@@ -28,6 +33,7 @@
   padding: 0 10px;
   border-bottom: 1px solid var(--detached-menubar-border);
   background: var(--detached-menubar-bg);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 6%, transparent);
   flex: 0 0 auto;
   user-select: none;
   -webkit-user-select: none;
@@ -107,7 +113,7 @@
 .detached-file-explorer-sidebar {
   min-width: 0;
   min-height: 0;
-  background: var(--surface-messages);
+  background: color-mix(in srgb, var(--surface-messages) 88%, var(--surface-card) 12%);
 }
 
 .detached-file-explorer-workspace.is-sidebar-collapsed .detached-file-explorer-sidebar {
@@ -163,7 +169,7 @@
   position: relative;
   min-width: 0;
   min-height: 0;
-  background: var(--surface-messages);
+  background: color-mix(in srgb, var(--surface-messages) 96%, var(--surface-card) 4%);
 }
 
 .detached-file-explorer-sidebar-expand {

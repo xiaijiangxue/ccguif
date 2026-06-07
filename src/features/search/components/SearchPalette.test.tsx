@@ -30,6 +30,24 @@ function makeResult(): SearchResult {
   };
 }
 
+function makeContentResult(): SearchResult {
+  return {
+    id: "content:w-1:src/index.ts:3:15:codemoss",
+    kind: "content",
+    title: "src/index.ts",
+    subtitle: "const codemoss = createApp();",
+    score: 20,
+    workspaceId: "w-1",
+    workspaceName: "mossx",
+    filePath: "src/index.ts",
+    line: 3,
+    column: 15,
+    preview: "const codemoss = createApp();",
+    sourceKind: "content",
+    locationLabel: "src/index.ts:3:15",
+  };
+}
+
 describe("SearchPalette", () => {
   afterEach(() => {
     cleanup();
@@ -274,5 +292,144 @@ describe("SearchPalette", () => {
     fireEvent.compositionStart(input);
     fireEvent.compositionEnd(input, { target: { value: "search-again" } });
     expect(screen.getByText("search-again")).toBeTruthy();
+  });
+
+  it("renders content result path, preview, location, and content labels", () => {
+    render(
+      <SearchPalette
+        isOpen
+        scope="global"
+        contentFilters={["all"]}
+        workspaceName="mossx"
+        query="codemoss"
+        results={[makeContentResult()]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("src/index.ts")).toBeTruthy();
+    expect(screen.getByText("const codemoss = createApp();")).toBeTruthy();
+    expect(screen.getAllByText("searchPalette.typeContent").length).toBeGreaterThan(0);
+    expect(screen.getByText(/searchPalette.sourceTag: searchPalette.sourceContent/)).toBeTruthy();
+    expect(screen.getByText(/searchPalette.locationTag: src\/index\.ts:3:15/)).toBeTruthy();
+  });
+
+  it("renders a dedicated file-content filter button", () => {
+    const onContentFilterToggle = vi.fn();
+
+    render(
+      <SearchPalette
+        isOpen
+        scope="active-workspace"
+        contentFilters={["content"]}
+        workspaceName="mossx"
+        query="codemoss"
+        results={[makeContentResult()]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={onContentFilterToggle}
+        onClose={() => undefined}
+      />,
+    );
+
+    const contentFilter = screen.getByRole("button", {
+      name: "searchPalette.contentFileContent",
+    });
+    expect(contentFilter.classList.contains("is-active")).toBe(true);
+
+    fireEvent.click(contentFilter);
+    expect(onContentFilterToggle).toHaveBeenCalledWith("content");
+  });
+
+  it("explains why short content-only queries do not search", () => {
+    render(
+      <SearchPalette
+        isOpen
+        scope="active-workspace"
+        contentFilters={["content"]}
+        workspaceName="mossx"
+        query="d"
+        results={[]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("searchPalette.contentMinLengthTitle")).toBeTruthy();
+    expect(screen.getByText("searchPalette.contentMinLengthHint")).toBeTruthy();
+    expect(screen.queryByText("searchPalette.noResults")).toBeNull();
+  });
+
+  it("shows content loading status while keeping lightweight results visible", () => {
+    render(
+      <SearchPalette
+        isOpen
+        scope="active-workspace"
+        contentFilters={["all"]}
+        workspaceName="mossx"
+        query="app"
+        results={[makeResult()]}
+        selectedIndex={0}
+        contentSearchStatus="loading"
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText("/wf-thinking")).toBeTruthy();
+    expect(screen.getByText("searchPalette.contentSearching")).toBeTruthy();
+  });
+
+  it("requests more content results when scrolling near the bottom", () => {
+    const onLoadMoreContentResults = vi.fn();
+    render(
+      <SearchPalette
+        isOpen
+        scope="active-workspace"
+        contentFilters={["all"]}
+        workspaceName="mossx"
+        query="codemoss"
+        results={[makeContentResult()]}
+        selectedIndex={0}
+        hasMoreContentResults
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onLoadMoreContentResults={onLoadMoreContentResults}
+        onClose={() => undefined}
+      />,
+    );
+
+    const results = document.querySelector(".search-palette-results");
+    if (!results) {
+      throw new Error("missing results container");
+    }
+    Object.defineProperty(results, "scrollHeight", { configurable: true, value: 400 });
+    Object.defineProperty(results, "clientHeight", { configurable: true, value: 200 });
+    Object.defineProperty(results, "scrollTop", { configurable: true, value: 160 });
+
+    fireEvent.scroll(results);
+
+    expect(onLoadMoreContentResults).toHaveBeenCalledTimes(1);
   });
 });

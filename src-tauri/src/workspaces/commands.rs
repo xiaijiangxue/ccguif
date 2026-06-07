@@ -2153,6 +2153,8 @@ pub(crate) async fn search_workspace_text(
     is_regex: bool,
     include_pattern: Option<String>,
     exclude_pattern: Option<String>,
+    limit: Option<usize>,
+    cursor: Option<String>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<WorkspaceTextSearchResponse, String> {
@@ -2169,6 +2171,8 @@ pub(crate) async fn search_workspace_text(
                 "isRegex": is_regex,
                 "includePattern": include_pattern,
                 "excludePattern": exclude_pattern,
+                "limit": limit,
+                "cursor": cursor,
             }),
         )
         .await?;
@@ -2181,6 +2185,8 @@ pub(crate) async fn search_workspace_text(
         is_regex,
         include_pattern,
         exclude_pattern,
+        limit,
+        cursor,
     };
     workspaces_core::list_workspace_files_core(&state.workspaces, &workspace_id, |root| {
         search_workspace_text_inner(root, &query, &options)

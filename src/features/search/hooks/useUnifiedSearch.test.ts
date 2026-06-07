@@ -77,6 +77,50 @@ describe("computeUnifiedSearchResults", () => {
     expect(results.some((item) => item.kind === "command" && item.commandName === "plan")).toBe(true);
   });
 
+  it("separates file path results from file content results", () => {
+    const contentResult = {
+      id: "content:w-1:src/app.ts:1:1:alpha",
+      kind: "content" as const,
+      title: "src/app.ts",
+      score: 100,
+      workspaceId: "w-1",
+      sourceKind: "content" as const,
+    };
+    const base = {
+      query: "alpha",
+      workspaceSources: [
+        {
+          workspaceId: "w-1",
+          workspaceName: "A",
+          files: ["src/alpha.ts"],
+          threads: [],
+        },
+      ],
+      externalResults: [contentResult],
+      kanbanTasks: [],
+      threadItemsByThread: {} as Record<string, ConversationItem[]>,
+      historyItems: [],
+      skills: [] as SkillOption[],
+      commands: [] as CustomCommandOption[],
+      activeWorkspaceId: "w-1",
+      recencyMap: {},
+      reportMetrics: false,
+    };
+
+    const fileOnly = computeUnifiedSearchResults({
+      ...base,
+      contentFilters: ["files"],
+    });
+    expect(fileOnly.some((item) => item.kind === "file")).toBe(true);
+    expect(fileOnly.some((item) => item.kind === "content")).toBe(false);
+
+    const contentOnly = computeUnifiedSearchResults({
+      ...base,
+      contentFilters: ["content"],
+    });
+    expect(contentOnly.map((item) => item.kind)).toEqual(["content"]);
+  });
+
   it("keeps global search latency under baseline for large data", () => {
     const {
       workspaceCount,

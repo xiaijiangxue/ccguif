@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SearchContentFilter } from "../types";
-import { toggleSearchContentFilters } from "./contentFilters";
+import type { SearchResult } from "../types";
+import { searchResultMatchesContentFilters, toggleSearchContentFilters } from "./contentFilters";
 
 describe("toggleSearchContentFilters", () => {
   it("keeps all as exclusive", () => {
@@ -24,5 +25,22 @@ describe("toggleSearchContentFilters", () => {
 
     current = toggleSearchContentFilters(current, "threads");
     expect(current).toEqual(["all"]);
+  });
+});
+
+describe("searchResultMatchesContentFilters", () => {
+  it("keeps content results behind the dedicated content filter", () => {
+    const contentResult: SearchResult = {
+      id: "content:ws:src/app.ts:1:1:q",
+      kind: "content",
+      title: "src/app.ts",
+      score: 100,
+      sourceKind: "content",
+    };
+
+    expect(searchResultMatchesContentFilters(contentResult, ["all"])).toBe(true);
+    expect(searchResultMatchesContentFilters(contentResult, ["files"])).toBe(false);
+    expect(searchResultMatchesContentFilters(contentResult, ["content"])).toBe(true);
+    expect(searchResultMatchesContentFilters(contentResult, ["messages"])).toBe(false);
   });
 });

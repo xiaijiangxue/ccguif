@@ -11,4 +11,27 @@ describe("compareSearchResults", () => {
     const sorted = [a, b].sort((left, right) => compareSearchResults(left, right, recency));
     expect(sorted[0]?.id).toBe("b");
   });
+
+  it("uses active workspace as a stable tie-breaker after score and updated time", () => {
+    const active: SearchResult = {
+      id: "active",
+      kind: "content",
+      title: "src/b.ts",
+      score: 100,
+      workspaceId: "ws-active",
+    };
+    const other: SearchResult = {
+      id: "other",
+      kind: "content",
+      title: "src/a.ts",
+      score: 100,
+      workspaceId: "ws-other",
+    };
+
+    const sorted = [other, active].sort((left, right) =>
+      compareSearchResults(left, right, {}, { activeWorkspaceId: "ws-active" }),
+    );
+
+    expect(sorted[0]?.id).toBe("active");
+  });
 });

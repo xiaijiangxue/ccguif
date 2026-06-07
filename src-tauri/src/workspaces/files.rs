@@ -3,12 +3,14 @@ use std::fs::File;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, UNIX_EPOCH};
 
+use base64::{engine::general_purpose::STANDARD as BASE64_STANDARD, Engine as _};
 use git2::Repository;
 use ignore::WalkBuilder;
 use regex::{Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::text_encoding::decode_text_bytes;
 use crate::utils::normalize_git_path;
@@ -458,6 +460,22 @@ pub(crate) struct WorkspaceTextSearchMatch {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+pub(crate) struct WorkspaceTextSearchCursor {
+    pub(crate) query: String,
+    pub(crate) case_sensitive: bool,
+    pub(crate) whole_word: bool,
+    pub(crate) is_regex: bool,
+    pub(crate) include_pattern: Option<String>,
+    pub(crate) exclude_pattern: Option<String>,
+    pub(crate) path: String,
+    pub(crate) line: usize,
+    pub(crate) column: usize,
+    pub(crate) file_len: u64,
+    pub(crate) file_modified_ms: Option<u128>,
+    pub(crate) file_sha256: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub(crate) struct WorkspaceTextSearchFileResult {
     pub(crate) path: String,
     pub(crate) match_count: usize,
@@ -470,6 +488,10 @@ pub(crate) struct WorkspaceTextSearchResponse {
     pub(crate) file_count: usize,
     pub(crate) match_count: usize,
     pub(crate) limit_hit: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) next_cursor: Option<String>,
+    #[serde(default)]
+    pub(crate) invalid_cursor: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -479,6 +501,8 @@ pub(crate) struct WorkspaceTextSearchOptions {
     pub(crate) is_regex: bool,
     pub(crate) include_pattern: Option<String>,
     pub(crate) exclude_pattern: Option<String>,
+    pub(crate) limit: Option<usize>,
+    pub(crate) cursor: Option<String>,
 }
 
 const MAX_SEARCH_MATCHES: usize = 1_000;
@@ -487,6 +511,7 @@ const MAX_PREVIEW_CHARS: usize = 180;
 const WORKSPACE_SCAN_ENTRY_BUDGET: usize = 30_000;
 const WORKSPACE_SCAN_TIME_BUDGET: Duration = Duration::from_millis(1_200);
 const WORKSPACE_DIRECTORY_SCAN_BUDGET_MULTIPLIER: usize = 8;
+const MAX_SEARCH_PAGE_MATCHES: usize = 500;
 
 fn workspace_scan_budget_reached(started_at: Instant, scanned_entries: usize) -> bool {
     scanned_entries >= WORKSPACE_SCAN_ENTRY_BUDGET
@@ -601,6 +626,120 @@ fn build_preview(line: &str, start: usize, end: usize) -> String {
     preview.trim().to_string()
 }
 
+fn encode_search_cursor(cursor: &WorkspaceTextSearchCursor) -> Result<String, String> {
+    serde_json::to_vec(cursor)
+        .map(|bytes| BASE64_STANDARD.encode(bytes))
+        .map_err(|error| format!("failed to encode search cursor: {error}"))
+}
+
+fn decode_search_cursor(cursor: &str) -> Result<WorkspaceTextSearchCursor, String> {
+    let bytes = BASE64_STANDARD
+        .decode(cursor)
+        .map_err(|error| format!("invalid search cursor: {error}"))?;
+    serde_json::from_slice::<WorkspaceTextSearchCursor>(&bytes)
+        .map_err(|error| format!("invalid search cursor payload: {error}"))
+}
+
+fn empty_text_search_response(invalid_cursor: bool) -> WorkspaceTextSearchResponse {
+    WorkspaceTextSearchResponse {
+        files: Vec::new(),
+        file_count: 0,
+        match_count: 0,
+        limit_hit: false,
+        next_cursor: None,
+        invalid_cursor,
+    }
+}
+
+fn normalize_search_pattern_option(value: &Option<String>) -> Option<String> {
+    value
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToOwned::to_owned)
+}
+
+fn file_modified_ms(metadata: &std::fs::Metadata) -> Option<u128> {
+    metadata
+        .modified()
+        .ok()
+        .and_then(|modified| modified.duration_since(UNIX_EPOCH).ok())
+        .map(|duration| duration.as_millis())
+}
+
+fn cursor_matches_request(
+    cursor: &WorkspaceTextSearchCursor,
+    query: &str,
+    options: &WorkspaceTextSearchOptions,
+) -> bool {
+    cursor.query == query.trim()
+        && cursor.case_sensitive == options.case_sensitive
+        && cursor.whole_word == options.whole_word
+        && cursor.is_regex == options.is_regex
+        && cursor.include_pattern == normalize_search_pattern_option(&options.include_pattern)
+        && cursor.exclude_pattern == normalize_search_pattern_option(&options.exclude_pattern)
+}
+
+fn cursor_matches_file(
+    cursor: &WorkspaceTextSearchCursor,
+    normalized_path: &str,
+    metadata: &std::fs::Metadata,
+    bytes: &[u8],
+) -> bool {
+    cursor.path == normalized_path
+        && cursor.file_len == metadata.len()
+        && cursor.file_modified_ms == file_modified_ms(metadata)
+        && cursor.file_sha256 == sha256_hex(bytes)
+}
+
+fn sha256_hex(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    digest.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn should_skip_match_for_cursor(
+    normalized_path: &str,
+    line: usize,
+    column: usize,
+    cursor: Option<&WorkspaceTextSearchCursor>,
+) -> bool {
+    let Some(cursor) = cursor else {
+        return false;
+    };
+    if normalized_path < cursor.path.as_str() {
+        return true;
+    }
+    if normalized_path > cursor.path.as_str() {
+        return false;
+    }
+    line < cursor.line || (line == cursor.line && column <= cursor.column)
+}
+
+fn build_search_cursor(
+    query: &str,
+    options: &WorkspaceTextSearchOptions,
+    normalized_path: &str,
+    line: usize,
+    column: usize,
+    metadata: &std::fs::Metadata,
+    bytes: &[u8],
+) -> Result<String, String> {
+    encode_search_cursor(&WorkspaceTextSearchCursor {
+        query: query.trim().to_string(),
+        case_sensitive: options.case_sensitive,
+        whole_word: options.whole_word,
+        is_regex: options.is_regex,
+        include_pattern: normalize_search_pattern_option(&options.include_pattern),
+        exclude_pattern: normalize_search_pattern_option(&options.exclude_pattern),
+        path: normalized_path.to_string(),
+        line,
+        column,
+        file_len: metadata.len(),
+        file_modified_ms: file_modified_ms(metadata),
+        file_sha256: sha256_hex(bytes),
+    })
+}
+
 pub(crate) fn search_workspace_text_inner(
     root: &PathBuf,
     query: &str,
@@ -609,6 +748,27 @@ pub(crate) fn search_workspace_text_inner(
     let regex = compile_search_regex(query, options)?;
     let include_patterns = compile_glob_patterns(options.include_pattern.as_deref())?;
     let exclude_patterns = compile_glob_patterns(options.exclude_pattern.as_deref())?;
+    let page_limit = options.limit.map(|limit| {
+        if limit == 0 {
+            1
+        } else {
+            limit.min(MAX_SEARCH_PAGE_MATCHES)
+        }
+    });
+    let decoded_cursor = match options.cursor.as_deref().filter(|value| !value.trim().is_empty()) {
+        Some(cursor) => match decode_search_cursor(cursor) {
+            Ok(decoded) => Some(decoded),
+            Err(_) => return Ok(empty_text_search_response(true)),
+        },
+        None => None,
+    };
+    if decoded_cursor
+        .as_ref()
+        .is_some_and(|cursor| !cursor_matches_request(cursor, query, options))
+    {
+        return Ok(empty_text_search_response(true));
+    }
+    let mut cursor_file_was_seen = decoded_cursor.is_none();
     let root_for_filter = root.clone();
     let walker = WalkBuilder::new(root)
         .hidden(false)
@@ -617,6 +777,7 @@ pub(crate) fn search_workspace_text_inner(
         .git_ignore(true)
         .git_global(true)
         .git_exclude(true)
+        .sort_by_file_path(|left, right| left.cmp(right))
         .filter_entry(move |entry| {
             if entry.depth() == 0 {
                 return true;
@@ -641,6 +802,9 @@ pub(crate) fn search_workspace_text_inner(
     let mut total_files = 0usize;
     let mut total_matches = 0usize;
     let mut limit_hit = false;
+    let mut next_cursor = None;
+    let mut last_page_cursor = None;
+    let mut current_file: Option<WorkspaceTextSearchFileResult> = None;
 
     for entry in walker {
         let entry = match entry {
@@ -675,25 +839,76 @@ pub(crate) fn search_workspace_text_inner(
             Ok(bytes) => bytes,
             Err(_) => continue,
         };
+        if let Some(cursor) = decoded_cursor.as_ref() {
+            if normalized == cursor.path {
+                if !cursor_matches_file(cursor, &normalized, &metadata, &bytes) {
+                    return Ok(empty_text_search_response(true));
+                }
+                cursor_file_was_seen = true;
+            }
+        }
         if bytes.contains(&0) {
             continue;
         }
         let content = String::from_utf8_lossy(&bytes);
-        let mut file_matches = Vec::new();
         let mut file_match_count = 0usize;
         for (line_index, line) in content.lines().enumerate() {
             for capture in regex.find_iter(line) {
+                let line_number = line_index + 1;
+                let column = line[..capture.start()].chars().count() + 1;
+                if should_skip_match_for_cursor(
+                    &normalized,
+                    line_number,
+                    column,
+                    decoded_cursor.as_ref(),
+                ) {
+                    continue;
+                }
+                if page_limit.is_some_and(|limit| total_matches >= limit) {
+                    limit_hit = true;
+                    next_cursor = last_page_cursor.clone();
+                    break;
+                }
                 file_match_count += 1;
                 total_matches += 1;
-                if file_matches.len() < 50 {
-                    file_matches.push(WorkspaceTextSearchMatch {
-                        line: line_index + 1,
-                        column: line[..capture.start()].chars().count() + 1,
-                        end_column: line[..capture.end()].chars().count() + 1,
-                        preview: build_preview(line, capture.start(), capture.end()),
+                if current_file
+                    .as_ref()
+                    .is_none_or(|file| file.path != normalized)
+                {
+                    if let Some(file) = current_file.take() {
+                        files.push(file);
+                    }
+                    current_file = Some(WorkspaceTextSearchFileResult {
+                        path: normalized.clone(),
+                        match_count: 0,
+                        matches: Vec::new(),
                     });
+                    total_files += 1;
                 }
-                if total_matches >= MAX_SEARCH_MATCHES {
+                if let Some(file) = current_file.as_mut() {
+                    file.match_count += 1;
+                    if page_limit.is_some() || file.matches.len() < 50 {
+                        file.matches.push(WorkspaceTextSearchMatch {
+                            line: line_number,
+                            column,
+                            end_column: line[..capture.end()].chars().count() + 1,
+                            preview: build_preview(line, capture.start(), capture.end()),
+                        });
+                    }
+                }
+                if let Some(limit) = page_limit {
+                    if total_matches == limit {
+                        last_page_cursor = Some(build_search_cursor(
+                            query,
+                            options,
+                            &normalized,
+                            line_number,
+                            column,
+                            &metadata,
+                            &bytes,
+                        )?);
+                    }
+                } else if total_matches >= MAX_SEARCH_MATCHES {
                     limit_hit = true;
                     break;
                 }
@@ -702,17 +917,23 @@ pub(crate) fn search_workspace_text_inner(
                 break;
             }
         }
-        if file_match_count > 0 {
-            total_files += 1;
-            files.push(WorkspaceTextSearchFileResult {
-                path: normalized,
-                match_count: file_match_count,
-                matches: file_matches,
-            });
-        }
         if limit_hit {
             break;
         }
+        if file_match_count > 0 && current_file.as_ref().is_some_and(|file| file.path == normalized)
+        {
+            if let Some(file) = current_file.take() {
+                files.push(file);
+            }
+        }
+    }
+
+    if let Some(file) = current_file.take() {
+        files.push(file);
+    }
+
+    if !cursor_file_was_seen {
+        return Ok(empty_text_search_response(true));
     }
 
     Ok(WorkspaceTextSearchResponse {
@@ -720,6 +941,8 @@ pub(crate) fn search_workspace_text_inner(
         file_count: total_files,
         match_count: total_matches,
         limit_hit,
+        next_cursor,
+        invalid_cursor: false,
     })
 }
 
@@ -2011,724 +2234,5 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> Result<()
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        compile_search_regex, create_workspace_directory_inner, duplicate_workspace_item_inner,
-        is_special_directory_path, list_external_absolute_directory_children_inner,
-        list_external_spec_tree_inner, list_workspace_directory_children_inner,
-        list_workspace_files_inner, normalize_workspace_relative_directory_path,
-        normalize_workspace_relative_path, paste_workspace_item_inner,
-        read_external_absolute_file_inner, read_external_spec_file_inner,
-        read_workspace_file_inner, rename_workspace_item_inner,
-        resolve_external_absolute_preview_handle_inner, resolve_external_spec_preview_handle_inner,
-        resolve_workspace_preview_handle_inner, search_workspace_text_inner,
-        sort_and_truncate_named_entries, write_external_absolute_file_inner,
-        WorkspaceDirectoryChildState, WorkspaceScanState, WorkspaceTextSearchOptions,
-    };
-    use crate::utils::normalize_git_path;
-    use std::path::PathBuf;
-    use std::time::{SystemTime, UNIX_EPOCH};
-    use uuid::Uuid;
-
-    #[test]
-    fn special_directory_path_detection_supports_dependency_dirs() {
-        assert!(is_special_directory_path("node_modules"));
-        assert!(is_special_directory_path("apps/web/node_modules"));
-        assert!(is_special_directory_path("tools/.pnpm-store"));
-        assert!(is_special_directory_path("sdk/.m2"));
-        assert!(is_special_directory_path("rust/.cargo"));
-    }
-
-    #[test]
-    fn special_directory_path_detection_supports_build_dirs() {
-        assert!(is_special_directory_path("target"));
-        assert!(is_special_directory_path("packages/ui/dist"));
-        assert!(is_special_directory_path("service/build"));
-        assert!(is_special_directory_path("native/cmake-build-debug"));
-        assert!(is_special_directory_path("cache/.turbo"));
-    }
-
-    #[test]
-    fn special_directory_path_detection_does_not_match_source_or_docs() {
-        assert!(!is_special_directory_path("src"));
-        assert!(!is_special_directory_path("docs"));
-        assert!(!is_special_directory_path("apps/web/src"));
-    }
-
-    #[test]
-    fn normalize_workspace_relative_path_rejects_empty_or_escaped_inputs() {
-        assert!(normalize_workspace_relative_path("").is_err());
-        assert!(normalize_workspace_relative_path("/").is_err());
-        assert!(normalize_workspace_relative_path("../outside").is_err());
-        assert!(normalize_workspace_relative_path("./local").is_err());
-        assert!(normalize_workspace_relative_path(".git/config").is_err());
-    }
-
-    #[test]
-    fn normalize_workspace_relative_path_accepts_regular_relative_path() {
-        assert_eq!(
-            normalize_workspace_relative_path("src/main.ts").expect("valid relative path"),
-            "src/main.ts".to_string()
-        );
-    }
-
-    #[test]
-    fn normalize_workspace_relative_directory_path_accepts_root_sentinel() {
-        assert_eq!(
-            normalize_workspace_relative_directory_path("").expect("root path"),
-            ""
-        );
-        assert!(normalize_workspace_relative_directory_path("   ").is_err());
-        assert!(normalize_workspace_relative_directory_path("/").is_err());
-        assert!(normalize_workspace_relative_directory_path("../outside").is_err());
-        assert!(normalize_workspace_relative_directory_path(".git/config").is_err());
-    }
-
-    #[test]
-    fn create_workspace_directory_creates_relative_directory() {
-        let suffix = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("clock moved backwards")
-            .as_nanos();
-        let root = std::env::temp_dir().join(format!("mossx-dir-create-{suffix}"));
-        std::fs::create_dir_all(&root).expect("create root");
-
-        create_workspace_directory_inner(&PathBuf::from(&root), "docs").expect("create docs");
-        assert!(root.join("docs").is_dir());
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn duplicate_workspace_item_preserves_extension_and_collision_suffix() {
-        let root = std::env::temp_dir().join(format!("mossx-duplicate-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src")).expect("create src");
-        std::fs::write(root.join("src/index.ts"), "one").expect("write index");
-        std::fs::write(root.join("src/index copy.ts"), "existing").expect("write copy");
-
-        let result = duplicate_workspace_item_inner(&PathBuf::from(&root), "src/index.ts")
-            .expect("duplicate file");
-
-        assert_eq!(result.path, "src/index copy 1.ts");
-        assert!(root.join("src/index copy 1.ts").is_file());
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn paste_workspace_item_copies_folder_to_target_directory() {
-        let root = std::env::temp_dir().join(format!("mossx-paste-folder-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src/components")).expect("create source");
-        std::fs::create_dir_all(root.join("examples")).expect("create target");
-        std::fs::write(root.join("src/components/Button.tsx"), "button").expect("write file");
-
-        let result =
-            paste_workspace_item_inner(&PathBuf::from(&root), "src/components", "examples")
-                .expect("paste folder");
-
-        assert_eq!(result.path, "examples/components");
-        assert!(root.join("examples/components/Button.tsx").is_file());
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn paste_workspace_item_uses_copy_suffix_on_target_collision() {
-        let root = std::env::temp_dir().join(format!("mossx-paste-collision-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src")).expect("create source");
-        std::fs::create_dir_all(root.join("examples/components")).expect("create existing target");
-        std::fs::write(root.join("src/components.tsx"), "source").expect("write source");
-        std::fs::write(root.join("examples/components.tsx"), "existing").expect("write target");
-
-        let result =
-            paste_workspace_item_inner(&PathBuf::from(&root), "src/components.tsx", "examples")
-                .expect("paste file");
-
-        assert_eq!(result.path, "examples/components copy.tsx");
-        assert!(root.join("examples/components copy.tsx").is_file());
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn paste_workspace_item_rejects_folder_into_descendant() {
-        let root = std::env::temp_dir().join(format!("mossx-paste-descendant-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src/components")).expect("create dirs");
-
-        let result = paste_workspace_item_inner(&PathBuf::from(&root), "src", "src/components");
-
-        assert!(result.is_err());
-        assert_eq!(
-            result.err().as_deref(),
-            Some("Cannot copy a folder into itself or its descendant.")
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn rename_workspace_item_renames_file_and_rejects_conflict() {
-        let root = std::env::temp_dir().join(format!("mossx-rename-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        std::fs::write(root.join("docs/readme.md"), "readme").expect("write readme");
-        std::fs::write(root.join("docs/guide.md"), "guide").expect("write guide");
-
-        let conflict =
-            rename_workspace_item_inner(&PathBuf::from(&root), "docs/readme.md", "guide.md");
-        assert!(conflict.is_err());
-        assert_eq!(
-            conflict.err().as_deref(),
-            Some("Target path already exists.")
-        );
-
-        let result =
-            rename_workspace_item_inner(&PathBuf::from(&root), "docs/readme.md", "intro.md")
-                .expect("rename file");
-        assert_eq!(result.path, "docs/intro.md");
-        assert!(root.join("docs/intro.md").is_file());
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn rename_workspace_item_rejects_path_like_basename() {
-        let root = std::env::temp_dir().join(format!("mossx-rename-invalid-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        std::fs::write(root.join("docs/readme.md"), "readme").expect("write readme");
-
-        let result =
-            rename_workspace_item_inner(&PathBuf::from(&root), "docs/readme.md", "../escape.md");
-
-        assert!(result.is_err());
-        assert_eq!(result.err().as_deref(), Some("Invalid item name."));
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn rename_workspace_item_rejects_windows_reserved_basename() {
-        let root = std::env::temp_dir().join(format!("mossx-rename-windows-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        std::fs::write(root.join("docs/readme.md"), "readme").expect("write readme");
-
-        for name in ["CON", "aux.txt", "bad:name.md", "trailing."] {
-            let result = rename_workspace_item_inner(&PathBuf::from(&root), "docs/readme.md", name);
-            assert!(result.is_err(), "{name} should be rejected");
-            assert_eq!(result.err().as_deref(), Some("Invalid item name."));
-        }
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn compile_search_regex_respects_whole_word() {
-        let regex = compile_search_regex(
-            "code",
-            &WorkspaceTextSearchOptions {
-                case_sensitive: false,
-                whole_word: true,
-                is_regex: false,
-                include_pattern: None,
-                exclude_pattern: None,
-            },
-        )
-        .expect("regex");
-
-        assert!(regex.is_match("code"));
-        assert!(!regex.is_match("codemoss"));
-    }
-
-    #[test]
-    fn search_workspace_text_finds_matches_and_honors_include_pattern() {
-        let root = std::env::temp_dir().join(format!("mossx-search-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src")).expect("create src dir");
-        std::fs::write(
-            root.join("src/main.ts"),
-            "const codemoss = 1;\nconst code = 2;\n",
-        )
-        .expect("write main.ts");
-        std::fs::write(root.join("README.md"), "codemoss docs\n").expect("write readme");
-
-        let response = search_workspace_text_inner(
-            &root,
-            "codemoss",
-            &WorkspaceTextSearchOptions {
-                case_sensitive: false,
-                whole_word: false,
-                is_regex: false,
-                include_pattern: Some("src/**".to_string()),
-                exclude_pattern: None,
-            },
-        )
-        .expect("search response");
-
-        assert_eq!(response.file_count, 1);
-        assert_eq!(response.match_count, 1);
-        assert_eq!(response.files[0].path, "src/main.ts");
-        assert_eq!(response.files[0].matches[0].line, 1);
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_files_keeps_scanning_files_when_directory_cap_reached() {
-        let root = std::env::temp_dir().join(format!("mossx-files-cap-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&root).expect("create root");
-
-        for index in 0..1_010usize {
-            std::fs::create_dir_all(root.join(format!("a-dir-{index:04}")))
-                .expect("create directory");
-        }
-        std::fs::write(root.join("z-last-file.ts"), "export const ok = true;\n")
-            .expect("write test file");
-
-        let response = list_workspace_files_inner(&root, 1);
-
-        assert!(
-            response.files.iter().any(|path| path == "z-last-file.ts"),
-            "expected file scan to continue after directory cap"
-        );
-        assert!(
-            response.directories.len() <= 1_000,
-            "directory list should still honor cap"
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_files_keeps_scanning_deep_files_when_directory_cap_reached() {
-        let root = std::env::temp_dir().join(format!("mossx-files-deep-cap-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&root).expect("create root");
-
-        for index in 0..1_010usize {
-            std::fs::create_dir_all(root.join(format!("a-dir-{index:04}")))
-                .expect("create directory");
-        }
-        let deep_dir = root.join("z-deep").join("nested");
-        std::fs::create_dir_all(&deep_dir).expect("create deep dir");
-        std::fs::write(deep_dir.join("hit.ts"), "export const deep = true;\n")
-            .expect("write deep file");
-
-        let response = list_workspace_files_inner(&root, 1);
-
-        assert!(
-            response
-                .files
-                .iter()
-                .any(|path| path == "z-deep/nested/hit.ts"),
-            "expected walker to keep scanning deep files after directory cap"
-        );
-        assert!(
-            response.directories.len() <= 1_000,
-            "directory list should still honor cap"
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_files_marks_truncated_directory_state_as_partial() {
-        let root = std::env::temp_dir().join(format!("mossx-files-partial-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("packages/large")).expect("create large dir");
-        std::fs::write(
-            root.join("packages/large/index.ts"),
-            "export const large = true;\n",
-        )
-        .expect("write large file");
-
-        let response = list_workspace_files_inner(&root, 1);
-        let packages_entry = response
-            .directory_entries
-            .iter()
-            .find(|entry| entry.path == "packages")
-            .expect("packages metadata");
-
-        assert_eq!(response.scan_state, WorkspaceScanState::Partial);
-        assert!(response.limit_hit);
-        assert_eq!(
-            packages_entry.child_state,
-            WorkspaceDirectoryChildState::Partial
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn sort_and_truncate_named_entries_sorts_before_truncating() {
-        let mut entries = vec![
-            ("z-item".to_string(), 1usize),
-            ("m-item".to_string(), 2usize),
-            ("a-item".to_string(), 3usize),
-            ("b-item".to_string(), 4usize),
-        ];
-
-        sort_and_truncate_named_entries(&mut entries, 2);
-
-        let names: Vec<String> = entries.into_iter().map(|(name, _)| name).collect();
-        assert_eq!(names, vec!["a-item".to_string(), "b-item".to_string()]);
-    }
-
-    #[test]
-    fn list_workspace_directory_children_returns_sorted_entries() {
-        let root = std::env::temp_dir().join(format!("mossx-dir-children-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("bucket")).expect("create bucket dir");
-        std::fs::write(root.join("bucket/z.ts"), "z\n").expect("write z");
-        std::fs::write(root.join("bucket/a.ts"), "a\n").expect("write a");
-        std::fs::write(root.join("bucket/m.ts"), "m\n").expect("write m");
-
-        let response =
-            list_workspace_directory_children_inner(&root, "bucket", 3).expect("list children");
-
-        assert_eq!(
-            response.files,
-            vec![
-                "bucket/a.ts".to_string(),
-                "bucket/m.ts".to_string(),
-                "bucket/z.ts".to_string()
-            ]
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_directory_children_accepts_empty_path_as_root() {
-        let root = std::env::temp_dir().join(format!("mossx-root-children-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src")).expect("create src dir");
-        std::fs::write(root.join("README.md"), "# test\n").expect("write readme");
-        std::fs::write(root.join("src/main.ts"), "main\n").expect("write nested file");
-
-        let response =
-            list_workspace_directory_children_inner(&root, "", 10).expect("list root children");
-
-        assert_eq!(response.files, vec!["README.md".to_string()]);
-        assert_eq!(response.directories, vec!["src".to_string()]);
-        assert!(!response.files.contains(&"src/main.ts".to_string()));
-        assert!(response
-            .directory_entries
-            .iter()
-            .any(|entry| entry.path == "src"
-                && entry.child_state == WorkspaceDirectoryChildState::Unknown));
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_directory_children_defers_root_gitignore_markers() {
-        let root = std::env::temp_dir().join(format!("mossx-root-gitignore-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("src")).expect("create src dir");
-        std::fs::write(root.join(".gitignore"), "src/ignored.ts\n").expect("write gitignore");
-        std::fs::write(root.join("src/ignored.ts"), "ignored\n").expect("write ignored file");
-        git2::Repository::init(&root).expect("init git repo");
-
-        let root_response =
-            list_workspace_directory_children_inner(&root, "", 10).expect("list root children");
-        assert!(root_response.gitignored_files.is_empty());
-        assert!(root_response.gitignored_directories.is_empty());
-
-        let src_response =
-            list_workspace_directory_children_inner(&root, "src", 10).expect("list src children");
-        assert_eq!(
-            src_response.gitignored_files,
-            vec!["src/ignored.ts".to_string()]
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_directory_children_reports_empty_directory() {
-        let root = std::env::temp_dir().join(format!("mossx-dir-empty-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("empty")).expect("create empty dir");
-
-        let response =
-            list_workspace_directory_children_inner(&root, "empty", 20).expect("list children");
-        let parent_entry = response
-            .directory_entries
-            .iter()
-            .find(|entry| entry.path == "empty")
-            .expect("empty directory metadata");
-
-        assert_eq!(response.scan_state, WorkspaceScanState::Complete);
-        assert!(!response.limit_hit);
-        assert_eq!(
-            parent_entry.child_state,
-            WorkspaceDirectoryChildState::Empty
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_workspace_directory_children_reports_partial_when_entry_cap_hits() {
-        let root = std::env::temp_dir().join(format!("mossx-dir-partial-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("bucket")).expect("create bucket dir");
-        std::fs::write(root.join("bucket/a.ts"), "a\n").expect("write a");
-        std::fs::write(root.join("bucket/b.ts"), "b\n").expect("write b");
-
-        let response =
-            list_workspace_directory_children_inner(&root, "bucket", 1).expect("list children");
-        let parent_entry = response
-            .directory_entries
-            .iter()
-            .find(|entry| entry.path == "bucket")
-            .expect("bucket metadata");
-
-        assert_eq!(response.files.len() + response.directories.len(), 1);
-        assert_eq!(response.scan_state, WorkspaceScanState::Partial);
-        assert!(response.limit_hit);
-        assert_eq!(
-            parent_entry.child_state,
-            WorkspaceDirectoryChildState::Partial
-        );
-        assert!(parent_entry.has_more);
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_external_absolute_directory_children_returns_sorted_entries() {
-        let root =
-            std::env::temp_dir().join(format!("mossx-external-dir-children-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("skill")).expect("create skill dir");
-        std::fs::write(root.join("skill/z.ts"), "z\n").expect("write z");
-        std::fs::write(root.join("skill/a.ts"), "a\n").expect("write a");
-        std::fs::write(root.join("skill/m.ts"), "m\n").expect("write m");
-        let canonical_skill_dir = root
-            .join("skill")
-            .canonicalize()
-            .expect("canonical skill dir");
-        let expected_base = normalize_git_path(&canonical_skill_dir.to_string_lossy());
-
-        let response = list_external_absolute_directory_children_inner(
-            root.join("skill").to_str().expect("directory path"),
-            std::slice::from_ref(&root),
-            3,
-        )
-        .expect("list children");
-
-        assert_eq!(
-            response.files,
-            vec![
-                format!("{expected_base}/a.ts"),
-                format!("{expected_base}/m.ts"),
-                format!("{expected_base}/z.ts")
-            ]
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_external_absolute_directory_children_rejects_relative_path() {
-        let root = PathBuf::from("/tmp");
-        let result = list_external_absolute_directory_children_inner("relative/path", &[root], 20);
-        assert!(result.is_err());
-        assert_eq!(result.err().as_deref(), Some("Invalid directory path."));
-    }
-
-    #[test]
-    fn read_workspace_file_decodes_gb18030_text() {
-        let root = std::env::temp_dir().join(format!("mossx-read-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        let (encoded, _, had_errors) = encoding_rs::GB18030.encode("usb异常断开");
-        assert!(!had_errors, "encode should succeed");
-        std::fs::write(root.join("docs/main_lin_test.c"), encoded.as_ref()).expect("write file");
-
-        let response = read_workspace_file_inner(&PathBuf::from(&root), "docs/main_lin_test.c")
-            .expect("read file");
-
-        assert_eq!(response.content, "usb异常断开");
-        assert!(!response.truncated);
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn read_external_absolute_file_decodes_gb18030_text() {
-        let root = std::env::temp_dir().join(format!("mossx-read-absolute-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        let (encoded, _, had_errors) = encoding_rs::GB18030.encode("外部绝对路径可读取");
-        assert!(!had_errors, "encode should succeed");
-        let file_path = root.join("docs/skill.md");
-        std::fs::write(&file_path, encoded.as_ref()).expect("write file");
-
-        let response = read_external_absolute_file_inner(
-            file_path.to_str().expect("file path"),
-            std::slice::from_ref(&root),
-        )
-        .expect("read file");
-
-        assert_eq!(response.content, "外部绝对路径可读取");
-        assert!(!response.truncated);
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn resolve_workspace_preview_handle_keeps_file_backed_payload_bounded() {
-        let root = std::env::temp_dir().join(format!("mossx-preview-handle-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        std::fs::write(root.join("docs/report.pdf"), b"%PDF-1.7").expect("write pdf");
-
-        let response =
-            resolve_workspace_preview_handle_inner(&PathBuf::from(&root), "docs/report.pdf")
-                .expect("preview handle");
-
-        assert!(response.absolute_path.ends_with("docs/report.pdf"));
-        assert_eq!(response.extension.as_deref(), Some("pdf"));
-        assert!(response.byte_length > 0);
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn read_external_absolute_file_rejects_relative_path() {
-        let root = PathBuf::from("/tmp");
-        let result = read_external_absolute_file_inner("relative/path.md", &[root]);
-        assert!(result.is_err());
-        assert_eq!(result.err().as_deref(), Some("Invalid file path"));
-    }
-
-    #[test]
-    fn write_external_absolute_file_updates_existing_file() {
-        let root = std::env::temp_dir().join(format!("mossx-write-absolute-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create docs");
-        let file_path = root.join("docs/skill.md");
-        std::fs::write(&file_path, "before").expect("write file");
-
-        write_external_absolute_file_inner(
-            file_path.to_str().expect("file path"),
-            std::slice::from_ref(&root),
-            "after",
-        )
-        .expect("write absolute file");
-
-        let content = std::fs::read_to_string(&file_path).expect("read updated file");
-        assert_eq!(content, "after");
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-    }
-
-    #[test]
-    fn write_external_absolute_file_rejects_relative_path() {
-        let root = PathBuf::from("/tmp");
-        let result = write_external_absolute_file_inner("relative/path.md", &[root], "content");
-        assert!(result.is_err());
-        assert_eq!(result.err().as_deref(), Some("Invalid file path"));
-    }
-
-    #[test]
-    fn write_external_absolute_file_rejects_path_outside_allowed_roots() {
-        let root =
-            std::env::temp_dir().join(format!("mossx-write-absolute-root-{}", Uuid::new_v4()));
-        let outside =
-            std::env::temp_dir().join(format!("mossx-write-absolute-outside-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(root.join("docs")).expect("create root docs");
-        std::fs::create_dir_all(outside.join("docs")).expect("create outside docs");
-        let file_path = outside.join("docs/skill.md");
-        std::fs::write(&file_path, "before").expect("write file");
-
-        let result = write_external_absolute_file_inner(
-            file_path.to_str().expect("file path"),
-            &[root.clone()],
-            "after",
-        );
-
-        assert_eq!(
-            result.err().as_deref(),
-            Some("Path is not within allowed directories.")
-        );
-
-        std::fs::remove_dir_all(&root).expect("cleanup root");
-        std::fs::remove_dir_all(&outside).expect("cleanup outside");
-    }
-
-    #[test]
-    fn resolve_external_preview_handles_respect_allowed_roots_and_openspec_aliases() {
-        let project_root =
-            std::env::temp_dir().join(format!("mossx-preview-spec-{}", Uuid::new_v4()));
-        let openspec_root = project_root.join("openspec");
-        std::fs::create_dir_all(&openspec_root).expect("create spec root");
-        std::fs::write(openspec_root.join("project.docx"), b"docx").expect("write docx");
-
-        let spec_response = resolve_external_spec_preview_handle_inner(
-            project_root.to_str().expect("project root"),
-            "openspec/project.docx",
-        )
-        .expect("spec preview handle");
-        assert_eq!(spec_response.extension.as_deref(), Some("docx"));
-
-        let absolute_response = resolve_external_absolute_preview_handle_inner(
-            openspec_root
-                .join("project.docx")
-                .to_str()
-                .expect("absolute path"),
-            std::slice::from_ref(&project_root),
-        )
-        .expect("absolute preview handle");
-        assert_eq!(absolute_response.extension.as_deref(), Some("docx"));
-
-        std::fs::remove_dir_all(&project_root).expect("cleanup root");
-    }
-
-    #[test]
-    fn read_external_spec_file_decodes_gb18030_text() {
-        let project_root = std::env::temp_dir().join(format!("mossx-spec-{}", Uuid::new_v4()));
-        let openspec_root = project_root.join("openspec");
-        std::fs::create_dir_all(&openspec_root).expect("create spec root");
-        let (encoded, _, had_errors) = encoding_rs::GB18030.encode("重新插拔usb会恢复");
-        assert!(!had_errors, "encode should succeed");
-        std::fs::write(openspec_root.join("legacy.c"), encoded.as_ref()).expect("write file");
-
-        let response = read_external_spec_file_inner(
-            project_root.to_str().expect("root path"),
-            "openspec/legacy.c",
-        )
-        .expect("read file");
-
-        assert!(response.exists);
-        assert_eq!(response.content, "重新插拔usb会恢复");
-        assert!(!response.truncated);
-
-        std::fs::remove_dir_all(&project_root).expect("cleanup root");
-    }
-
-    #[test]
-    fn read_external_spec_file_supports_direct_openspec_root_input() {
-        let project_root =
-            std::env::temp_dir().join(format!("mossx-openspec-direct-{}", Uuid::new_v4()));
-        let openspec_root = project_root.join("openspec");
-        std::fs::create_dir_all(&openspec_root).expect("create spec root");
-        std::fs::write(openspec_root.join("project.md"), "# Project Context").expect("write file");
-
-        let response = read_external_spec_file_inner(
-            openspec_root.to_str().expect("root path"),
-            "openspec/project.md",
-        )
-        .expect("read file");
-
-        assert!(response.exists);
-        assert_eq!(response.content, "# Project Context");
-
-        std::fs::remove_dir_all(&project_root).expect("cleanup root");
-    }
-
-    #[test]
-    fn list_external_spec_tree_returns_placeholder_when_project_root_has_no_openspec() {
-        let project_root =
-            std::env::temp_dir().join(format!("mossx-project-no-openspec-{}", Uuid::new_v4()));
-        std::fs::create_dir_all(&project_root).expect("create project root");
-        std::fs::write(project_root.join("package.json"), "{}").expect("write project file");
-
-        let response =
-            list_external_spec_tree_inner(project_root.to_str().expect("root path"), 100)
-                .expect("list tree");
-
-        assert_eq!(response.files, Vec::<String>::new());
-        assert_eq!(response.directories, vec!["openspec".to_string()]);
-
-        std::fs::remove_dir_all(&project_root).expect("cleanup root");
-    }
-}
+#[path = "files/tests.rs"]
+mod tests;

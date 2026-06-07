@@ -15,6 +15,7 @@ import { useComposerInsert } from "../features/app/hooks/useComposerInsert";
 import { loadHistoryWithImportance } from "../features/composer/hooks/useInputHistoryStore";
 import type { HistoryItem } from "../features/composer/hooks/useInputHistoryStore";
 import type { KanbanTask } from "../features/kanban/types";
+import { usePaletteContentSearch } from "../features/search/hooks/usePaletteContentSearch";
 import { useUnifiedSearch } from "../features/search/hooks/useUnifiedSearch";
 import type {
   SearchContentFilter,
@@ -485,10 +486,34 @@ export function useAppShellSearchRadarSection({
       new Map(workspaces.map((workspace) => [workspace.path, workspace.name])),
     [workspaces],
   );
+  const contentSearchWorkspaces = useMemo(
+    () =>
+      workspaces.map((workspace, index) => ({
+        workspaceId: workspace.id,
+        workspaceName: workspace.name,
+        recentRank: index,
+      })),
+    [workspaces],
+  );
+  const {
+    contentResults,
+    status: contentSearchStatus,
+    error: contentSearchError,
+    hasMore: hasMoreContentResults,
+    loadMore: loadMoreContentResults,
+  } = usePaletteContentSearch({
+    query: searchPaletteQuery,
+    scope: searchScope,
+    contentFilters: searchContentFilters,
+    workspaces: contentSearchWorkspaces,
+    activeWorkspaceId,
+    isPaletteOpen: isSearchPaletteOpen,
+  });
   const rawSearchResults = useUnifiedSearch({
     query: searchPaletteQuery,
     contentFilters: searchContentFilters,
     workspaceSources: workspaceSearchSources,
+    externalResults: contentResults,
     kanbanTasks: scopedKanbanTasks,
     threadItemsByThread: isSearchPaletteOpen ? deferredThreadItemsByThread : {},
     historyItems: historySearchItems,
@@ -658,7 +683,11 @@ export function useAppShellSearchRadarSection({
     lockLiveSessions,
     perfSnapshotRef,
     RECENT_THREAD_LIMIT,
+    contentSearchError,
+    contentSearchStatus,
+    hasMoreContentResults,
     recentThreads,
+    loadMoreContentResults,
     scopedKanbanTasks,
     searchResults,
     sessionRadarFeed,

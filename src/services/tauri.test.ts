@@ -71,6 +71,7 @@ import {
   listProjectRelatedCodexSessions,
   listProjectRelatedSessions,
   listExternalSpecTree,
+  searchWorkspaceText,
   listWorkspaceSessions,
   listWorkspaceSessionArchiveEvidence,
   listWorkspaceSessionFolders,
@@ -272,6 +273,69 @@ describe("tauri invoke wrappers", () => {
       "list_threads",
       "list_thread_titles",
     ]);
+  });
+
+  it("maps workspace text search compatibility payload with null pagination defaults", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValue({
+      files: [],
+      file_count: 0,
+      match_count: 0,
+      limit_hit: false,
+    });
+
+    await searchWorkspaceText("ws-1", {
+      query: "codemoss",
+      caseSensitive: false,
+      wholeWord: false,
+      isRegex: false,
+      includePattern: null,
+      excludePattern: null,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("search_workspace_text", {
+      workspaceId: "ws-1",
+      query: "codemoss",
+      caseSensitive: false,
+      wholeWord: false,
+      isRegex: false,
+      includePattern: null,
+      excludePattern: null,
+      limit: null,
+      cursor: null,
+    });
+  });
+
+  it("maps workspace text search pagination payload", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValue({
+      files: [],
+      file_count: 0,
+      match_count: 0,
+      limit_hit: false,
+      next_cursor: "cursor-1",
+    });
+
+    await searchWorkspaceText("ws-1", {
+      query: "codemoss",
+      caseSensitive: false,
+      wholeWord: false,
+      isRegex: false,
+      limit: 50,
+      cursor: "cursor-0",
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("search_workspace_text", {
+      workspaceId: "ws-1",
+      query: "codemoss",
+      caseSensitive: false,
+      wholeWord: false,
+      isRegex: false,
+      includePattern: null,
+      excludePattern: null,
+      limit: 50,
+      cursor: "cursor-0",
+    });
   });
 
   it("traces startup-heavy wrapper failures without swallowing errors", async () => {

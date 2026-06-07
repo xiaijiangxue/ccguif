@@ -3,14 +3,17 @@ export type SearchResultKind =
   | "kanban"
   | "thread"
   | "message"
+  | "content"
   | "history"
   | "skill"
   | "command";
 
 export type SearchScope = "active-workspace" | "global";
+export type PaletteContentSearchStatus = "idle" | "loading" | "ready" | "degraded";
 export type SearchContentFilter =
   | "all"
   | "files"
+  | "content"
   | "kanban"
   | "threads"
   | "messages"
@@ -31,6 +34,11 @@ export type SearchResult = {
   panelId?: string;
   taskId?: string;
   filePath?: string;
+  line?: number;
+  column?: number;
+  preview?: string;
+  matchCount?: number;
+  matchId?: string;
   historyText?: string;
   skillName?: string;
   commandName?: string;
@@ -39,6 +47,7 @@ export type SearchResult = {
     | "kanban"
     | "threads"
     | "messages"
+    | "content"
     | "history"
     | "skills"
     | "commands";

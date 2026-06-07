@@ -1472,6 +1472,8 @@ export type WorkspaceTextSearchResponse = {
   file_count: number;
   match_count: number;
   limit_hit: boolean;
+  next_cursor?: string | null;
+  invalid_cursor?: boolean;
 };
 
 export type ExternalSpecFileResponse = {
@@ -1537,6 +1539,8 @@ export async function searchWorkspaceText(
     isRegex: boolean;
     includePattern?: string | null;
     excludePattern?: string | null;
+    limit?: number | null;
+    cursor?: string | null;
   },
 ) {
   return invoke<WorkspaceTextSearchResponse>("search_workspace_text", {
@@ -1547,6 +1551,8 @@ export async function searchWorkspaceText(
     isRegex: options.isRegex,
     includePattern: options.includePattern ?? null,
     excludePattern: options.excludePattern ?? null,
+    limit: options.limit ?? null,
+    cursor: options.cursor ?? null,
   });
 }
 
