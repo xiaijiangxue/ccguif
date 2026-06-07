@@ -50,6 +50,23 @@ describe("groupToolItems", () => {
     expect(entries.every((entry) => entry.kind === "item")).toBe(true);
   });
 
+  it("groups consecutive fileChange tools separately from edit tools", () => {
+    const entries = groupToolItems([
+      createToolItem("tool-1", "Tool: edit"),
+      createToolItem("tool-2", "File changes", "fileChange"),
+      createToolItem("tool-3", "File changes", "fileChange"),
+      createToolItem("tool-4", "Tool: edit"),
+    ]);
+
+    expect(entries).toHaveLength(3);
+    expect(entries[0]?.kind).toBe("item");
+    expect(entries[1]?.kind).toBe("fileChangeGroup");
+    if (entries[1]?.kind === "fileChangeGroup") {
+      expect(entries[1].items.map((item) => item.id)).toEqual(["tool-2", "tool-3"]);
+    }
+    expect(entries[2]?.kind).toBe("item");
+  });
+
   it("hides TodoWrite tool blocks in message stream", () => {
     const entries = groupToolItems([
       createToolItem("tool-1", "Tool: read"),

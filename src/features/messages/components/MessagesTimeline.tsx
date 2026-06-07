@@ -310,6 +310,39 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     observeElementOffset: observeTimelineElementOffset,
     overscan: 12,
   });
+  const timelineProjectionMeasureKey = useMemo(
+    () => timelineProjectionRows.map((row) => row.key).join("|"),
+    [timelineProjectionRows],
+  );
+  useEffect(() => {
+    if (!shouldVirtualizeTimeline) {
+      return;
+    }
+    const frameId = window.requestAnimationFrame(() => {
+      timelineVirtualizer.measure();
+    });
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [
+    shouldVirtualizeTimeline,
+    timelineProjectionMeasureKey,
+    timelineVirtualizer,
+  ]);
+  useEffect(() => {
+    if (!shouldVirtualizeTimeline) {
+      return;
+    }
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        timelineVirtualizer.measure();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [shouldVirtualizeTimeline, timelineVirtualizer]);
   useEffect(() => {
     if (!onAnchorRowScrollerReady) {
       return;
@@ -678,6 +711,21 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         <ToolOperationTimelineBlock
           key={`eg-${firstItem?.id ?? "edit-group"}`}
           kind="editGroup"
+          items={entry.items}
+        >
+          <EditToolGroupBlock
+            items={entry.items}
+            onOpenDiffPath={onOpenDiffPath}
+          />
+        </ToolOperationTimelineBlock>,
+      );
+    }
+    if (entry.kind === "fileChangeGroup") {
+      const firstItem = entry.items[0];
+      return renderWithAnchoredUserInput(
+        <ToolOperationTimelineBlock
+          key={`fcg-${firstItem?.id ?? "file-change-group"}`}
+          kind="fileChangeGroup"
           items={entry.items}
         >
           <EditToolGroupBlock

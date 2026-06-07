@@ -15,6 +15,7 @@ export type GroupedEntry =
   | { kind: 'item'; item: ConversationItem }
   | { kind: 'readGroup'; items: ToolItem[] }
   | { kind: 'editGroup'; items: ToolItem[] }
+  | { kind: 'fileChangeGroup'; items: ToolItem[] }
   | { kind: 'bashGroup'; items: ToolItem[] }
   | { kind: 'searchGroup'; items: ToolItem[] };
 
@@ -52,11 +53,12 @@ function canMergeExploreItems(previous: ExploreItem, next: ExploreItem): boolean
 /**
  * 将分类映射到 GroupedEntry 的 kind
  */
-type GroupableCategory = 'read' | 'edit' | 'bash' | 'search';
+type GroupableCategory = 'read' | 'edit' | 'fileChange' | 'bash' | 'search';
 
 const CATEGORY_TO_GROUP_KIND: Record<GroupableCategory, GroupedEntry['kind']> = {
   read: 'readGroup',
   edit: 'editGroup',
+  fileChange: 'fileChangeGroup',
   bash: 'bashGroup',
   search: 'searchGroup',
 };

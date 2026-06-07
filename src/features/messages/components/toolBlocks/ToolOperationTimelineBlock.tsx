@@ -40,6 +40,7 @@ type ToolOperationTimelineKind =
   | "single"
   | "readGroup"
   | "editGroup"
+  | "fileChangeGroup"
   | "bashGroup"
   | "searchGroup";
 
@@ -190,6 +191,7 @@ function resolveTimelineCategory(
 ): ToolCategory {
   if (kind === "readGroup") return "read";
   if (kind === "editGroup") return "edit";
+  if (kind === "fileChangeGroup") return "fileChange";
   if (kind === "bashGroup") return "bash";
   if (kind === "searchGroup") return "search";
   return item ? classifyToolCategory(item) : "other";
@@ -297,6 +299,7 @@ function resolveTitle(input: {
   const { category, count, firstItem, kind, t } = input;
   if (kind === "readGroup") return t("messages.operationTimeline.readGroup", { count });
   if (kind === "editGroup") return t("messages.operationTimeline.editGroup", { count });
+  if (kind === "fileChangeGroup") return t("messages.operationTimeline.fileChangeGroup", { count });
   if (kind === "bashGroup") return t("messages.operationTimeline.bashGroup", { count });
   if (kind === "searchGroup") return t("messages.operationTimeline.searchGroup", { count });
   const toolName = extractToolName(firstItem?.title);

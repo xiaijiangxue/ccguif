@@ -860,7 +860,7 @@ describe("Messages rich content", () => {
     });
   });
 
-  it("routes file-change row clicks to onOpenDiffPath", () => {
+  it("routes grouped file-change row clicks to onOpenDiffPath", () => {
     const onOpenDiffPath = vi.fn();
     const items: ConversationItem[] = [
       {
@@ -871,6 +871,15 @@ describe("Messages rich content", () => {
         detail: "",
         status: "completed",
         changes: [{ path: "src/App.tsx", kind: "modified", diff: "@@ -1 +1 @@\n-old\n+new" }],
+      },
+      {
+        id: "tool-file-change-2",
+        kind: "tool",
+        toolType: "fileChange",
+        title: "File changes",
+        detail: "",
+        status: "completed",
+        changes: [{ path: "src/Sidebar.tsx", kind: "modified", diff: "@@ -1 +1 @@\n-old\n+new" }],
       },
     ];
 
@@ -886,11 +895,13 @@ describe("Messages rich content", () => {
       />,
     );
 
-    const header = container.querySelector(".task-header");
-    expect(header).toBeTruthy();
-    if (header) {
-      fireEvent.click(header);
+    expect(container.querySelector(".tool-operation-timeline-block--fileChange")).toBeTruthy();
+    const summary = container.querySelector(".tool-operation-timeline-summary");
+    expect(summary).toBeTruthy();
+    if (!summary) {
+      return;
     }
+    fireEvent.click(summary);
     fireEvent.click(screen.getByRole("button", { name: "App.tsx" }));
     expect(onOpenDiffPath).toHaveBeenCalledWith("src/App.tsx");
   });

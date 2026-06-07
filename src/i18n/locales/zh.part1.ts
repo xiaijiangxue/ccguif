@@ -2627,6 +2627,7 @@ const zhPart1 = {
     operationTimeline: {
       readGroup: "读取 {{count}} 个文件",
       editGroup: "编辑 {{count}} 个文件",
+      fileChangeGroup: "变更 {{count}} 个文件",
       bashGroup: "执行 {{count}} 条命令",
       searchGroup: "搜索 {{count}} 个模式",
       operationCount: "{{count}} 个操作",

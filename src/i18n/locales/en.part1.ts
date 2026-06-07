@@ -2690,6 +2690,7 @@ const enPart1 = {
     operationTimeline: {
       readGroup: "Read {{count}} files",
       editGroup: "Edit {{count}} files",
+      fileChangeGroup: "Change {{count}} files",
       bashGroup: "Run {{count}} commands",
       searchGroup: "Search {{count}} patterns",
       operationCount: "{{count}} ops",
