@@ -26,6 +26,7 @@ type WorkspaceSessionFolderTreeProps = {
   workspaceId: string;
   workspacePath: string;
   folders: WorkspaceSessionFolderNode[];
+  pinnedRows: ThreadListProps["pinnedRows"];
   rootRows: WorkspaceSessionThreadRow[];
   isExpanded: boolean;
   rootDraftRequestKey?: number;
@@ -47,6 +48,7 @@ export function WorkspaceSessionFolderTree({
   workspaceId,
   workspacePath,
   folders,
+  pinnedRows,
   rootRows,
   isExpanded,
   rootDraftRequestKey = 0,
@@ -497,7 +499,7 @@ export function WorkspaceSessionFolderTree({
     >
       {renderFolderDraft(null)}
       {folders.map((folder) => renderFolder(folder, 0))}
-      {rootRows.length > 0 ? (
+      {pinnedRows.length > 0 || rootRows.length > 0 ? (
         <ThreadList
           {...threadListProps}
           onShowThreadMenu={(
@@ -523,7 +525,7 @@ export function WorkspaceSessionFolderTree({
           }
           workspaceId={workspaceId}
           workspacePath={workspacePath}
-          pinnedRows={[]}
+          pinnedRows={pinnedRows}
           unpinnedRows={rootRows}
           totalThreadRoots={rootRows.length}
           hasMoreRoots={threadListProps.hasMoreRoots}
@@ -533,7 +535,7 @@ export function WorkspaceSessionFolderTree({
           showLoadOlder={threadListProps.showLoadOlder}
         />
       ) : null}
-      {rootRows.length === 0 && threadListProps.nextCursor ? (
+      {rootRows.length === 0 && pinnedRows.length === 0 && threadListProps.nextCursor ? (
         <ThreadList
           {...threadListProps}
           workspaceId={workspaceId}

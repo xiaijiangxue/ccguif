@@ -262,12 +262,16 @@ describe("Sidebar", () => {
       />,
     );
 
-    const pinnedSection = container.querySelector(".sidebar-pinned-section");
-    expect(pinnedSection).toBeTruthy();
-    expect(within(pinnedSection as HTMLElement).getByText("项目分析")).toBeTruthy();
-
     const workspaceList = container.querySelector(".workspace-list");
     expect(workspaceList).toBeTruthy();
+    expect(container.querySelector(".sidebar-pinned-section")).toBeNull();
+    const workspaceCard = container.querySelector(".workspace-card");
+    expect(workspaceCard).toBeTruthy();
+    const workspaceThreadRows = Array.from(
+      (workspaceCard as HTMLElement).querySelectorAll(".thread-row .thread-name"),
+    ).map((node) => node.textContent);
+    expect(workspaceThreadRows).toEqual(["项目分析", "给我生成一张图"]);
+    expect(within(workspaceList as HTMLElement).getByText("项目分析")).toBeTruthy();
     expect(within(workspaceList as HTMLElement).getByText("给我生成一张图")).toBeTruthy();
     expect(screen.queryByText("Agent 20")).toBeNull();
     expect(screen.queryByText("Codex Session")).toBeNull();

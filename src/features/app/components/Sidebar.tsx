@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next";
 import { ThreadList } from "./ThreadList";
 import { ThreadEmptyState } from "./ThreadEmptyState";
 import { WorktreeSection } from "./WorktreeSection";
-import { PinnedThreadList } from "./PinnedThreadList";
 import { WorkspaceCard } from "./WorkspaceCard";
 import { WorkspaceGroup } from "./WorkspaceGroup";
 import { WorkspaceSessionFolderTree } from "./WorkspaceSessionFolderTree";
@@ -91,6 +90,7 @@ type WorkspaceGroupSection = {
 };
 
 type WorkspaceThreadRows = {
+  pinnedRows: Array<{ thread: ThreadSummary; depth: number }>;
   unpinnedRows: Array<{ thread: ThreadSummary; depth: number }>;
   totalRoots: number;
   hasMoreRoots: boolean;
@@ -1135,83 +1135,6 @@ export function Sidebar({
     [normalizedQuery],
   );
 
-  const pinnedThreadRows = useMemo(() => {
-    type ThreadRow = { thread: ThreadSummary; depth: number };
-    const groups: Array<{
-      pinTime: number;
-      workspaceId: string;
-      workspacePath: string;
-      rows: ThreadRow[];
-    }> = [];
-    if (pinnedThreadsVersion < 0) {
-      return [];
-    }
-
-    workspaces.forEach((workspace) => {
-      if (!isWorkspaceMatch(workspace)) {
-        return;
-      }
-      const threads = getProjectedThreads(workspace.id);
-      if (!threads.length) {
-        return;
-      }
-      const { pinnedRows } = getThreadRows(
-        threads,
-        Number.POSITIVE_INFINITY,
-        workspace.id,
-        getPinTimestamp,
-      );
-      if (!pinnedRows.length) {
-        return;
-      }
-      let currentRows: ThreadRow[] = [];
-      let currentPinTime: number | null = null;
-
-      pinnedRows.forEach((row) => {
-        if (row.depth === 0) {
-          if (currentRows.length && currentPinTime !== null) {
-            groups.push({
-              pinTime: currentPinTime,
-              workspaceId: workspace.id,
-              workspacePath: workspace.path,
-              rows: currentRows,
-            });
-          }
-          currentRows = [row];
-          currentPinTime = getPinTimestamp(workspace.id, row.thread.id);
-        } else {
-          currentRows.push(row);
-        }
-      });
-
-      if (currentRows.length && currentPinTime !== null) {
-        groups.push({
-          pinTime: currentPinTime,
-          workspaceId: workspace.id,
-          workspacePath: workspace.path,
-          rows: currentRows,
-        });
-      }
-    });
-
-    return groups
-      .sort((a, b) => a.pinTime - b.pinTime)
-      .flatMap((group) =>
-        group.rows.map((row) => ({
-          ...row,
-          workspaceId: group.workspaceId,
-          workspacePath: group.workspacePath,
-        })),
-      );
-  }, [
-    workspaces,
-    getProjectedThreads,
-    getThreadRows,
-    getPinTimestamp,
-    isWorkspaceMatch,
-    pinnedThreadsVersion,
-  ]);
-
   const { sidebarBodyRef, scrollFade, updateScrollFade } = useSidebarScrollFade(
     groupedWorkspaces,
     threadsByWorkspace,
@@ -1301,6 +1224,7 @@ export function Sidebar({
       group.workspaces.forEach((workspace) => {
         if (workspace.settings.sidebarCollapsed) {
           rowsByWorkspace.set(workspace.id, {
+            pinnedRows: [],
             unpinnedRows: [],
             totalRoots: 0,
             hasMoreRoots: false,
@@ -1313,7 +1237,7 @@ export function Sidebar({
         );
         const visibleThreadRootLimit =
           workspaceThreadRootLimits[workspace.id] ?? visibleThreadRootCount;
-        const { unpinnedRows, totalRoots, hasMoreRoots } = getThreadRows(
+        const { pinnedRows, unpinnedRows, totalRoots, hasMoreRoots } = getThreadRows(
           threads,
           visibleThreadRootLimit,
           workspace.id,
@@ -1321,6 +1245,7 @@ export function Sidebar({
           visibleThreadRootCount,
         );
         rowsByWorkspace.set(workspace.id, {
+          pinnedRows,
           unpinnedRows,
           totalRoots,
           hasMoreRoots,
@@ -1334,6 +1259,7 @@ export function Sidebar({
     getPinTimestamp,
     getThreadRows,
     getProjectedThreads,
+    pinnedThreadsVersion,
     workspaceThreadRootLimits,
   ]);
 
@@ -2395,6 +2321,7 @@ export function Sidebar({
     const threads = threadsByWorkspace[entry.id] ?? [];
     const isCollapsed = entry.settings.sidebarCollapsed;
     const threadRows = threadRowsByWorkspace.get(entry.id);
+    const pinnedRows = threadRows?.pinnedRows ?? [];
     const unpinnedRows = threadRows?.unpinnedRows ?? [];
     const totalThreadRoots = threadRows?.totalRoots ?? 0;
     const hasMoreThreadRoots = threadRows?.hasMoreRoots ?? false;
@@ -2544,6 +2471,7 @@ export function Sidebar({
             workspacePath={entry.path}
             folders={folderProjection.folders}
             rootRows={folderProjection.rootRows}
+            pinnedRows={pinnedRows}
             isExpanded={isExpanded}
             rootDraftRequestKey={rootFolderDraftRequestKey}
             moveFolderTargets={folderMoveTargets}
@@ -2586,7 +2514,7 @@ export function Sidebar({
           <ThreadList
             workspaceId={entry.id}
             workspacePath={entry.path}
-            pinnedRows={[]}
+            pinnedRows={pinnedRows}
             unpinnedRows={unpinnedRows}
             totalThreadRoots={totalThreadRoots}
             hasMoreRoots={hasMoreThreadRoots}
@@ -2813,31 +2741,6 @@ export function Sidebar({
             onViewportScroll={updateScrollFade}
             viewportRef={sidebarBodyRef}
           >
-            {pinnedThreadRows.length > 0 && (
-              <div className="pinned-section sidebar-pinned-section">
-                <PinnedThreadList
-                  rows={pinnedThreadRows}
-                  activeWorkspaceId={activeWorkspaceId}
-                  activeThreadId={activeThreadId}
-                  systemProxyEnabled={systemProxyEnabled}
-                  systemProxyUrl={systemProxyUrl}
-                  threadStatusById={threadStatusById}
-                  moveFolderTargetsByWorkspaceId={moveFolderTargetsByWorkspaceId}
-                  getThreadTime={getThreadTime}
-                  isThreadPinned={isThreadPinned}
-                  isThreadAutoNaming={isThreadAutoNaming}
-                  onToggleThreadPin={handleToggleThreadPin}
-                  onSelectThread={onSelectThread}
-                  onDeleteThread={onDeleteThread}
-                  onShowThreadMenu={showThreadMenu}
-                  deleteConfirmThreadId={deleteConfirmThreadId}
-                  deleteConfirmWorkspaceId={deleteConfirmWorkspaceId}
-                  deleteConfirmBusy={deleteConfirmBusy}
-                  onCancelDeleteConfirm={onCancelDeleteConfirm}
-                  onConfirmDeleteConfirm={onConfirmDeleteConfirm}
-                />
-              </div>
-            )}
             <div className="sidebar-section-header">
               <div className="sidebar-section-title">
                 {t("sidebar.projects")}
