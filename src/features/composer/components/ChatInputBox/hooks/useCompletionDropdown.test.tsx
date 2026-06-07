@@ -91,4 +91,37 @@ describe('useCompletionDropdown', () => {
       expect(result.current.items).toEqual([]);
     });
   });
+
+  it('removes a selected dollar skill trigger token without leaving query residue', () => {
+    const { result } = renderHook(() =>
+      useCompletionDropdown<TestItem>({
+        trigger: '$',
+        provider: vi.fn().mockResolvedValue([]),
+        debounceMs: 0,
+        toDropdownItem: (item) => ({
+          id: item.id,
+          label: item.id,
+          type: 'command',
+        }),
+        onSelect: vi.fn(),
+      }),
+    );
+
+    expect(
+      result.current.replaceText('$ce-plan', '', {
+        trigger: '$',
+        query: 'ce-plan',
+        start: 0,
+        end: 8,
+      }),
+    ).toBe('');
+    expect(
+      result.current.replaceText('请用 $ce-plan 帮我规划', '', {
+        trigger: '$',
+        query: 'ce-plan',
+        start: 3,
+        end: 11,
+      }),
+    ).toBe('请用  帮我规划');
+  });
 });

@@ -884,8 +884,10 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
           inlineCompletion.clear();
         }
 
+        const stagedOptions = pendingCommitOptionsRef.current;
+        const shouldFlushParentInput = stagedOptions?.source === 'programmatic';
+
         if (INCREMENTAL_UNDO_REDO_ENABLED && !isApplyingUndoRedoRef.current) {
-          const stagedOptions = pendingCommitOptionsRef.current;
           const commitOptions: CommitSnapshotOptions = {
             source: stagedOptions?.source ?? 'input',
             inputType: stagedOptions?.inputType ?? lastBeforeInputTypeRef.current,
@@ -915,6 +917,9 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
         // Notify parent component (use debounced version to reduce re-renders)
         // If determined empty (only zero-width characters), pass empty string to parent
         debouncedOnInput(isEmpty ? '' : text);
+        if (shouldFlushParentInput) {
+          debouncedOnInput.flush();
+        }
 
         timer.end();
       },
