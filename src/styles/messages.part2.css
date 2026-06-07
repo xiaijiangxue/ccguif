@@ -785,12 +785,12 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  margin: 6px 0;
-  padding: 4px 0 4px 10px;
+  margin: 8px 0 10px;
+  padding: 9px 11px 9px 12px;
   border: none;
   border-left: 3px solid var(--border-strong);
-  border-radius: 0;
-  background: color-mix(in srgb, var(--surface-command) 56%, transparent);
+  border-radius: 0 8px 8px 0;
+  background: color-mix(in srgb, var(--surface-card-strong) 52%, transparent);
   box-shadow: none;
 }
 
@@ -803,19 +803,21 @@
   border-radius: 0;
   font-size: 12px;
   font-weight: 700;
-  color: var(--text-strongest, var(--text-stronger));
+  color: color-mix(in srgb, var(--text-strongest, var(--text-stronger)) 88%, var(--text-muted));
   background: transparent;
   border: none;
   flex: 0 0 auto;
 }
 
 .message.assistant .markdown-codex-canvas .markdown-lead-text {
-  font-weight: 650;
-  letter-spacing: 0.01em;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.5;
 }
 
 .message.assistant .markdown-codex-canvas .markdown-lead-plan {
-  border-left-color: color-mix(in srgb, #2563eb 55%, var(--border-strong));
+  border-left-color: color-mix(in srgb, var(--status-success, #16a34a) 62%, var(--border-strong));
+  background: color-mix(in srgb, var(--status-success, #16a34a) 7%, var(--surface-card-strong));
 }
 
 .message.assistant .markdown-codex-canvas .markdown-lead-result {

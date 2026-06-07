@@ -276,11 +276,19 @@
 .message.assistant .bubble {
   max-width: 100%;
   width: 100%;
-  padding: 8px 10px;
-  background: color-mix(in srgb, var(--surface-card-strong) 72%, var(--surface-messages));
-  border: 1px solid color-mix(in srgb, var(--border-subtle) 78%, transparent);
+  padding: 2px 6px;
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 8px;
   box-shadow: none;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.message.assistant:not(.message-agent-task) .bubble:hover {
+  background: color-mix(in srgb, var(--surface-card-strong) 34%, transparent);
+  border-color: color-mix(in srgb, var(--border-subtle) 28%, transparent);
 }
 
 .message.assistant.message-agent-task {
