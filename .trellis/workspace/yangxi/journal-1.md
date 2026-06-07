@@ -905,3 +905,51 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 22: Highlight matched text in content search preview
+
+**Date**: 2026-06-08
+**Task**: Highlight matched text in content search preview
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Matched text highlighting | Added `renderHighlightedPreview` in SearchPalette to highlight matched substrings in `<mark>` tags |
+| Matched text field | Added `matchedText` to `SearchResult` type, populated by `contentProvider` |
+| Highlight styling | New `.search-palette-result-highlight` with warm yellow background, border-radius, and subtle shadow |
+| Fallback behavior | Falls back to current query for highlighting when `matchedText` is absent |
+| Tests | Added tests verifying highlight rendering, fallback behavior, and substring matching |
+
+**Updated Files**:
+- `src/features/search/types.ts`
+- `src/features/search/providers/contentProvider.ts`
+- `src/features/search/components/SearchPalette.tsx`
+- `src/features/search/components/SearchPalette.test.tsx`
+- `src/features/search/providers/contentProvider.test.ts`
+- `src/styles/search-palette.css`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ae1ff39b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

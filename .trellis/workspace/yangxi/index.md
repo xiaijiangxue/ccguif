@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 21
+- **Total Sessions**: 22
 - **Last Active**: 2026-06-08
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~907 | Active |
+| `journal-1.md` | ~955 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 22 | 2026-06-08 | Highlight matched text in content search preview | `ae1ff39b` | `refactor/liquid-precision-ui` |
 | 21 | 2026-06-08 | Add file content search to search palette | `91cfbb16` | `refactor/liquid-precision-ui` |
 | 20 | 2026-06-07 | Replace custom memory picker with unified completion dropdown | `c45e97c9` | `refactor/liquid-precision-ui` |
 | 19 | 2026-06-07 | Refine assistant bubble and codex command card styles | `a56d91f8` | `refactor/liquid-precision-ui` |
