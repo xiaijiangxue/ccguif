@@ -8,16 +8,16 @@
 }
 
 .completion-dropdown--command {
-  max-height: min(360px, 42vh);
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
-  border-radius: 18px;
-  background: color-mix(in srgb, var(--popover) 98%, white 2%);
+  max-height: min(420px, 48vh);
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--popover) 99%, white 1%);
   box-shadow:
-    0 10px 30px rgba(30, 40, 60, 0.1),
-    0 2px 8px rgba(30, 40, 60, 0.06),
-    0 0 0 1px color-mix(in srgb, #4d8ff0 14%, transparent);
-  backdrop-filter: blur(16px);
+    0 18px 42px rgba(15, 23, 42, 0.1),
+    0 3px 10px rgba(15, 23, 42, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
 }
 
 .completion-dropdown--prompt {
@@ -31,7 +31,7 @@
 
 .completion-dropdown--command .dropdown-list {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .dropdown-list--prompt-grid {
@@ -101,25 +101,25 @@
 
 .completion-dropdown--command .dropdown-item {
   position: relative;
-  min-height: 42px;
-  width: calc(100% - 6px);
-  gap: 12px;
-  padding: 0 14px;
+  min-height: 48px;
+  width: 100%;
+  gap: 14px;
+  padding: 0 14px 0 16px;
   margin-right: 0;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 10px;
   background: transparent;
 }
 
 .completion-dropdown--command .dropdown-item::before {
   content: "";
   position: absolute;
-  left: 8px;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
+  left: 6px;
+  top: 10px;
+  bottom: 10px;
+  width: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, #4d8ff0 72%, white 28%);
+  background: color-mix(in srgb, #4d8ff0 76%, white 24%);
   opacity: 0;
   transform: scaleY(0.65);
   transition:
@@ -128,14 +128,14 @@
 }
 
 .completion-dropdown--command .dropdown-item:hover {
-  background: color-mix(in srgb, #4d8ff0 5%, var(--accent));
+  background: color-mix(in srgb, #4d8ff0 5%, var(--popover));
 }
 
 .completion-dropdown--command .dropdown-item.active,
 .completion-dropdown--command .dropdown-item.selected {
-  background: color-mix(in srgb, #4d8ff0 14%, white 86%);
-  border-color: color-mix(in srgb, #4d8ff0 28%, transparent);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  background: color-mix(in srgb, #4d8ff0 15%, var(--popover));
+  border-color: color-mix(in srgb, #4d8ff0 34%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #4d8ff0 8%, transparent);
   color: var(--text-primary);
 }
 
@@ -225,7 +225,7 @@
 .completion-dropdown--command .dropdown-item-label {
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 .dropdown-item--prompt .dropdown-item-label {
@@ -251,7 +251,7 @@
 
 .completion-dropdown--command .dropdown-item-description {
   margin-left: 0;
-  color: color-mix(in srgb, var(--text-muted) 88%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 92%, transparent);
   font-size: 13px;
   font-weight: 450;
   direction: ltr;
@@ -352,7 +352,7 @@
 .completion-dropdown--command .dropdown-item-icon {
   width: 24px;
   height: 24px;
-  color: color-mix(in srgb, var(--foreground) 62%, transparent);
+  color: color-mix(in srgb, var(--foreground) 58%, transparent);
 }
 
 .completion-dropdown--command .dropdown-item-icon svg {
