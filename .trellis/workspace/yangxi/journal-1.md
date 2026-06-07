@@ -810,3 +810,46 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 20: Replace custom memory picker with unified completion dropdown
+
+**Date**: 2026-06-07
+**Task**: Replace custom memory picker with unified completion dropdown
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Memory picker | Removed custom memory picker rendering, types, and helpers; replaced with unified CompletionDropdown |
+| Props cleanup | Removed `selectedManualMemoryIds` prop from ChatInputBoxFooter |
+| Dropdown unification | Normalized file/memory/agent completions to use CompletionDropdown with 450px width |
+| Styles | Refined dropdown sizing, hover/active states to use themed variables, adjusted item spacing and indicator bar
+
+**Updated Files**:
+- `src/features/composer/components/ChatInputBox/ChatInputBoxFooter.tsx`
+- `src/features/composer/components/ChatInputBox/styles/dropdown.css`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c45e97c9` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

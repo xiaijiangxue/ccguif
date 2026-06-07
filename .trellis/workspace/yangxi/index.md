@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 19
+- **Total Sessions**: 20
 - **Last Active**: 2026-06-07
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~812 | Active |
+| `journal-1.md` | ~855 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 20 | 2026-06-07 | Replace custom memory picker with unified completion dropdown | `c45e97c9` | `refactor/liquid-precision-ui` |
 | 19 | 2026-06-07 | Refine assistant bubble and codex command card styles | `a56d91f8` | `refactor/liquid-precision-ui` |
 | 18 | 2026-06-07 | Improve virtualization filtering and reasoning display | `1d320220` | `refactor/liquid-precision-ui` |
 | 17 | 2026-06-07 | 优化重命名弹窗样式 | `c9f28bda` | `refactor/liquid-precision-ui` |
