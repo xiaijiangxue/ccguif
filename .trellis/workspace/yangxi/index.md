@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 17
+- **Total Sessions**: 18
 - **Last Active**: 2026-06-07
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~719 | Active |
+| `journal-1.md` | ~769 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 18 | 2026-06-07 | Improve virtualization filtering and reasoning display | `1d320220` | `refactor/liquid-precision-ui` |
 | 17 | 2026-06-07 | 优化重命名弹窗样式 | `c9f28bda` | `refactor/liquid-precision-ui` |
 | 16 | 2026-06-06 | 提交消息渲染状态优化 | `6d70c150` | `refactor/liquid-precision-ui` |
 | 15 | 2026-06-06 | 提交消息时间线虚拟化展示优化 | `8251bfd7` | `refactor/liquid-precision-ui` |

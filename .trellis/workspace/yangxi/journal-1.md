@@ -717,3 +717,53 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 18: Improve virtualization filtering and reasoning display
+
+**Date**: 2026-06-07
+**Task**: Improve virtualization filtering and reasoning display
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Virtualization filtering | Added `shouldIncludeTimelineProjectionRowInVirtualWindow` to filter bash groups, canvas command cards, and encrypted reasoning from virtual window |
+| Row measurement | Replaced `measureElement` with ResizeObserver-based per-row measurement via `getVirtualTimelineRowRef` |
+| Streaming virtualization | Removed separate streaming threshold; thinking rows always skip virtualization |
+| Reasoning display | Added `normalizeReasoningDisplayText` to collapse consecutive blank lines |
+| CSS refinement | Polished assistant bubble, thinking block, reasoning markdown, and code block styles |
+
+**Updated Files**:
+- `src/features/messages/components/MessagesRows.tsx`
+- `src/features/messages/components/MessagesRows.stream-mitigation.test.tsx`
+- `src/features/messages/components/MessagesTimeline.tsx`
+- `src/features/messages/components/messagesTimelineVirtualization.ts`
+- `src/features/messages/components/messagesTimelineVirtualization.test.ts`
+- `src/styles/messages.part1.css`
+- `src/styles/messages.part2.css`
+- `src/styles/tool-blocks-shell.css`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1d320220` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
