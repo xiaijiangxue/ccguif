@@ -853,3 +853,55 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 21: Add file content search to search palette
+
+**Date**: 2026-06-08
+**Task**: Add file content search to search palette
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Backend | New `file_access` module and tauri command for workspace text search |
+| Content provider | `contentProvider.ts` maps workspace text search results to palette items |
+| Content search hook | `usePaletteContentSearch` with debounced search and pagination |
+| SearchPalette | Added content search status, error display, load-more on scroll |
+| New result kind | Added `content` result kind with en/zh i18n strings |
+| Tests | Added tests for hooks, provider, scoring, and search palette |
+| CSS refinement | Updated styles across search-palette, browser-agent-window, clone-modal, worktree-modal and other dialog components |
+
+**Updated Files**:
+- `openspec/changes/add-search-palette-file-content/` (new)
+- `src-tauri/src/workspaces/files.rs` (refactored)
+- `src-tauri/src/workspaces/files/tests.rs` (new)
+- `src/features/search/providers/contentProvider.ts` (new)
+- `src/features/search/hooks/usePaletteContentSearch.ts` (new)
+- `src/features/search/components/SearchPalette.tsx`
+- `src/services/tauri.ts`
+- `src/styles/search-palette.css` and various dialog CSS files
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `91cfbb16` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
