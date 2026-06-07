@@ -43,6 +43,7 @@ describe("mapWorkspaceTextSearchToContentResults", () => {
       line: 10,
       column: 5,
       preview: "const codemoss = true",
+      matchedText: "codemoss",
       matchCount: 2,
       matchId: "src/app.ts:10:5",
       locationLabel: "src/app.ts:10:5",

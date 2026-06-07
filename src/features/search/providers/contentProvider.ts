@@ -62,6 +62,7 @@ export function mapWorkspaceTextSearchToContentResults({
         line: match.line,
         column: match.column,
         preview,
+        matchedText: normalizedQuery,
         matchCount: file.match_count,
         matchId,
         sourceKind: "content",

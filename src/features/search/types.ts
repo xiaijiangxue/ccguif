@@ -37,6 +37,7 @@ export type SearchResult = {
   line?: number;
   column?: number;
   preview?: string;
+  matchedText?: string;
   matchCount?: number;
   matchId?: string;
   historyText?: string;

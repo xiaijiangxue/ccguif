@@ -18,6 +18,45 @@ function sanitizeSearchQueryInput(value: string): string {
   return value.replace(INVISIBLE_QUERY_CHARS_REGEX, "");
 }
 
+function renderHighlightedPreview(preview: string, matchedText?: string) {
+  const normalizedMatch = matchedText?.trim();
+  if (!normalizedMatch) {
+    return preview;
+  }
+
+  const previewLower = preview.toLocaleLowerCase();
+  const matchLower = normalizedMatch.toLocaleLowerCase();
+  const segments = [];
+  let cursor = 0;
+  let matchIndex = previewLower.indexOf(matchLower, cursor);
+
+  while (matchIndex >= 0) {
+    if (matchIndex > cursor) {
+      segments.push(preview.slice(cursor, matchIndex));
+    }
+    const matchEnd = matchIndex + normalizedMatch.length;
+    segments.push(
+      <mark
+        className="search-palette-result-highlight"
+        key={`${matchIndex}-${matchEnd}`}
+      >
+        {preview.slice(matchIndex, matchEnd)}
+      </mark>,
+    );
+    cursor = matchEnd;
+    matchIndex = previewLower.indexOf(matchLower, cursor);
+  }
+
+  if (cursor === 0) {
+    return preview;
+  }
+  if (cursor < preview.length) {
+    segments.push(preview.slice(cursor));
+  }
+
+  return <>{segments}</>;
+}
+
 type SearchPaletteProps = {
   isOpen: boolean;
   scope: SearchScope;
@@ -313,7 +352,9 @@ export function SearchPalette({
                 <span className="search-palette-result-main">
                   <span className="search-palette-result-title">{result.title}</span>
                   {result.kind === "content" && result.preview ? (
-                    <span className="search-palette-result-preview">{result.preview}</span>
+                    <span className="search-palette-result-preview">
+                      {renderHighlightedPreview(result.preview, result.matchedText ?? trimmedVisibleQuery)}
+                    </span>
                   ) : result.subtitle ? (
                     <span className="search-palette-result-subtitle">{result.subtitle}</span>
                   ) : null}

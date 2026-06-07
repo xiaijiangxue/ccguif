@@ -260,6 +260,15 @@
   overflow: hidden;
 }
 
+.search-palette-result-highlight {
+  background: #ffe58a;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #b7791f 34%, transparent);
+  color: #251a00;
+  font-weight: 700;
+  padding: 0 3px;
+}
+
 .search-palette-result-tags {
   display: flex;
   flex-wrap: wrap;

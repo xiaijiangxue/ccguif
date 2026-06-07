@@ -43,6 +43,7 @@ function makeContentResult(): SearchResult {
     line: 3,
     column: 15,
     preview: "const codemoss = createApp();",
+    matchedText: "codemoss",
     sourceKind: "content",
     locationLabel: "src/index.ts:3:15",
   };
@@ -314,10 +315,80 @@ describe("SearchPalette", () => {
     );
 
     expect(screen.getByText("src/index.ts")).toBeTruthy();
-    expect(screen.getByText("const codemoss = createApp();")).toBeTruthy();
+    const preview = document.querySelector(".search-palette-result-preview");
+    expect(preview?.textContent).toBe("const codemoss = createApp();");
+    const highlightedMatch = screen.getByText("codemoss");
+    expect(highlightedMatch.tagName).toBe("MARK");
+    expect(highlightedMatch.classList.contains("search-palette-result-highlight")).toBe(true);
     expect(screen.getAllByText("searchPalette.typeContent").length).toBeGreaterThan(0);
     expect(screen.getByText(/searchPalette.sourceTag: searchPalette.sourceContent/)).toBeTruthy();
     expect(screen.getByText(/searchPalette.locationTag: src\/index\.ts:3:15/)).toBeTruthy();
+  });
+
+  it("highlights content preview with the current query when result has no matched text", () => {
+    const resultWithoutMatchedText = {
+      ...makeContentResult(),
+      matchedText: undefined,
+    };
+
+    render(
+      <SearchPalette
+        isOpen
+        scope="global"
+        contentFilters={["content"]}
+        workspaceName="mossx"
+        query="clear"
+        results={[
+          {
+            ...resultWithoutMatchedText,
+            preview: "Clear and concise guidance",
+          },
+        ]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    const highlightedMatch = screen.getByText("Clear");
+    expect(highlightedMatch.tagName).toBe("MARK");
+    expect(highlightedMatch.classList.contains("search-palette-result-highlight")).toBe(true);
+  });
+
+  it("highlights query text inside longer matched words in content previews", () => {
+    render(
+      <SearchPalette
+        isOpen
+        scope="global"
+        contentFilters={["content"]}
+        workspaceName="mossx"
+        query="clear"
+        results={[
+          {
+            ...makeContentResult(),
+            preview: "Use when requirements are unclear or evolving",
+            matchedText: "clear",
+          },
+        ]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    const preview = document.querySelector(".search-palette-result-preview");
+    expect(preview?.textContent).toBe("Use when requirements are unclear or evolving");
+    const highlightedMatch = screen.getByText("clear");
+    expect(highlightedMatch.tagName).toBe("MARK");
+    expect(highlightedMatch.classList.contains("search-palette-result-highlight")).toBe(true);
   });
 
   it("renders a dedicated file-content filter button", () => {
