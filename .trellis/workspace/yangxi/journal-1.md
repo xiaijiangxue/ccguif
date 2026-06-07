@@ -767,3 +767,46 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 19: Refine assistant bubble and codex command card styles
+
+**Date**: 2026-06-07
+**Task**: Refine assistant bubble and codex command card styles
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+(Add summary)
+
+### Main Changes
+
+| Feature | Description |
+|---------|-------------|
+| Assistant bubble | Made transparent by default with hover-only background/border reveal; added transition; reduced padding |
+| Codex command card | Refined padding/margin, right-side border-radius, surface-card-strong background |
+| Lead plan styling | Changed border from blue to success green with background tint |
+| Lead text | Reduced font-weight, removed letter-spacing, improved line-height |
+
+**Updated Files**:
+- `src/styles/messages.part1.css`
+- `src/styles/messages.part2.css`
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a56d91f8` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
