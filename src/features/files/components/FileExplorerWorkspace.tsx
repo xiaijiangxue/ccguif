@@ -230,7 +230,7 @@ export function FileExplorerWorkspace({
         aria-label={t("layout.resizeSidebar")}
         onPointerDown={handleResizeStart}
       />
-      <div className="detached-file-explorer-viewer">
+      <div className="detached-file-explorer-viewer" data-file-preview-scope="true">
         {showViewerExpandButton ? (
           <button
             type="button"

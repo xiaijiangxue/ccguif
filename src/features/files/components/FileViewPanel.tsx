@@ -2275,7 +2275,11 @@ export function FileViewPanel({
   );
 
   return (
-    <div className={`fvp${usesSingleRowHeader ? " fvp-single-row-header" : ""}`} ref={panelRootRef}>
+    <div
+      className={`fvp${usesSingleRowHeader ? " fvp-single-row-header" : ""}`}
+      data-file-preview-scope="true"
+      ref={panelRootRef}
+    >
       {usesSingleRowHeader ? renderSingleRowHeader() : renderTabs()}
       {tabContextMenu.visible && canCloseAllTabs ? (
         <div

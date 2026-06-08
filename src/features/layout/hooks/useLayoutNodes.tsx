@@ -1382,6 +1382,19 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
         return;
       }
       event.preventDefault();
+      const activeElement =
+        event.target instanceof Element
+          ? event.target
+          : document.activeElement instanceof Element
+            ? document.activeElement
+            : null;
+      const isFilePreviewFocused = Boolean(
+        activeElement?.closest('[data-file-preview-scope="true"]'),
+      );
+      if (isFilePreviewFocused && options.editorFilePath) {
+        options.onCloseEditorTab(options.editorFilePath);
+        return;
+      }
       if (!options.activeWorkspaceId || !options.activeThreadId) {
         return;
       }
@@ -1403,6 +1416,8 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
     options.activeThreadId,
     options.activeWorkspaceId,
     options.closeCurrentSessionShortcut,
+    options.editorFilePath,
+    options.onCloseEditorTab,
   ]);
   const threadStatusById = options.threadStatusById;
   const showTopbarTabMenu = useCallback(

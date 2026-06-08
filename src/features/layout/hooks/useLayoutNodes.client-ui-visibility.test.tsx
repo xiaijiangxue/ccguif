@@ -201,7 +201,9 @@ vi.mock("../../search/components/WorkspaceSearchPanel", () => ({
 }));
 
 vi.mock("../../files/components/FileViewPanel", () => ({
-  FileViewPanel: () => <div data-testid="file-view-panel" />,
+  FileViewPanel: () => (
+    <div data-testid="file-view-panel" data-file-preview-scope="true" tabIndex={0} />
+  ),
 }));
 
 vi.mock("../../prompts/components/PromptPanel", () => ({
@@ -845,6 +847,32 @@ describe("useLayoutNodes client UI visibility", () => {
     fireEvent.click(screen.getByRole("button", { name: "open file reference" }));
 
     expect(onOpenFile).toHaveBeenCalledWith("src/App.tsx");
+  });
+
+  it("closes the focused file preview tab before falling back to the current session tab shortcut", async () => {
+    const onCloseEditorTab = vi.fn();
+    const onSelectWorkspace = vi.fn();
+    const { result } = await renderUseLayoutNodes(
+      createLayoutOptions({
+        centerMode: "editor",
+        editorFilePath: "src/App.tsx",
+        openEditorTabs: ["src/App.tsx", "src/main.tsx"],
+        closeCurrentSessionShortcut: "cmd+w",
+        onCloseEditorTab,
+        onSelectWorkspace,
+      }),
+    );
+
+    render(<>{result.current.mainContentNode}</>);
+    screen.getByTestId("file-view-panel").focus();
+
+    fireEvent.keyDown(window, {
+      key: "w",
+      ctrlKey: true,
+    });
+
+    expect(onCloseEditorTab).toHaveBeenCalledWith("src/App.tsx");
+    expect(onSelectWorkspace).not.toHaveBeenCalled();
   });
 
   it("toggles the Project Map toolbar icon off from full Project Map mode", async () => {

@@ -219,6 +219,9 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
     };
     #[cfg(not(target_os = "linux"))]
     let file_menu = {
+        let close_window_item =
+            MenuItemBuilder::with_id("file_close_window", "关闭窗口").build(handle)?;
+        registry.register("file_close_window", &close_window_item);
         let submenu = SubmenuBuilder::with_id(handle, "file_menu", "文件")
             .items(&[
                 &new_agent_item,
@@ -228,7 +231,7 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
                 &PredefinedMenuItem::separator(handle)?,
                 &add_workspace_item,
                 &PredefinedMenuItem::separator(handle)?,
-                &PredefinedMenuItem::close_window(handle, None)?,
+                &close_window_item,
                 #[cfg(not(target_os = "macos"))]
                 &PredefinedMenuItem::quit(handle, None)?,
             ])
@@ -393,14 +396,16 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
     #[cfg(not(target_os = "linux"))]
     let window_menu = {
         let reload_item = build_reload_window_item(handle)?;
+        let close_item = MenuItemBuilder::with_id("window_close", "关闭窗口").build(handle)?;
         registry.register("window_reload", &reload_item);
+        registry.register("window_close", &close_item);
         let submenu = SubmenuBuilder::with_id(handle, "window_menu", "窗口")
             .items(&[
                 &PredefinedMenuItem::minimize(handle, None)?,
                 &PredefinedMenuItem::maximize(handle, None)?,
                 &reload_item,
                 &PredefinedMenuItem::separator(handle)?,
-                &PredefinedMenuItem::close_window(handle, None)?,
+                &close_item,
             ])
             .build()?;
         registry.register_submenu("window_menu", &submenu);
@@ -549,6 +554,15 @@ mod tests {
         assert_eq!(reload_window_accelerator(), Some("CmdOrCtrl+R"));
         #[cfg(not(target_os = "macos"))]
         assert_eq!(reload_window_accelerator(), None);
+    }
+
+    #[test]
+    fn close_window_menu_does_not_reserve_cmd_w() {
+        let menu_source = include_str!("menu.rs");
+        let predefined_close_window = ["PredefinedMenuItem", "::", "close_window"].concat();
+        let close_window_accelerator = ["CmdOrCtrl", "+", "W"].concat();
+        assert!(!menu_source.contains(&predefined_close_window));
+        assert!(!menu_source.contains(&close_window_accelerator));
     }
 
     #[test]

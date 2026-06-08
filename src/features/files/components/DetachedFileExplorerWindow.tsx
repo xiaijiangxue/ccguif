@@ -14,6 +14,7 @@ import {
   configureDetachedExternalChangeMonitor,
 } from "../../../services/tauri";
 import type { WorkspaceInfo } from "../../../types";
+import { matchesShortcutForPlatform } from "../../../utils/shortcuts";
 import { isMacPlatform, isWindowsPlatform } from "../../../utils/platform";
 import {
   buildDetachedFileExplorerWindowTitle,
@@ -183,6 +184,25 @@ export function DetachedFileExplorerWindow() {
         .catch(reportDetachedExternalChangeMonitorCleanupError);
     };
   }, [session]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat) {
+        return;
+      }
+      if (!matchesShortcutForPlatform(event, appSettings.closeCurrentSessionShortcut)) {
+        return;
+      }
+      if (!activeFilePath) {
+        return;
+      }
+      event.preventDefault();
+      closeTab(activeFilePath);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeFilePath, appSettings.closeCurrentSessionShortcut, closeTab]);
 
   const renderCompactMenubar = () => (
     <header
