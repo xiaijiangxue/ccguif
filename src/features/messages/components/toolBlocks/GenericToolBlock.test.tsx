@@ -85,6 +85,33 @@ const fileChangePathHintCompatItem: Extract<ConversationItem, { kind: "tool" }> 
   changes: [{ path: "src/App.tsx", kind: "modified" }],
 };
 
+const multiAddedFileChangeWithOutputDiffItem: Extract<ConversationItem, { kind: "tool" }> = {
+  id: "tool-2-added-output-diff",
+  kind: "tool",
+  toolType: "fileChange",
+  title: "File changes",
+  detail: "{}",
+  status: "completed",
+  output: [
+    "diff --git a/src/contentProvider.ts b/src/contentProvider.ts",
+    "--- /dev/null",
+    "+++ b/src/contentProvider.ts",
+    "@@ -0,0 +1,2 @@",
+    "+export const contentProvider = {};",
+    "+export const contentProviderId = 'main';",
+    "diff --git a/src/contentProvider.test.ts b/src/contentProvider.test.ts",
+    "--- /dev/null",
+    "+++ b/src/contentProvider.test.ts",
+    "@@ -0,0 +1,2 @@",
+    "+import { contentProvider } from './contentProvider';",
+    "+expect(contentProvider).toBeTruthy();",
+  ].join("\n"),
+  changes: [
+    { path: "src/contentProvider.ts", kind: "added" },
+    { path: "src/contentProvider.test.ts", kind: "added" },
+  ],
+};
+
 const markdownOutputItem: Extract<ConversationItem, { kind: "tool" }> = {
   id: "tool-3",
   kind: "tool",
@@ -460,6 +487,20 @@ describe("GenericToolBlock", () => {
 
     expect(screen.getAllByText("+1").length).toBeGreaterThan(0);
     expect(screen.getAllByText("-1").length).toBeGreaterThan(0);
+  });
+
+  it("shows inline diff previews for added files when multi-file changes only carry output diff", () => {
+    render(
+      <GenericToolBlock
+        item={multiAddedFileChangeWithOutputDiffItem}
+        isExpanded
+        onToggle={vi.fn()}
+      />,
+    );
+
+    expect(document.querySelectorAll(".tool-change-inline-diff")).toHaveLength(2);
+    expect(screen.getByText("export const contentProvider = {};")).toBeTruthy();
+    expect(screen.getByText("import { contentProvider } from './contentProvider';")).toBeTruthy();
   });
 
   it("opens diff path when clicking file-change row link without toggling card", () => {

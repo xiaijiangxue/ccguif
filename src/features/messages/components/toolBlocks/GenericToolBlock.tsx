@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { convertFileSrc } from '@tauri-apps/api/core';
 import type { ConversationItem } from '../../../../types';
 import { parseDiff, type ParsedDiffLine } from '../../../../utils/diff';
+import { inferFileChangesFromPayload } from '../../../../utils/threadItemsFileChanges';
 import { computeDiff } from '../../utils/diffUtils';
 import { LocalImage } from '../LocalImage';
 import { Markdown } from '../Markdown';
@@ -833,27 +834,40 @@ function resolveChangeDiffText(
   change: { path: string; diff?: string },
   allChanges: Array<{ path: string; kind?: string; diff?: string }>,
   candidateArgs: Record<string, unknown>[],
+  inferredDiffEntries: Array<{ path: string; diff?: string }>,
   outputDiffText: string,
 ): string | undefined {
   const direct = (change.diff ?? '').trim();
   if (direct) {
     return direct;
   }
-  if (allChanges.length === 1) {
-    for (const args of candidateArgs) {
-      const pathHint = getFirstStringFieldCaseInsensitive(args, FILE_CHANGE_PATH_KEYS);
-      if (pathHint && !pathHintMatches(pathHint, change.path)) {
-        continue;
-      }
-      const argsDiff = getFirstStringFieldCaseInsensitive(args, FILE_CHANGE_DIFF_KEYS);
-      if (argsDiff) {
-        return argsDiff;
-      }
-      const synthetic = buildSyntheticUnifiedDiffFromArgs(args);
-      if (synthetic) {
-        return synthetic;
-      }
+  for (const inferred of inferredDiffEntries) {
+    if (!pathHintMatches(inferred.path, change.path)) {
+      continue;
     }
+    const inferredDiff = (inferred.diff ?? '').trim();
+    if (inferredDiff) {
+      return inferredDiff;
+    }
+  }
+  for (const args of candidateArgs) {
+    const pathHint = getFirstStringFieldCaseInsensitive(args, FILE_CHANGE_PATH_KEYS);
+    if (!pathHint && allChanges.length > 1) {
+      continue;
+    }
+    if (pathHint && !pathHintMatches(pathHint, change.path)) {
+      continue;
+    }
+    const argsDiff = getFirstStringFieldCaseInsensitive(args, FILE_CHANGE_DIFF_KEYS);
+    if (argsDiff) {
+      return argsDiff;
+    }
+    const synthetic = buildSyntheticUnifiedDiffFromArgs(args);
+    if (synthetic) {
+      return synthetic;
+    }
+  }
+  if (allChanges.length === 1) {
     const outputTrimmed = outputDiffText.trim();
     if (outputTrimmed) {
       return outputTrimmed;
@@ -876,17 +890,20 @@ function resolveChangeDiffStats(
   if (direct.additions > 0 || direct.deletions > 0) {
     return direct;
   }
-  if (allChanges.length === 1) {
-    for (const args of candidateArgs) {
-      const pathHint = getFirstStringFieldCaseInsensitive(args, FILE_CHANGE_PATH_KEYS);
-      if (pathHint && !pathHintMatches(pathHint, change.path)) {
-        continue;
-      }
-      const fromArgs = collectDiffStatsFromArgs(args);
-      if (fromArgs.additions > 0 || fromArgs.deletions > 0) {
-        return fromArgs;
-      }
+  for (const args of candidateArgs) {
+    const pathHint = getFirstStringFieldCaseInsensitive(args, FILE_CHANGE_PATH_KEYS);
+    if (!pathHint && allChanges.length > 1) {
+      continue;
     }
+    if (pathHint && !pathHintMatches(pathHint, change.path)) {
+      continue;
+    }
+    const fromArgs = collectDiffStatsFromArgs(args);
+    if (fromArgs.additions > 0 || fromArgs.deletions > 0) {
+      return fromArgs;
+    }
+  }
+  if (allChanges.length === 1) {
     if (outputStats.additions > 0 || outputStats.deletions > 0) {
       return outputStats;
     }
@@ -894,7 +911,43 @@ function resolveChangeDiffStats(
   return direct;
 }
 
-function buildDiffPreview(diffText?: string): {
+function buildAddedFilePreviewFallback(diffText: string): ParsedDiffLine[] {
+  const lines = diffText.split('\n');
+  const previewLines: ParsedDiffLine[] = [];
+  let newLine = 1;
+
+  for (const rawLine of lines) {
+    if (
+      rawLine.startsWith('diff --git ') ||
+      rawLine.startsWith('index ') ||
+      rawLine.startsWith('new file mode ') ||
+      rawLine.startsWith('--- ') ||
+      rawLine.startsWith('+++ ') ||
+      rawLine.startsWith('*** ') ||
+      rawLine.startsWith('@@')
+    ) {
+      continue;
+    }
+    if (rawLine.startsWith('\\')) {
+      continue;
+    }
+    const text = rawLine.startsWith('+') ? rawLine.slice(1) : rawLine;
+    if (!text && rawLine.length === 0) {
+      continue;
+    }
+    previewLines.push({
+      type: 'add',
+      oldLine: null,
+      newLine,
+      text,
+    });
+    newLine += 1;
+  }
+
+  return previewLines;
+}
+
+function buildDiffPreview(diffText?: string, normalizedKind?: NormalizedChangeKind): {
   lines: ParsedDiffLine[];
   truncated: boolean;
 } {
@@ -902,11 +955,15 @@ function buildDiffPreview(diffText?: string): {
     return { lines: [], truncated: false };
   }
   const parsed = parseDiff(diffText);
-  if (parsed.length <= FILE_CHANGE_DIFF_PREVIEW_MAX_LINES) {
-    return { lines: parsed, truncated: false };
+  const previewLines =
+    parsed.length > 0 || normalizedKind !== 'added'
+      ? parsed
+      : buildAddedFilePreviewFallback(diffText);
+  if (previewLines.length <= FILE_CHANGE_DIFF_PREVIEW_MAX_LINES) {
+    return { lines: previewLines, truncated: false };
   }
   return {
-    lines: parsed.slice(0, FILE_CHANGE_DIFF_PREVIEW_MAX_LINES),
+    lines: previewLines.slice(0, FILE_CHANGE_DIFF_PREVIEW_MAX_LINES),
     truncated: true,
   };
 }
@@ -918,16 +975,22 @@ function toDisplayChanges(
   outputDiffText: string,
   includePreview: boolean,
 ): DisplayChange[] {
+  const inferredDiffEntries = [
+    ...candidateArgs.flatMap((args) => inferFileChangesFromPayload(args)),
+    ...inferFileChangesFromPayload(outputDiffText),
+  ];
   return changes.map((change) => {
     const normalizedKind = normalizeChangeKind(change.kind);
     const diffText = resolveChangeDiffText(
       change,
       changes,
       candidateArgs,
+      inferredDiffEntries,
       outputDiffText,
     );
-    const preview = includePreview
-      ? buildDiffPreview(diffText)
+    const shouldBuildPreview = includePreview || normalizedKind === 'added';
+    const preview = shouldBuildPreview
+      ? buildDiffPreview(diffText, normalizedKind)
       : { lines: [], truncated: false };
     return {
       path: change.path,
@@ -1392,7 +1455,10 @@ export const GenericToolBlock = memo(function GenericToolBlock({
         {displayChanges.map((change, index) => (
           (() => {
             const changeEntryKey = getChangeEntryKey(change.path, index);
-            const isChangeExpanded = expandedCollapsedChangeRows[changeEntryKey] ?? false;
+            const defaultExpanded =
+              change.normalizedKind === 'added' && change.diffPreviewLines.length > 0;
+            const isChangeExpanded =
+              expandedCollapsedChangeRows[changeEntryKey] ?? defaultExpanded;
             return (
               <div
                 key={changeEntryKey}
