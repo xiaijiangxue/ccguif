@@ -5,15 +5,23 @@ import {
 } from "../../../utils/shortcuts";
 
 type UsePanelShortcutsOptions = {
+  toggleProjectsSidebarShortcut: string | null;
   toggleDebugPanelShortcut: string | null;
   toggleTerminalShortcut: string | null;
+  sidebarCollapsed: boolean;
+  onCollapseSidebar: () => void;
+  onExpandSidebar: () => void;
   onToggleDebug: () => void;
   onToggleTerminal: () => void;
 };
 
 export function usePanelShortcuts({
+  toggleProjectsSidebarShortcut,
   toggleDebugPanelShortcut,
   toggleTerminalShortcut,
+  sidebarCollapsed,
+  onCollapseSidebar,
+  onExpandSidebar,
   onToggleDebug,
   onToggleTerminal,
 }: UsePanelShortcutsOptions) {
@@ -28,6 +36,15 @@ export function usePanelShortcuts({
       ) {
         return;
       }
+      if (matchesShortcutForPlatform(event, toggleProjectsSidebarShortcut)) {
+        event.preventDefault();
+        if (sidebarCollapsed) {
+          onExpandSidebar();
+        } else {
+          onCollapseSidebar();
+        }
+        return;
+      }
       if (matchesShortcutForPlatform(event, toggleDebugPanelShortcut)) {
         event.preventDefault();
         onToggleDebug();
@@ -40,5 +57,14 @@ export function usePanelShortcuts({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onToggleDebug, onToggleTerminal, toggleDebugPanelShortcut, toggleTerminalShortcut]);
+  }, [
+    onCollapseSidebar,
+    onExpandSidebar,
+    onToggleDebug,
+    onToggleTerminal,
+    sidebarCollapsed,
+    toggleDebugPanelShortcut,
+    toggleProjectsSidebarShortcut,
+    toggleTerminalShortcut,
+  ]);
 }

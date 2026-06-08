@@ -8,12 +8,14 @@ export function useLayoutController({
   activeWorkspaceId,
   setActiveTab,
   setDebugOpen,
+  toggleProjectsSidebarShortcut,
   toggleDebugPanelShortcut,
   toggleTerminalShortcut,
 }: {
   activeWorkspaceId: string | null;
   setActiveTab: (tab: "projects" | "codex" | "spec" | "git" | "log") => void;
   setDebugOpen: (value: boolean | ((prev: boolean) => boolean)) => void;
+  toggleProjectsSidebarShortcut: string | null;
   toggleDebugPanelShortcut: string | null;
   toggleTerminalShortcut: string | null;
 }) {
@@ -61,8 +63,12 @@ export function useLayoutController({
   });
 
   usePanelShortcuts({
+    toggleProjectsSidebarShortcut,
     toggleDebugPanelShortcut,
     toggleTerminalShortcut,
+    sidebarCollapsed,
+    onCollapseSidebar: collapseSidebar,
+    onExpandSidebar: expandSidebar,
     onToggleDebug: handleDebugClick,
     onToggleTerminal: handleToggleTerminal,
   });

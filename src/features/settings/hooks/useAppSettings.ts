@@ -166,7 +166,7 @@ const defaultSettings: AppSettings = {
   cycleOpenSessionNextShortcut: "cmd+shift+]",
   toggleLeftConversationSidebarShortcut: "cmd+alt+[",
   toggleRightConversationSidebarShortcut: "cmd+alt+]",
-  toggleProjectsSidebarShortcut: "cmd+shift+p",
+  toggleProjectsSidebarShortcut: "cmd+b",
   toggleGitSidebarShortcut: "cmd+shift+g",
   toggleGlobalSearchShortcut: "cmd+o",
   toggleDebugPanelShortcut: "cmd+shift+d",
@@ -272,6 +272,14 @@ const defaultSettings: AppSettings = {
 };
 
 const CODEX_WARM_TTL_DEFAULT_SECONDS = 7200;
+const LEGACY_TOGGLE_PROJECTS_SIDEBAR_SHORTCUT = "cmd+shift+p";
+
+function normalizeToggleProjectsSidebarShortcut(value: string | null | undefined) {
+  const normalized = normalizeShortcutValue(value);
+  return normalized === LEGACY_TOGGLE_PROJECTS_SIDEBAR_SHORTCUT
+    ? defaultSettings.toggleProjectsSidebarShortcut
+    : normalized;
+}
 
 function normalizeAppSettings(
   settings: AppSettings,
@@ -458,6 +466,9 @@ function normalizeAppSettings(
       : "enter",
     newWorktreeAgentShortcut: normalizeNewWorktreeShortcut(
       settings.newWorktreeAgentShortcut,
+    ),
+    toggleProjectsSidebarShortcut: normalizeToggleProjectsSidebarShortcut(
+      settings.toggleProjectsSidebarShortcut,
     ),
     toggleGlobalSearchShortcut: normalizeGlobalSearchShortcut(
       settings.toggleGlobalSearchShortcut,

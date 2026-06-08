@@ -303,6 +303,7 @@ export function AppShell() {
     activeWorkspaceId,
     setActiveTab,
     setDebugOpen,
+    toggleProjectsSidebarShortcut: appSettings.toggleProjectsSidebarShortcut,
     toggleDebugPanelShortcut: appSettings.toggleDebugPanelShortcut,
     toggleTerminalShortcut: appSettings.toggleTerminalShortcut,
   });

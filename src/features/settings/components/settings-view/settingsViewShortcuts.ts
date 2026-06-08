@@ -288,7 +288,7 @@ export const shortcutActions: ShortcutActionMetadata[] = [
     draftKey: "projectsSidebar",
     category: "panels",
     labelKey: "settings.toggleProjectsSidebar",
-    defaultShortcut: "cmd+shift+p",
+    defaultShortcut: "cmd+b",
     scope: "native-menu",
     triggerSurface: "native-menu",
   },

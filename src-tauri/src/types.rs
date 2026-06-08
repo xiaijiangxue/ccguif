@@ -1380,7 +1380,7 @@ fn default_close_current_session_shortcut() -> Option<String> {
 }
 
 fn default_toggle_projects_sidebar_shortcut() -> Option<String> {
-    Some("cmd+shift+p".to_string())
+    Some("cmd+b".to_string())
 }
 
 fn default_toggle_git_sidebar_shortcut() -> Option<String> {

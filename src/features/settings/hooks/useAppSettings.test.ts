@@ -146,6 +146,32 @@ describe("useAppSettings", () => {
     );
   });
 
+  it("upgrades the legacy projects sidebar default shortcut while loading settings", async () => {
+    getAppSettingsMock.mockResolvedValue({
+      toggleProjectsSidebarShortcut: "cmd+shift+p",
+    } as AppSettings);
+
+    const { result } = renderHook(() => useAppSettings());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.toggleProjectsSidebarShortcut).toBe("cmd+b");
+  });
+
+  it("preserves custom projects sidebar shortcuts while loading settings", async () => {
+    getAppSettingsMock.mockResolvedValue({
+      toggleProjectsSidebarShortcut: "cmd+alt+b",
+    } as AppSettings);
+
+    const { result } = renderHook(() => useAppSettings());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.toggleProjectsSidebarShortcut).toBe(
+      "cmd+alt+b",
+    );
+  });
+
   it("keeps supported Codex auto-compaction thresholds", async () => {
     getAppSettingsMock.mockResolvedValue({
       codexAutoCompactionThresholdPercent: 150,
