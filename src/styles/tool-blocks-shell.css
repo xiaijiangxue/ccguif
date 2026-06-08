@@ -22,32 +22,21 @@
    ============================================ */
 
 .tool-operation-timeline-block {
+  --tool-operation-summary-min-height: 36px;
+  --tool-operation-node-size: 9px;
+  --tool-operation-node-center-y: calc(var(--tool-operation-summary-min-height) / 2);
   position: relative;
   margin: 2px 0;
-  padding: 0 0 0 24px;
-}
-
-.tool-operation-timeline-block::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: -8px;
-  left: 8px;
-  width: 1px;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--border-strong) 18%, transparent),
-    color-mix(in srgb, var(--border-subtle) 70%, transparent)
-  );
+  padding: 0;
 }
 
 .tool-operation-timeline-node {
   position: absolute;
-  top: 14px;
-  left: 4px;
+  top: calc(var(--tool-operation-node-center-y) - var(--tool-operation-node-size) / 2);
+  left: 12px;
   z-index: 1;
-  width: 9px;
-  height: 9px;
+  width: var(--tool-operation-node-size);
+  height: var(--tool-operation-node-size);
   border-radius: 50%;
   background: var(--color-success, var(--status-success));
   box-shadow:
@@ -75,8 +64,8 @@
   grid-template-columns: 24px minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
-  min-height: 36px;
-  padding: 6px 10px;
+  min-height: var(--tool-operation-summary-min-height);
+  padding: 6px 10px 6px 30px;
   gap: 9px;
   color: var(--text-secondary, var(--text-muted));
   background: color-mix(in srgb, var(--surface-card) 34%, transparent);
