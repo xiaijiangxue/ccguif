@@ -19,6 +19,7 @@ import { usePaletteContentSearch } from "../features/search/hooks/usePaletteCont
 import { useUnifiedSearch } from "../features/search/hooks/useUnifiedSearch";
 import type {
   SearchContentFilter,
+  SearchMatchOptions,
   SearchScope,
 } from "../features/search/types";
 import { useWorkspaceSessionActivity } from "../features/session-activity/hooks/useWorkspaceSessionActivity";
@@ -126,6 +127,7 @@ type UseAppShellSearchRadarSectionOptions = {
   listThreadsForWorkspace: ListThreadsForWorkspace;
   rightPanelCollapsed: boolean;
   searchContentFilters: SearchContentFilter[];
+  searchMatchOptions: SearchMatchOptions;
   searchPaletteQuery: string;
   searchScope: SearchScope;
   setGlobalSearchFilesByWorkspace: Dispatch<
@@ -167,6 +169,7 @@ export function useAppShellSearchRadarSection({
   listThreadsForWorkspace,
   rightPanelCollapsed,
   searchContentFilters,
+  searchMatchOptions,
   searchPaletteQuery,
   searchScope,
   setGlobalSearchFilesByWorkspace,
@@ -505,6 +508,7 @@ export function useAppShellSearchRadarSection({
     query: searchPaletteQuery,
     scope: searchScope,
     contentFilters: searchContentFilters,
+    matchOptions: searchMatchOptions,
     workspaces: contentSearchWorkspaces,
     activeWorkspaceId,
     isPaletteOpen: isSearchPaletteOpen,
@@ -512,6 +516,7 @@ export function useAppShellSearchRadarSection({
   const rawSearchResults = useUnifiedSearch({
     query: searchPaletteQuery,
     contentFilters: searchContentFilters,
+    matchOptions: searchMatchOptions,
     workspaceSources: workspaceSearchSources,
     externalResults: contentResults,
     kanbanTasks: scopedKanbanTasks,

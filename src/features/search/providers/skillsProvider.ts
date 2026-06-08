@@ -1,5 +1,7 @@
 import type { SkillOption } from "../../../types";
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
 type NormalizedSkillEntry = {
   name: string;
@@ -32,8 +34,9 @@ export function searchSkills(
   query: string,
   skills: SkillOption[],
   workspaceId?: string | null,
+  matchOptions?: SearchMatchOptions,
 ): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
@@ -67,8 +70,8 @@ export function searchSkills(
 
   const results: SearchResult[] = [];
   for (const skill of normalizedSkills.values()) {
-    const searchText = `${skill.name} ${skill.description}`.toLowerCase();
-    const index = searchText.indexOf(normalizedQuery);
+    const searchText = `${skill.name} ${skill.description}`;
+    const index = findSearchMatchIndex(searchText, normalizedQuery, matchOptions);
     if (index < 0) {
       continue;
     }

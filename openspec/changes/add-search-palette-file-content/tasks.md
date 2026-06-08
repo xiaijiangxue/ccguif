@@ -7,3 +7,4 @@
 - [x] 5. Render content results with path, location, preview, status, and i18n copy.
 - [x] 6. Preserve Workspace Search Panel compatibility.
 - [x] 7. Add focused Rust, service, hook, mapper, and component tests for the new behavior.
+- [x] 8. Add Search Palette case-sensitive and whole-word match toggles across lightweight and file-content results.

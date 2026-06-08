@@ -4,6 +4,8 @@
 
 Search Palette remains a single query surface. Lightweight providers continue to return synchronously. File-content matches are appended as a separate result kind after query settle. In current scope, the active workspace is searched. In global scope, workspaces are searched progressively with bounded concurrency and active/recent workspaces prioritized.
 
+The Palette exposes two compact match toggles in the query row: case-sensitive matching and whole-word matching. These options apply consistently to lightweight in-memory providers and to file-content search requests. More advanced text-search controls, such as regex and include/exclude path filters, remain in the dedicated Workspace Search Panel.
+
 ## Performance Contract
 
 - Short or empty queries do not trigger content search.

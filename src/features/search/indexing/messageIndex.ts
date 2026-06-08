@@ -1,4 +1,6 @@
 import type { ConversationItem } from "../../../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
 export type IndexedMessage = {
   messageId: string;
@@ -31,13 +33,17 @@ export function buildWorkspaceMessageIndex(
   return indexed;
 }
 
-export function makeMessageSnippet(text: string, query: string, radius = 36): string {
-  const normalizedQuery = query.trim().toLowerCase();
+export function makeMessageSnippet(
+  text: string,
+  query: string,
+  radius = 36,
+  matchOptions?: SearchMatchOptions,
+): string {
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return text.slice(0, Math.min(96, text.length));
   }
-  const lower = text.toLowerCase();
-  const hit = lower.indexOf(normalizedQuery);
+  const hit = findSearchMatchIndex(text, normalizedQuery, matchOptions);
   if (hit < 0) {
     return text.slice(0, Math.min(96, text.length));
   }

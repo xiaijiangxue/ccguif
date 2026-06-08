@@ -1,18 +1,21 @@
 import type { ThreadSummary } from "../../../types";
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
 export function searchThreads(
   query: string,
   threads: ThreadSummary[],
   workspaceId: string,
+  matchOptions?: SearchMatchOptions,
 ): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
   const results: SearchResult[] = [];
   for (const thread of threads) {
-    const index = thread.name.toLowerCase().indexOf(normalizedQuery);
+    const index = findSearchMatchIndex(thread.name, normalizedQuery, matchOptions);
     if (index < 0) {
       continue;
     }

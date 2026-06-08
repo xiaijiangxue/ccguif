@@ -130,6 +130,7 @@ function createBaseOptions(workspace = createWorkspace("ws-1", "Workspace 1")) {
     listThreadsForWorkspace: vi.fn(async () => {}),
     rightPanelCollapsed: false,
     searchContentFilters: ["all" as const],
+    searchMatchOptions: { caseSensitive: false, wholeWord: false },
     searchPaletteQuery: "needle",
     searchScope: "active-workspace" as const,
     setGlobalSearchFilesByWorkspace: vi.fn(),
@@ -194,6 +195,7 @@ describe("useAppShellSearchRadarSection", () => {
         listThreadsForWorkspace: vi.fn(async () => {}),
         rightPanelCollapsed: false,
         searchContentFilters: [],
+        searchMatchOptions: { caseSensitive: false, wholeWord: false },
         searchPaletteQuery: "",
         searchScope: "active-workspace",
         setGlobalSearchFilesByWorkspace: vi.fn(),
@@ -275,6 +277,7 @@ describe("useAppShellSearchRadarSection", () => {
         listThreadsForWorkspace: vi.fn(async () => {}),
         rightPanelCollapsed: false,
         searchContentFilters: [],
+        searchMatchOptions: { caseSensitive: false, wholeWord: false },
         searchPaletteQuery: "",
         searchScope: "active-workspace",
         setGlobalSearchFilesByWorkspace: vi.fn(),
@@ -325,6 +328,7 @@ describe("useAppShellSearchRadarSection", () => {
         listThreadsForWorkspace: vi.fn(async () => {}),
         rightPanelCollapsed: false,
         searchContentFilters: [],
+        searchMatchOptions: { caseSensitive: false, wholeWord: false },
         searchPaletteQuery: "",
         searchScope: "active-workspace",
         setGlobalSearchFilesByWorkspace: vi.fn(),
@@ -398,6 +402,25 @@ describe("useAppShellSearchRadarSection", () => {
       expect.objectContaining({
         externalResults: [contentResult],
       }),
+    );
+  });
+
+  it("passes match options into palette content and unified search", () => {
+    const workspace = createWorkspace("ws-1", "Workspace 1");
+    const matchOptions = { caseSensitive: true, wholeWord: true };
+
+    renderHook(() =>
+      useAppShellSearchRadarSection({
+        ...createBaseOptions(workspace),
+        searchMatchOptions: matchOptions,
+      }),
+    );
+
+    expect(usePaletteContentSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ matchOptions }),
+    );
+    expect(useUnifiedSearchMock).toHaveBeenCalledWith(
+      expect.objectContaining({ matchOptions }),
     );
   });
 });

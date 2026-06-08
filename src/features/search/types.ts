@@ -10,6 +10,10 @@ export type SearchResultKind =
 
 export type SearchScope = "active-workspace" | "global";
 export type PaletteContentSearchStatus = "idle" | "loading" | "ready" | "degraded";
+export type SearchMatchOptions = {
+  caseSensitive: boolean;
+  wholeWord: boolean;
+};
 export type SearchContentFilter =
   | "all"
   | "files"

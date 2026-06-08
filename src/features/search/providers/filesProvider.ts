@@ -1,14 +1,20 @@
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
-export function searchFiles(query: string, files: string[], workspaceId: string): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+export function searchFiles(
+  query: string,
+  files: string[],
+  workspaceId: string,
+  matchOptions?: SearchMatchOptions,
+): SearchResult[] {
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
   const results: SearchResult[] = [];
   for (const path of files) {
-    const lower = path.toLowerCase();
-    const index = lower.indexOf(normalizedQuery);
+    const index = findSearchMatchIndex(path, normalizedQuery, matchOptions);
     if (index < 0) {
       continue;
     }

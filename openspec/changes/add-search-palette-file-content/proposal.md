@@ -13,6 +13,7 @@ Users often remember a code string, config value, or document phrase instead of 
 - Add file-content results to Search Palette for eligible ordinary text queries.
 - Follow existing current/global Palette scope.
 - Show lightweight results immediately while content results load asynchronously.
+- Add lightweight case-sensitive and whole-word match toggles to the Palette query surface.
 - Cap the initial content result batch and support lazy loading additional matches.
 - Preserve existing Workspace Search Panel advanced search behavior.
 - Preserve existing Palette keyboard and IME behavior.
@@ -20,6 +21,6 @@ Users often remember a code string, config value, or document phrase instead of 
 ## Non-Goals
 
 - Persistent full-text indexing.
-- Regex/case/whole-word/include/exclude controls in the Palette.
+- Regex, include-pattern, or exclude-pattern controls in the Palette.
 - Perfect global relevance ordering before showing any result.
 - Raycast-style action menus or broader command-center behavior.

@@ -23,8 +23,9 @@ import { searchSkills } from "../providers/skillsProvider";
 import { searchThreads } from "../providers/threadProvider";
 import { loadSearchRecencyMap } from "../ranking/recencyStore";
 import { compareSearchResults } from "../ranking/score";
-import type { SearchContentFilter, SearchResult } from "../types";
+import type { SearchContentFilter, SearchMatchOptions, SearchResult } from "../types";
 import { searchResultMatchesContentFilters } from "../utils/contentFilters";
+import { DEFAULT_SEARCH_MATCH_OPTIONS, normalizeSearchQuery } from "../utils/matchOptions";
 
 type WorkspaceSearchSource = {
   workspaceId: string;
@@ -46,6 +47,7 @@ type UseUnifiedSearchOptions = {
   activeWorkspaceId?: string | null;
   maxResults?: number;
   workspaceNameByPath?: Map<string, string>;
+  matchOptions?: SearchMatchOptions;
 };
 
 export type ComputeUnifiedSearchOptions = Omit<UseUnifiedSearchOptions, "query" | "scope"> & {
@@ -93,6 +95,7 @@ export function useUnifiedSearch({
   activeWorkspaceId,
   maxResults = SEARCH_TOTAL_LIMIT,
   workspaceNameByPath,
+  matchOptions = DEFAULT_SEARCH_MATCH_OPTIONS,
 }: UseUnifiedSearchOptions) {
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
@@ -123,6 +126,7 @@ export function useUnifiedSearch({
       recencyMap: loadSearchRecencyMap(),
       reportMetrics: true,
       workspaceNameByPath,
+      matchOptions,
     });
   }, [
     debouncedQuery,
@@ -137,6 +141,7 @@ export function useUnifiedSearch({
     threadItemsByThread,
     workspaceSources,
     workspaceNameByPath,
+    matchOptions,
   ]);
 
   return computedResults;
@@ -157,8 +162,9 @@ export function computeUnifiedSearchResults({
   recencyMap,
   reportMetrics = false,
   workspaceNameByPath,
+  matchOptions = DEFAULT_SEARCH_MATCH_OPTIONS,
 }: ComputeUnifiedSearchOptions): SearchResult[] {
-  const normalizedQuery = query.trim();
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [] as SearchResult[];
   }
@@ -180,7 +186,7 @@ export function computeUnifiedSearchResults({
     if (shouldIncludeSection(contentFilters, "files")) {
       merged.push(
         ...takeLimited(
-          searchFiles(normalizedQuery, source.files, source.workspaceId),
+          searchFiles(normalizedQuery, source.files, source.workspaceId, matchOptions),
           Math.max(8, Math.floor(SEARCH_PROVIDER_LIMITS.files / Math.max(workspaceSources.length, 1))),
         ),
       );
@@ -188,7 +194,7 @@ export function computeUnifiedSearchResults({
     if (shouldIncludeSection(contentFilters, "threads")) {
       merged.push(
         ...takeLimited(
-          searchThreads(normalizedQuery, source.threads, source.workspaceId),
+          searchThreads(normalizedQuery, source.threads, source.workspaceId, matchOptions),
           Math.max(8, Math.floor(SEARCH_PROVIDER_LIMITS.threads / Math.max(workspaceSources.length, 1))),
         ),
       );
@@ -201,6 +207,7 @@ export function computeUnifiedSearchResults({
             workspaceId: source.workspaceId,
             threads: source.threads,
             threadItemsByThread,
+            matchOptions,
           }),
           Math.max(8, Math.floor(SEARCH_PROVIDER_LIMITS.messages / Math.max(workspaceSources.length, 1))),
         ),
@@ -210,25 +217,25 @@ export function computeUnifiedSearchResults({
 
   if (shouldIncludeSection(contentFilters, "kanban")) {
     merged.push(
-      ...takeLimited(searchKanbanTasks(normalizedQuery, kanbanTasks), SEARCH_PROVIDER_LIMITS.kanban),
+      ...takeLimited(searchKanbanTasks(normalizedQuery, kanbanTasks, matchOptions), SEARCH_PROVIDER_LIMITS.kanban),
     );
   }
   if (shouldIncludeSection(contentFilters, "history")) {
     merged.push(
-      ...takeLimited(searchHistory(normalizedQuery, historyItems), SEARCH_PROVIDER_LIMITS.history),
+      ...takeLimited(searchHistory(normalizedQuery, historyItems, matchOptions), SEARCH_PROVIDER_LIMITS.history),
     );
   }
   if (shouldIncludeSection(contentFilters, "skills")) {
     merged.push(
       ...takeLimited(
-        searchSkills(normalizedQuery, skills, activeWorkspaceId),
+        searchSkills(normalizedQuery, skills, activeWorkspaceId, matchOptions),
         SEARCH_PROVIDER_LIMITS.skills,
       ),
     );
   }
   if (shouldIncludeSection(contentFilters, "commands")) {
     merged.push(
-      ...takeLimited(searchCommands(normalizedQuery, commands), SEARCH_PROVIDER_LIMITS.commands),
+      ...takeLimited(searchCommands(normalizedQuery, commands, matchOptions), SEARCH_PROVIDER_LIMITS.commands),
     );
   }
 

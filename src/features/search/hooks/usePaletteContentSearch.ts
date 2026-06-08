@@ -13,9 +13,11 @@ import { mapWorkspaceTextSearchToContentResults } from "../providers/contentProv
 import type {
   PaletteContentSearchStatus,
   SearchContentFilter,
+  SearchMatchOptions,
   SearchResult,
   SearchScope,
 } from "../types";
+import { DEFAULT_SEARCH_MATCH_OPTIONS, normalizeSearchQuery } from "../utils/matchOptions";
 
 export type PaletteContentSearchWorkspace = {
   workspaceId: string;
@@ -36,6 +38,7 @@ type UsePaletteContentSearchOptions = {
   workspaces: PaletteContentSearchWorkspace[];
   activeWorkspaceId?: string | null;
   isPaletteOpen: boolean;
+  matchOptions?: SearchMatchOptions;
 };
 
 type UsePaletteContentSearchResult = {
@@ -105,6 +108,7 @@ export function usePaletteContentSearch({
   workspaces,
   activeWorkspaceId,
   isPaletteOpen,
+  matchOptions = DEFAULT_SEARCH_MATCH_OPTIONS,
 }: UsePaletteContentSearchOptions): UsePaletteContentSearchResult {
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [contentResults, setContentResults] = useState<SearchResult[]>([]);
@@ -121,7 +125,7 @@ export function usePaletteContentSearch({
     contentFilters.includes("all") || contentFilters.includes("content");
 
   useEffect(() => {
-    const normalizedQuery = query.trim();
+    const normalizedQuery = normalizeSearchQuery(query);
     if (
       !isPaletteOpen ||
       !canSearchContent ||
@@ -142,7 +146,7 @@ export function usePaletteContentSearch({
   );
 
   useEffect(() => {
-    const normalizedQuery = debouncedQuery.trim();
+    const normalizedQuery = normalizeSearchQuery(debouncedQuery);
     generationRef.current += 1;
     const generation = generationRef.current;
     pageStateRef.current = new Map();
@@ -244,8 +248,8 @@ export function usePaletteContentSearch({
         requestedFirstBatchCapacity += PALETTE_CONTENT_SEARCH_PAGE_LIMIT;
         void searchWorkspaceText(workspaceState.workspace.workspaceId, {
           query: normalizedQuery,
-          caseSensitive: false,
-          wholeWord: false,
+          caseSensitive: matchOptions.caseSensitive,
+          wholeWord: matchOptions.wholeWord,
           isRegex: false,
           includePattern: null,
           excludePattern: null,
@@ -279,13 +283,13 @@ export function usePaletteContentSearch({
     return () => {
       cancelled = true;
     };
-  }, [activeWorkspaceId, canSearchContent, debouncedQuery, isPaletteOpen, searchWorkspaces]);
+  }, [activeWorkspaceId, canSearchContent, debouncedQuery, isPaletteOpen, matchOptions, searchWorkspaces]);
 
   useEffect(() => {
     if (loadMoreSignal === 0) {
       return;
     }
-    const normalizedQuery = debouncedQuery.trim();
+    const normalizedQuery = normalizeSearchQuery(debouncedQuery);
     if (
       !isPaletteOpen ||
       !canSearchContent ||
@@ -320,8 +324,8 @@ export function usePaletteContentSearch({
     for (const workspaceState of nextQueue) {
       void searchWorkspaceText(workspaceState.workspace.workspaceId, {
         query: normalizedQuery,
-        caseSensitive: false,
-        wholeWord: false,
+        caseSensitive: matchOptions.caseSensitive,
+        wholeWord: matchOptions.wholeWord,
         isRegex: false,
         includePattern: null,
         excludePattern: null,
@@ -372,7 +376,7 @@ export function usePaletteContentSearch({
     return () => {
       cancelled = true;
     };
-  }, [activeWorkspaceId, canSearchContent, debouncedQuery, isPaletteOpen, loadMoreSignal]);
+  }, [activeWorkspaceId, canSearchContent, debouncedQuery, isPaletteOpen, loadMoreSignal, matchOptions]);
 
   const hasMore =
     [...pageStateRef.current.values()].some(

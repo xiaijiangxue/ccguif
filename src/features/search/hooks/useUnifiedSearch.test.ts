@@ -77,6 +77,59 @@ describe("computeUnifiedSearchResults", () => {
     expect(results.some((item) => item.kind === "command" && item.commandName === "plan")).toBe(true);
   });
 
+  it("supports case-sensitive matching across lightweight providers", () => {
+    const results = computeUnifiedSearchResults({
+      query: "plan",
+      contentFilters: ["skills", "commands"],
+      workspaceSources: [],
+      kanbanTasks: [],
+      threadItemsByThread: {},
+      historyItems: [],
+      skills: [{ name: "PlanWriter", path: "/skill/PlanWriter", description: "Plan helper" }],
+      commands: [{ name: "Plan", path: "/command/Plan", description: "Command Plan", content: "" }],
+      activeWorkspaceId: "w-1",
+      matchOptions: { caseSensitive: true, wholeWord: false },
+      recencyMap: {},
+      reportMetrics: false,
+    });
+
+    expect(results).toEqual([]);
+  });
+
+  it("supports whole-word matching across lightweight providers", () => {
+    const results = computeUnifiedSearchResults({
+      query: "clear",
+      contentFilters: ["files", "messages"],
+      workspaceSources: [
+        {
+          workspaceId: "w-1",
+          workspaceName: "A",
+          files: ["src/clear.ts", "src/unclear.ts"],
+          threads: [makeThread("t-1", "Thread", 10)],
+        },
+      ],
+      kanbanTasks: [],
+      threadItemsByThread: {
+        "t-1": [
+          makeMessage("m-1", "clear result"),
+          makeMessage("m-2", "unclear result"),
+        ],
+      },
+      historyItems: [],
+      skills: [],
+      commands: [],
+      activeWorkspaceId: "w-1",
+      matchOptions: { caseSensitive: false, wholeWord: true },
+      recencyMap: {},
+      reportMetrics: false,
+    });
+
+    expect(results.map((item) => item.title)).toContain("src/clear.ts");
+    expect(results.map((item) => item.title)).not.toContain("src/unclear.ts");
+    expect(results.some((item) => item.kind === "message" && item.messageId === "m-1")).toBe(true);
+    expect(results.some((item) => item.kind === "message" && item.messageId === "m-2")).toBe(false);
+  });
+
   it("separates file path results from file content results", () => {
     const contentResult = {
       id: "content:w-1:src/app.ts:1:1:alpha",

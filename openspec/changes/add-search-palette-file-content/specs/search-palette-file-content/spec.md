@@ -59,10 +59,15 @@ The file-content search SHALL be bounded so Search Palette remains responsive.
 
 The dedicated Workspace Search Panel SHALL preserve its existing advanced text-search behavior.
 
+#### Scenario: Palette match options apply consistently
+- **WHEN** the user toggles case-sensitive or whole-word matching in Search Palette
+- **THEN** lightweight Palette results and file-content Palette results SHALL use the selected matching behavior
+- **AND** content preview highlighting SHOULD respect the selected matching behavior
+
 #### Scenario: advanced options remain dedicated to Workspace Search Panel
-- **WHEN** the user needs regex, case-sensitive, whole-word, include-pattern, or exclude-pattern search
+- **WHEN** the user needs regex, include-pattern, or exclude-pattern search
 - **THEN** those controls SHALL remain available in the dedicated Workspace Search Panel
-- **AND** Search Palette SHALL NOT be required to expose those controls in this change
+- **AND** Search Palette SHALL NOT be required to expose those controls
 
 #### Scenario: existing search command callers remain compatible
 - **WHEN** an existing caller invokes workspace text search without pagination fields

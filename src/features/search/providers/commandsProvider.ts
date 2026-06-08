@@ -1,5 +1,7 @@
 import type { CustomCommandOption } from "../../../types";
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
 type NormalizedCommandEntry = {
   name: string;
@@ -28,8 +30,12 @@ function buildCommandResultId(entry: NormalizedCommandEntry): string {
   return `command:${nameToken}:${pathToken}:${sourceToken}`;
 }
 
-export function searchCommands(query: string, commands: CustomCommandOption[]): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+export function searchCommands(
+  query: string,
+  commands: CustomCommandOption[],
+  matchOptions?: SearchMatchOptions,
+): SearchResult[] {
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
@@ -69,8 +75,8 @@ export function searchCommands(query: string, commands: CustomCommandOption[]): 
   }
 
   for (const command of normalizedCommands.values()) {
-    const searchText = `${command.name} ${command.description} ${command.argumentHint}`.toLowerCase();
-    const index = searchText.indexOf(normalizedQuery);
+    const searchText = `${command.name} ${command.description} ${command.argumentHint}`;
+    const index = findSearchMatchIndex(searchText, normalizedQuery, matchOptions);
     if (index < 0) {
       continue;
     }

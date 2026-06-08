@@ -100,7 +100,7 @@ import { SearchPalette } from "./features/search/components/SearchPalette";
 import { shouldHideHomeOnThreadActivation } from "./features/home/utils/homeVisibility";
 import { forceRefreshAgents } from "./features/composer/components/ChatInputBox/providers";
 import { recordSearchResultOpen } from "./features/search/ranking/recencyStore";
-import type { SearchContentFilter, SearchResult, SearchScope } from "./features/search/types";
+import type { SearchContentFilter, SearchMatchOptions, SearchResult, SearchScope } from "./features/search/types";
 import { toggleSearchContentFilters } from "./features/search/utils/contentFilters";
 import { resolveSearchScopeOnOpen } from "./features/search/utils/scope";
 import {
@@ -385,6 +385,10 @@ export function AppShell() {
   const [searchScope, setSearchScope] = useState<SearchScope>("active-workspace");
   const [searchContentFilters, setSearchContentFilters] =
     useState<SearchContentFilter[]>(["all"]);
+  const [searchMatchOptions, setSearchMatchOptions] = useState<SearchMatchOptions>({
+    caseSensitive: false,
+    wholeWord: false,
+  });
   const [searchPaletteQuery, setSearchPaletteQuery] = useState("");
   const [searchPaletteSelectedIndex, setSearchPaletteSelectedIndex] = useState(0);
   const [globalSearchFilesByWorkspace, setGlobalSearchFilesByWorkspace] = useState<
@@ -1720,6 +1724,7 @@ export function AppShell() {
     listThreadsForWorkspace,
     rightPanelCollapsed,
     searchContentFilters,
+    searchMatchOptions,
     searchPaletteQuery,
     searchScope,
     setGlobalSearchFilesByWorkspace,
@@ -2192,7 +2197,7 @@ export function AppShell() {
     renameWorktreeUpstream, renameWorktreeUpstreamPrompt, resetGitHubPanelState, resetSoloSplitToHalf, resetWorkspaceThreads, resolveCloneProjectContext,
     resolveCanonicalThreadId, resolveCollaborationRuntimeMode, resolveCollaborationUiMode, resolveComposerSelectionForThread, resolveOpenCodeAgentForThread, resolveOpenCodeVariantForThread, resolvedEffort, resolvedModel, restartTerminalSession,
     retryReleaseNotesLoad, reviewPrompt, rightPanelCollapsed, rightPanelWidth, runtimeRunState,
-    scaleShortcutText, scaleShortcutTitle, scanGitRoots, scopedKanbanTasks, searchContentFilters, searchPaletteQuery, searchPaletteSelectedIndex,
+    scaleShortcutText, scaleShortcutTitle, scanGitRoots, scopedKanbanTasks, searchContentFilters, searchMatchOptions, searchPaletteQuery, searchPaletteSelectedIndex,
     searchResults, searchScope, selectBranch, selectBranchAtIndex, selectCommit, selectCommitAtIndex, selectHome, selectWorkspace,
     selectedAgent, selectedCollaborationMode, selectedCollaborationModeId, selectedCommitSha, selectedDiffPath, selectedEffort: effectiveSelectedEffort,
     selectedAgentRef,
@@ -2201,7 +2206,7 @@ export function AppShell() {
     setAppMode, setAppSettings, setCenterMode, setCodexCollaborationMode, setCollaborationRuntimeModeByThread, setCollaborationUiModeByThread, setComposerInsert, setDebugOpen,
     setDiffSource, setEditorSplitCompanion, setEditorSplitLayout, setEngineSelectedModelIdByType, setFilePanelMode, setFileReferenceMode, setGitDiffListView, setGitDiffViewStyle, setGitHistoryPanelHeight,
     setGitPanelMode, setGitRootScanDepth, setGlobalSearchFilesByWorkspace, setHighlightedBranchIndex, setHighlightedCommitIndex, setHighlightedPresetIndex, setIsEditorFileMaximized, setIsPanelLocked,
-    setIsPlanPanelDismissed, setIsSearchPaletteOpen, setKanbanViewState, setLiveEditPreviewEnabled, setPrefillDraft, setReduceTransparency, setWindowTransparencyEnabled, setWindowOpacity, setRightPanelWidth, setSearchContentFilters, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope,
+    setIsPlanPanelDismissed, setIsSearchPaletteOpen, setKanbanViewState, setLiveEditPreviewEnabled, setPrefillDraft, setReduceTransparency, setWindowTransparencyEnabled, setWindowOpacity, setRightPanelWidth, setSearchContentFilters, setSearchMatchOptions, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope,
     setSelectedCollaborationModeId, setSelectedCommitSha, setSelectedDiffPath, setSelectedEffort: handleSelectComposerEffort, setSelectedKanbanTaskId, setSelectedModelId, setSelectedPullRequest,
     setHomeOpen, setWorkspaceHomeWorkspaceId, settingsHighlightTarget, settingsOpen, settingsSection, loadingProgressDialog, dismissLoadingProgressDialog, shouldLoadDiffs, shouldLoadGitHubPanelData,
     showLoadingProgressDialog, hideLoadingProgressDialog,

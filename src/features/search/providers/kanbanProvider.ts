@@ -1,8 +1,14 @@
 import type { KanbanTask } from "../../kanban/types";
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
-export function searchKanbanTasks(query: string, tasks: KanbanTask[]): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+export function searchKanbanTasks(
+  query: string,
+  tasks: KanbanTask[],
+  matchOptions?: SearchMatchOptions,
+): SearchResult[] {
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
@@ -10,8 +16,8 @@ export function searchKanbanTasks(query: string, tasks: KanbanTask[]): SearchRes
   for (const task of tasks) {
     const title = task.title.trim();
     const description = task.description.trim();
-    const titleIndex = title.toLowerCase().indexOf(normalizedQuery);
-    const descriptionIndex = description.toLowerCase().indexOf(normalizedQuery);
+    const titleIndex = findSearchMatchIndex(title, normalizedQuery, matchOptions);
+    const descriptionIndex = findSearchMatchIndex(description, normalizedQuery, matchOptions);
     if (titleIndex < 0 && descriptionIndex < 0) {
       continue;
     }

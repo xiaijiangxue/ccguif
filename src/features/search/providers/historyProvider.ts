@@ -1,12 +1,18 @@
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
 type HistoryEntry = {
   text: string;
   importance: number;
 };
 
-export function searchHistory(query: string, historyItems: HistoryEntry[]): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+export function searchHistory(
+  query: string,
+  historyItems: HistoryEntry[],
+  matchOptions?: SearchMatchOptions,
+): SearchResult[] {
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
@@ -16,7 +22,7 @@ export function searchHistory(query: string, historyItems: HistoryEntry[]): Sear
     if (!text) {
       continue;
     }
-    const index = text.toLowerCase().indexOf(normalizedQuery);
+    const index = findSearchMatchIndex(text, normalizedQuery, matchOptions);
     if (index < 0) {
       continue;
     }

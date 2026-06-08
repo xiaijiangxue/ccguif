@@ -1,12 +1,15 @@
 import type { ConversationItem, ThreadSummary } from "../../../types";
 import { buildWorkspaceMessageIndex, makeMessageSnippet } from "../indexing/messageIndex";
 import type { SearchResult } from "../types";
+import type { SearchMatchOptions } from "../types";
+import { findSearchMatchIndex, normalizeSearchQuery } from "../utils/matchOptions";
 
 type SearchMessageOptions = {
   query: string;
   workspaceId: string;
   threads: ThreadSummary[];
   threadItemsByThread: Record<string, ConversationItem[]>;
+  matchOptions?: SearchMatchOptions;
 };
 
 export function searchMessages({
@@ -14,8 +17,9 @@ export function searchMessages({
   workspaceId,
   threads,
   threadItemsByThread,
+  matchOptions,
 }: SearchMessageOptions): SearchResult[] {
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = normalizeSearchQuery(query);
   if (!normalizedQuery) {
     return [];
   }
@@ -29,13 +33,12 @@ export function searchMessages({
 
   const results: SearchResult[] = [];
   for (const message of indexedMessages) {
-    const lower = message.text.toLowerCase();
-    const index = lower.indexOf(normalizedQuery);
+    const index = findSearchMatchIndex(message.text, normalizedQuery, matchOptions);
     if (index < 0) {
       continue;
     }
     const threadName = threadNameById.get(message.threadId) ?? "Thread";
-    const snippet = makeMessageSnippet(message.text, normalizedQuery);
+    const snippet = makeMessageSnippet(message.text, normalizedQuery, 36, matchOptions);
     const score = index === 0 ? 40 : 260 + index;
     results.push({
       id: `message:${workspaceId}:${message.threadId}:${message.messageId}`,

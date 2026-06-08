@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { UIEvent } from "react";
 import { useTranslation } from "react-i18next";
+import SearchIcon from "lucide-react/dist/esm/icons/search";
 import projectIconUrl from "../../../../icon.png";
 import { isComposingEvent } from "../../../utils/keys";
 import { PALETTE_CONTENT_SEARCH_MIN_QUERY_LENGTH } from "../perf/limits";
 import type {
   PaletteContentSearchStatus,
   SearchContentFilter,
+  SearchMatchOptions,
   SearchResult,
   SearchScope,
 } from "../types";
+import { DEFAULT_SEARCH_MATCH_OPTIONS, findSearchMatchIndex } from "../utils/matchOptions";
 
 const INVISIBLE_QUERY_CHARS_REGEX = /[\u200B-\u200D\uFEFF]/g;
 const LOAD_MORE_SCROLL_THRESHOLD_PX = 72;
@@ -18,17 +21,19 @@ function sanitizeSearchQueryInput(value: string): string {
   return value.replace(INVISIBLE_QUERY_CHARS_REGEX, "");
 }
 
-function renderHighlightedPreview(preview: string, matchedText?: string) {
+function renderHighlightedPreview(
+  preview: string,
+  matchedText: string | undefined,
+  matchOptions: SearchMatchOptions,
+) {
   const normalizedMatch = matchedText?.trim();
   if (!normalizedMatch) {
     return preview;
   }
 
-  const previewLower = preview.toLocaleLowerCase();
-  const matchLower = normalizedMatch.toLocaleLowerCase();
   const segments = [];
   let cursor = 0;
-  let matchIndex = previewLower.indexOf(matchLower, cursor);
+  let matchIndex = findSearchMatchIndex(preview, normalizedMatch, matchOptions);
 
   while (matchIndex >= 0) {
     if (matchIndex > cursor) {
@@ -44,7 +49,12 @@ function renderHighlightedPreview(preview: string, matchedText?: string) {
       </mark>,
     );
     cursor = matchEnd;
-    matchIndex = previewLower.indexOf(matchLower, cursor);
+    const nextMatchIndex = findSearchMatchIndex(
+      preview.slice(cursor),
+      normalizedMatch,
+      matchOptions,
+    );
+    matchIndex = nextMatchIndex >= 0 ? cursor + nextMatchIndex : -1;
   }
 
   if (cursor === 0) {
@@ -61,6 +71,7 @@ type SearchPaletteProps = {
   isOpen: boolean;
   scope: SearchScope;
   contentFilters: SearchContentFilter[];
+  matchOptions?: SearchMatchOptions;
   workspaceName?: string | null;
   query: string;
   results: SearchResult[];
@@ -73,6 +84,7 @@ type SearchPaletteProps = {
   onSelect: (result: SearchResult) => void;
   onScopeChange: (scope: SearchScope) => void;
   onContentFilterToggle: (filter: SearchContentFilter) => void;
+  onMatchOptionsChange?: (options: SearchMatchOptions) => void;
   onLoadMoreContentResults?: () => void;
   onClose: () => void;
 };
@@ -81,6 +93,7 @@ export function SearchPalette({
   isOpen,
   scope,
   contentFilters,
+  matchOptions = DEFAULT_SEARCH_MATCH_OPTIONS,
   workspaceName,
   query,
   results,
@@ -93,6 +106,7 @@ export function SearchPalette({
   onSelect,
   onScopeChange,
   onContentFilterToggle,
+  onMatchOptionsChange = () => undefined,
   onLoadMoreContentResults,
   onClose,
 }: SearchPaletteProps) {
@@ -142,6 +156,20 @@ export function SearchPalette({
   const placeholderText = selectedContentLabels.length
     ? t("searchPalette.placeholderFiltered", { content: selectedContentLabels.join(" / ") })
     : t("searchPalette.placeholder");
+  const matchOptionButtons = [
+    {
+      key: "caseSensitive" as const,
+      active: matchOptions.caseSensitive,
+      label: t("searchPalette.matchCaseLabel"),
+      symbol: t("searchPalette.matchCaseSymbol"),
+    },
+    {
+      key: "wholeWord" as const,
+      active: matchOptions.wholeWord,
+      label: t("searchPalette.wholeWordLabel"),
+      symbol: t("searchPalette.wholeWordSymbol"),
+    },
+  ];
   const normalizedVisibleQuery = sanitizeSearchQueryInput(query);
   const trimmedVisibleQuery = normalizedVisibleQuery.trim();
   const shouldShowResults = trimmedVisibleQuery.length > 0;
@@ -255,9 +283,7 @@ export function SearchPalette({
       >
         <div className="search-palette-top-accent" />
         <div className="search-palette-input-row">
-          <span className="search-palette-search-icon" aria-hidden="true">
-            ⌕
-          </span>
+          <SearchIcon className="search-palette-search-icon" aria-hidden="true" />
           <input
             ref={inputRef}
             className="search-palette-input"
@@ -274,6 +300,30 @@ export function SearchPalette({
               onQueryChange(sanitizeSearchQueryInput(event.currentTarget.value));
             }}
           />
+          <div
+            className="search-palette-match-options"
+            role="group"
+            aria-label={t("searchPalette.matchOptions")}
+          >
+            {matchOptionButtons.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                className={`search-palette-match-option-btn${option.active ? " is-active" : ""}`}
+                aria-label={option.label}
+                aria-pressed={option.active}
+                title={option.label}
+                onClick={() => {
+                  onMatchOptionsChange({
+                    ...matchOptions,
+                    [option.key]: !option.active,
+                  });
+                }}
+              >
+                {option.symbol}
+              </button>
+            ))}
+          </div>
           <span className="search-palette-project-icon-box" aria-hidden="true">
             <img
               className="search-palette-project-icon"
@@ -353,7 +403,11 @@ export function SearchPalette({
                   <span className="search-palette-result-title">{result.title}</span>
                   {result.kind === "content" && result.preview ? (
                     <span className="search-palette-result-preview">
-                      {renderHighlightedPreview(result.preview, result.matchedText ?? trimmedVisibleQuery)}
+                      {renderHighlightedPreview(
+                        result.preview,
+                        result.matchedText ?? trimmedVisibleQuery,
+                        matchOptions,
+                      )}
                     </span>
                   ) : result.subtitle ? (
                     <span className="search-palette-result-subtitle">{result.subtitle}</span>

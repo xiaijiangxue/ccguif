@@ -40,20 +40,22 @@
 .search-palette-input-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 0 14px;
   border-bottom: 1px solid var(--border-muted);
   background: color-mix(in srgb, var(--surface-card) 58%, transparent);
 }
 
 .search-palette-search-icon {
+  width: 15px;
+  height: 15px;
   color: var(--text-subtle);
-  font-size: 15px;
-  line-height: 1;
+  flex-shrink: 0;
 }
 
 .search-palette-input {
   width: 100%;
+  min-width: 0;
   background: transparent;
   border: 0;
   outline: 0;
@@ -74,15 +76,63 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 3px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   border-radius: 10px;
   border: 1px solid var(--border-muted);
   background: color-mix(in srgb, var(--surface-item) 52%, transparent);
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .search-palette-input::placeholder {
   color: color-mix(in srgb, var(--text-fainter) 84%, var(--text-muted));
+}
+
+.search-palette-match-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.search-palette-match-option-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: color-mix(in srgb, var(--text-subtle) 80%, var(--text-muted));
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.search-palette-match-option-btn:hover {
+  color: var(--text-emphasis);
+  background: color-mix(in srgb, var(--surface-control) 54%, transparent);
+  border-color: color-mix(in srgb, var(--border-subtle) 58%, transparent);
+}
+
+.search-palette-match-option-btn.is-active {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--surface-control) 82%, var(--surface-item));
+  border-color: color-mix(in srgb, #5f6777 32%, var(--border-muted));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, white 10%, transparent) inset,
+    0 1px 1px rgba(0, 0, 0, 0.1);
 }
 
 .search-palette-scope {

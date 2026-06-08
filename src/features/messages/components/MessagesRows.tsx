@@ -1169,7 +1169,9 @@ export const MessageRow = memo(function MessageRow({
     && imageItems.length === 0
     && deferredImageItems.length === 0
   );
-  const shouldRenderMessageActions = !hideCopyButton && item.role !== "assistant";
+  const shouldRenderMessageActions =
+    !hideCopyButton &&
+    (item.role !== "assistant" || item.isFinal !== true);
   const useCodexCanvasMarkdown = presentationProfile
     ? presentationProfile.codexCanvasMarkdown
     : activeEngine === "codex";

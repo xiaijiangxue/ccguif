@@ -174,6 +174,7 @@ describe("usePaletteContentSearch", () => {
         workspaces: searchWorkspaces,
         activeWorkspaceId: "ws-1",
         isPaletteOpen: true,
+        matchOptions: { caseSensitive: true, wholeWord: true },
       }),
     );
 
@@ -184,7 +185,11 @@ describe("usePaletteContentSearch", () => {
 
     expect(searchWorkspaceText).toHaveBeenCalledWith(
       "ws-1",
-      expect.objectContaining({ query: "abc" }),
+      expect.objectContaining({
+        query: "abc",
+        caseSensitive: true,
+        wholeWord: true,
+      }),
     );
     expect(result.current.contentResults[0]?.kind).toBe("content");
   });

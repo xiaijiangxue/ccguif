@@ -295,6 +295,52 @@ describe("SearchPalette", () => {
     expect(screen.getByText("search-again")).toBeTruthy();
   });
 
+  it("toggles match case and whole-word options", () => {
+    const onMatchOptionsChange = vi.fn();
+
+    render(
+      <SearchPalette
+        isOpen
+        scope="active-workspace"
+        contentFilters={["all"]}
+        matchOptions={{ caseSensitive: false, wholeWord: true }}
+        workspaceName="mossx"
+        query="clear"
+        results={[makeResult()]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onMatchOptionsChange={onMatchOptionsChange}
+        onClose={() => undefined}
+      />,
+    );
+
+    const caseButton = screen.getByRole("button", {
+      name: "searchPalette.matchCaseLabel",
+    });
+    const wholeWordButton = screen.getByRole("button", {
+      name: "searchPalette.wholeWordLabel",
+    });
+
+    expect(caseButton.getAttribute("aria-pressed")).toBe("false");
+    expect(wholeWordButton.getAttribute("aria-pressed")).toBe("true");
+
+    fireEvent.click(caseButton);
+    expect(onMatchOptionsChange).toHaveBeenCalledWith({
+      caseSensitive: true,
+      wholeWord: true,
+    });
+
+    fireEvent.click(wholeWordButton);
+    expect(onMatchOptionsChange).toHaveBeenCalledWith({
+      caseSensitive: false,
+      wholeWord: false,
+    });
+  });
+
   it("renders content result path, preview, location, and content labels", () => {
     render(
       <SearchPalette
@@ -389,6 +435,35 @@ describe("SearchPalette", () => {
     const highlightedMatch = screen.getByText("clear");
     expect(highlightedMatch.tagName).toBe("MARK");
     expect(highlightedMatch.classList.contains("search-palette-result-highlight")).toBe(true);
+  });
+
+  it("does not highlight partial preview matches when whole-word matching is enabled", () => {
+    render(
+      <SearchPalette
+        isOpen
+        scope="global"
+        contentFilters={["content"]}
+        matchOptions={{ caseSensitive: false, wholeWord: true }}
+        workspaceName="mossx"
+        query="clear"
+        results={[
+          {
+            ...makeContentResult(),
+            preview: "Use when requirements are unclear or evolving",
+            matchedText: "clear",
+          },
+        ]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    expect(document.querySelector(".search-palette-result-highlight")).toBeNull();
   });
 
   it("renders a dedicated file-content filter button", () => {

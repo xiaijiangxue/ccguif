@@ -92,7 +92,7 @@ export function renderAppShell(ctx: any) {
     resolveCloneProjectContext, resolveCollaborationRuntimeMode, resolveCollaborationUiMode, resolveOpenCodeAgentForThread, resolveOpenCodeVariantForThread, resolvedEffort, resolvedModel, response,
     restartTerminalSession, result, resumePrompt, retryReleaseNotesLoad, reviewPrompt, rightPanelAvailable, rightPanelCollapsed, rightPanelToolbarNode,
     rightPanelWidth, runtimeMode, runtimeRunState, scaleShortcutText, scaleShortcutTitle, scanGitRoots, scheduleDraggedHeightFlush, scopedKanbanTasks,
-    searchContentFilters, searchPaletteQuery, searchPaletteSelectedIndex, searchResults, searchScope, contentSearchError, contentSearchStatus, sections, selectBranch, selectBranchAtIndex,
+    searchContentFilters, searchMatchOptions, searchPaletteQuery, searchPaletteSelectedIndex, searchResults, searchScope, contentSearchError, contentSearchStatus, sections, selectBranch, selectBranchAtIndex,
     selectCommit, selectCommitAtIndex, selectHome, selectWorkspace, selected, selectedAgent, selectedAnswer, selectedCollaborationMode,
     selectedCollaborationModeId, selectedCommitSha, selectedComposerKanbanPanelId, selectedDiffPath, selectedEffort, selectedKanbanTaskId, selectedModelId, selectedOpenCodeAgent,
     selectedOpenCodeVariant, selectedPath, selectedPullRequest, selection, sendUserMessage, sendUserMessageToThread, sessions, setAccessMode,
@@ -101,7 +101,7 @@ export function renderAppShell(ctx: any) {
     setEngineSelectedModelIdByType, setFilePanelMode, setFileReferenceMode, setGitDiffListView, setGitDiffViewStyle, setGitHistoryPanelHeight, setGitPanelMode, setGitRootScanDepth,
     setGlobalSearchFilesByWorkspace, setHighlightedBranchIndex, setHighlightedCommitIndex, setHighlightedPresetIndex, setIsEditorFileMaximized, setIsPanelLocked, setIsPlanPanelDismissed, setIsSearchPaletteOpen,
     setKanbanViewState, setLiveEditPreviewEnabled, setPrefillDraft,
-    setReduceTransparency, setWindowTransparencyEnabled, setWindowOpacity, setRightPanelWidth, setSearchContentFilters, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope, setSelectedAgent, setSelectedCollaborationModeId,
+    setReduceTransparency, setWindowTransparencyEnabled, setWindowOpacity, setRightPanelWidth, setSearchContentFilters, setSearchMatchOptions, setSearchPaletteQuery, setSearchPaletteSelectedIndex, setSearchScope, setSelectedAgent, setSelectedCollaborationModeId,
     setSelectedCommitSha, setSelectedComposerKanbanPanelId, setSelectedDiffPath, setSelectedEffort, setSelectedKanbanTaskId, setSelectedModelId, setSelectedPullRequest, setWorkspaceHomeWorkspaceId,
     settingsHighlightTarget, settingsOpen, settingsSection, shouldForceResumeInCode, shouldImplementPlan, shouldLoadDiffs, shouldLoadGitHubPanelData, shouldMountSpecHub,
     shouldShowSidebarTopbarContent, showComposer, showDebugButton, showGitDetail, showGitHistory, showHome, showKanban, showNextReleaseNotes,
@@ -456,6 +456,7 @@ export function renderAppShell(ctx: any) {
         isOpen={isSearchPaletteOpen}
         scope={searchScope}
         contentFilters={searchContentFilters}
+        matchOptions={searchMatchOptions}
         workspaceName={activeWorkspace?.name ?? null}
         query={searchPaletteQuery}
         results={searchResults}
@@ -473,6 +474,10 @@ export function renderAppShell(ctx: any) {
           setSearchPaletteSelectedIndex(0);
         }}
         onContentFilterToggle={handleToggleSearchContentFilter}
+        onMatchOptionsChange={(nextOptions) => {
+          setSearchMatchOptions(nextOptions);
+          setSearchPaletteSelectedIndex(0);
+        }}
         onLoadMoreContentResults={loadMoreContentResults}
         onClose={closeSearchPalette}
       />
