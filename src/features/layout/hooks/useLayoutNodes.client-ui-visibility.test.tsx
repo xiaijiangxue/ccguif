@@ -863,7 +863,7 @@ describe("useLayoutNodes client UI visibility", () => {
       }),
     );
 
-    render(<>{result.current.mainContentNode}</>);
+    render(<>{result.current.fileViewPanelNode}</>);
     screen.getByTestId("file-view-panel").focus();
 
     fireEvent.keyDown(window, {
