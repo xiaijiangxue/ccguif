@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Composer } from "./Composer";
 import type { ComposerSendReadiness } from "../utils/composerSendReadiness";
+import type { ContextSelectionChip } from "./ChatInputBox/types";
 
 vi.mock("../../../services/dragDrop", () => ({
   subscribeWindowDragDrop: vi.fn(() => () => {}),
@@ -26,11 +27,15 @@ vi.mock("./ChatInputBox/ChatInputBoxAdapter", () => ({
     onTextChange,
     onSend,
     onManualMemorySelect,
+    onSelectSkill,
+    selectedContextChips,
     sendReadiness,
   }: {
     onTextChange: (next: string, cursor: number | null) => void;
     onSend: () => void;
     sendReadiness?: ComposerSendReadiness | null;
+    onSelectSkill?: (skillName: string) => void;
+    selectedContextChips?: ContextSelectionChip[];
     onManualMemorySelect?: (memory: {
       id: string;
       title: string;
@@ -68,9 +73,19 @@ vi.mock("./ChatInputBox/ChatInputBoxAdapter", () => ({
       >
         memory
       </button>
+      <button
+        type="button"
+        data-testid="select-skill"
+        onClick={() => onSelectSkill?.("ce-plan")}
+      >
+        skill
+      </button>
       <button type="button" data-testid="send-message" onClick={() => onSend()}>
         send
       </button>
+      <div data-testid="selected-context-chips">
+        {(selectedContextChips ?? []).map((chip) => `${chip.type}:${chip.name}`).join(",")}
+      </div>
       <div data-testid="readiness-context-summary">
         {sendReadiness?.contextSummary.compactLabel ?? ""}
       </div>
@@ -85,7 +100,14 @@ function renderComposer({
   activeThreadId?: string;
   onSend?: ReturnType<typeof vi.fn>;
 } = {}) {
-  return render(
+  return render(createComposerElement(activeThreadId, onSend));
+}
+
+function createComposerElement(
+  activeThreadId: string,
+  onSend: ReturnType<typeof vi.fn>,
+) {
+  return (
     <Composer
       onSend={onSend}
       onQueue={() => {}}
@@ -107,7 +129,7 @@ function renderComposer({
       reasoningSupported={false}
       accessMode="current"
       onSelectAccessMode={() => {}}
-      skills={[]}
+      skills={[{ name: "ce-plan", path: "/skills/ce-plan/SKILL.md" }]}
       prompts={[]}
       commands={[]}
       files={[]}
@@ -116,7 +138,7 @@ function renderComposer({
       dictationEnabled={false}
       activeWorkspaceId="ws-1"
       activeThreadId={activeThreadId}
-    />,
+    />
   );
 }
 
@@ -125,59 +147,40 @@ describe("Composer context ledger transitions", () => {
     cleanup();
   });
 
-  it("moves context source summary into the input header and resets it on session switch", async () => {
+  it("restores selected context chips when switching back to a session", async () => {
     const onSend = vi.fn(() => Promise.resolve());
     const view = renderComposer({ onSend });
 
     await act(async () => {
       fireEvent.click(screen.getByTestId("fill-text"));
-      fireEvent.click(screen.getByTestId("select-manual-memory"));
+      fireEvent.click(screen.getByTestId("select-skill"));
     });
 
     expect(screen.getByTestId("readiness-context-summary").textContent).toBe(
       "items:1 · groups:1",
     );
+    expect(screen.getByTestId("selected-context-chips").textContent).toBe(
+      "skill:ce-plan",
+    );
     expect(view.container.querySelector(".composer-context-stack")).toBeTruthy();
     expect(view.container.querySelector(".composer-context-ledger")).toBeNull();
     expect(screen.queryByRole("region", { name: "composer.contextLedgerTitle" })).toBeNull();
 
-    view.rerender(
-      <Composer
-        onSend={onSend}
-        onQueue={() => {}}
-        onStop={() => {}}
-        canStop={false}
-        isProcessing={false}
-        steerEnabled={false}
-        collaborationModes={[]}
-        collaborationModesEnabled={true}
-        selectedCollaborationModeId={null}
-        onSelectCollaborationMode={() => {}}
-        selectedEngine="claude"
-        models={[]}
-        selectedModelId={null}
-        onSelectModel={() => {}}
-        reasoningOptions={[]}
-        selectedEffort={null}
-        onSelectEffort={() => {}}
-        reasoningSupported={false}
-        accessMode="current"
-        onSelectAccessMode={() => {}}
-        skills={[]}
-        prompts={[]}
-        commands={[]}
-        files={[]}
-        draftText=""
-        onDraftChange={() => {}}
-        dictationEnabled={false}
-        activeWorkspaceId="ws-1"
-        activeThreadId="thread-2"
-      />,
-    );
+    view.rerender(createComposerElement("thread-2", onSend));
 
     expect(screen.getByTestId("readiness-context-summary").textContent).toBe(
       "no-extra-context",
     );
+    expect(screen.getByTestId("selected-context-chips").textContent).toBe("");
     expect(view.container.querySelector(".composer-context-stack")).toBeNull();
+
+    view.rerender(createComposerElement("thread-1", onSend));
+
+    expect(screen.getByTestId("selected-context-chips").textContent).toBe(
+      "skill:ce-plan",
+    );
+    expect(screen.getByTestId("readiness-context-summary").textContent).toBe(
+      "items:1 · groups:1",
+    );
   });
 });

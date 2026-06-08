@@ -372,6 +372,21 @@ type NoteCardSelection = {
   }>;
 };
 
+type ComposerContextSelectionSnapshot = {
+  selectedSkillNames: string[];
+  selectedCommonsNames: string[];
+  selectedManualMemories: ManualMemorySelection[];
+  selectedNoteCards: NoteCardSelection[];
+  memoryReferenceMode: MemoryReferenceMode;
+  carryOverManualMemoryIds: string[];
+  retainedManualMemoryIds: string[];
+  carryOverNoteCardIds: string[];
+  retainedNoteCardIds: string[];
+  carryOverContextChipKeys: string[];
+  retainedContextChipKeys: string[];
+  selectedInlineFileReferences: InlineFileReferenceSelection[];
+};
+
 const EMPTY_ITEMS: ConversationItem[] = [];
 const COMPOSER_MIN_HEIGHT = 20;
 const COMPOSER_EXPAND_HEIGHT = 80;
@@ -414,6 +429,23 @@ function resolveSelectedNamedItems<T extends { name: string }>(
 
 function toContextChipCarryOverKey(chip: ContextSelectionChip) {
   return `${chip.type}:${chip.name}`;
+}
+
+function createEmptyComposerContextSelectionSnapshot(): ComposerContextSelectionSnapshot {
+  return {
+    selectedSkillNames: [],
+    selectedCommonsNames: [],
+    selectedManualMemories: [],
+    selectedNoteCards: [],
+    memoryReferenceMode: "off",
+    carryOverManualMemoryIds: [],
+    retainedManualMemoryIds: [],
+    carryOverNoteCardIds: [],
+    retainedNoteCardIds: [],
+    carryOverContextChipKeys: [],
+    retainedContextChipKeys: [],
+    selectedInlineFileReferences: [],
+  };
 }
 
 const OPENCODE_DIRECT_COMMANDS = new Set(["status", "mcp", "export", "share"]);
@@ -618,6 +650,7 @@ export const Composer = memo(function Composer({
   const currentContextLedgerProjectionRef = useRef<ContextLedgerProjection | null>(null);
   const previousContextLedgerSessionKeyRef = useRef("");
   const contextLedgerSessionKey = `${activeWorkspaceId ?? "__no_workspace__"}::${activeThreadId ?? "__no_thread__"}`;
+  const contextSelectionsBySessionKeyRef = useRef<Record<string, ComposerContextSelectionSnapshot>>({});
   const onClearCodeAnnotationsRef = useRef(onClearCodeAnnotations);
   const [isComposerCollapsed, setIsComposerCollapsed] = useState(false);
   const [dismissedActiveFileReference, setDismissedActiveFileReference] =
@@ -803,11 +836,58 @@ export const Composer = memo(function Composer({
     setRetainedContextChipKeys(keepArrayWhenEmpty);
     setMemoryReferenceMode("off");
   }, []);
-  const resetContextLedgerSessionState = useCallback(() => {
-    clearComposerContextSelections();
+  const captureComposerContextSelectionSnapshot = useCallback(
+    (): ComposerContextSelectionSnapshot => ({
+      selectedSkillNames,
+      selectedCommonsNames,
+      selectedManualMemories,
+      selectedNoteCards,
+      memoryReferenceMode,
+      carryOverManualMemoryIds,
+      retainedManualMemoryIds,
+      carryOverNoteCardIds,
+      retainedNoteCardIds,
+      carryOverContextChipKeys,
+      retainedContextChipKeys,
+      selectedInlineFileReferences,
+    }),
+    [
+      carryOverContextChipKeys,
+      carryOverManualMemoryIds,
+      carryOverNoteCardIds,
+      memoryReferenceMode,
+      retainedContextChipKeys,
+      retainedManualMemoryIds,
+      retainedNoteCardIds,
+      selectedCommonsNames,
+      selectedInlineFileReferences,
+      selectedManualMemories,
+      selectedNoteCards,
+      selectedSkillNames,
+    ],
+  );
+  const restoreComposerContextSelectionSnapshot = useCallback(
+    (snapshot: ComposerContextSelectionSnapshot) => {
+      setSelectedSkillNames(snapshot.selectedSkillNames);
+      setSelectedCommonsNames(snapshot.selectedCommonsNames);
+      setSelectedManualMemories(snapshot.selectedManualMemories);
+      setSelectedNoteCards(snapshot.selectedNoteCards);
+      setMemoryReferenceMode(snapshot.memoryReferenceMode);
+      setCarryOverManualMemoryIds(snapshot.carryOverManualMemoryIds);
+      setRetainedManualMemoryIds(snapshot.retainedManualMemoryIds);
+      setCarryOverNoteCardIds(snapshot.carryOverNoteCardIds);
+      setRetainedNoteCardIds(snapshot.retainedNoteCardIds);
+      setCarryOverContextChipKeys(snapshot.carryOverContextChipKeys);
+      setRetainedContextChipKeys(snapshot.retainedContextChipKeys);
+      setSelectedInlineFileReferences(snapshot.selectedInlineFileReferences);
+    },
+    [],
+  );
+  const resetContextLedgerSessionState = useCallback((sessionKey: string) => {
     setContextLedgerExpanded((current) => (current ? false : current));
-    currentContextLedgerProjectionRef.current = null; previousContextLedgerSessionKeyRef.current = contextLedgerSessionKey;
-  }, [clearComposerContextSelections, contextLedgerSessionKey]);
+    currentContextLedgerProjectionRef.current = null;
+    previousContextLedgerSessionKeyRef.current = sessionKey;
+  }, []);
 
   useEffect(() => {
     if (textareaHeight > COMPOSER_MIN_HEIGHT) {
@@ -829,8 +909,29 @@ export const Composer = memo(function Composer({
   }, [hasStatusPanelActivity, statusPanelExpandedOverride]);
 
   useEffect(() => {
-    resetContextLedgerSessionState();
-  }, [activeThreadId, activeWorkspaceId, resetContextLedgerSessionState]);
+    const previousSessionKey = previousContextLedgerSessionKeyRef.current;
+    if (!previousSessionKey) {
+      previousContextLedgerSessionKeyRef.current = contextLedgerSessionKey;
+      return;
+    }
+    if (previousSessionKey === contextLedgerSessionKey) {
+      return;
+    }
+    contextSelectionsBySessionKeyRef.current[previousSessionKey] =
+      captureComposerContextSelectionSnapshot();
+    restoreComposerContextSelectionSnapshot(
+      contextSelectionsBySessionKeyRef.current[contextLedgerSessionKey] ??
+        createEmptyComposerContextSelectionSnapshot(),
+    );
+    resetContextLedgerSessionState(contextLedgerSessionKey);
+  }, [
+    activeThreadId,
+    activeWorkspaceId,
+    captureComposerContextSelectionSnapshot,
+    contextLedgerSessionKey,
+    resetContextLedgerSessionState,
+    restoreComposerContextSelectionSnapshot,
+  ]);
 
   useEffect(() => {
     if (!pendingCodeAnnotation) {
