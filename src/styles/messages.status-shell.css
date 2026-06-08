@@ -323,10 +323,14 @@
 }
 
 .working {
+  position: sticky;
+  bottom: 8px;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
+  max-width: calc(100% - 24px);
   padding: 0;
   margin: 4px 24px 12px 0;
   color: var(--text-fainter);
@@ -342,6 +346,7 @@
 .working-spinner {
   position: relative;
   display: inline-block;
+  flex: 0 0 14px;
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -478,6 +483,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 0 0 6ch;
+  justify-content: flex-end;
   font-variant-numeric: tabular-nums;
   color: var(--text-stronger);
 }
@@ -485,6 +492,10 @@
 
 .working-text {
   position: relative;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: transparent;
   background: linear-gradient(
     90deg,
@@ -499,12 +510,17 @@
 }
 
 .working-hint {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin-left: 8px;
   color: var(--text-faint);
   font-size: 11px;
 }
 
 .working-activity {
+  min-width: 0;
   color: var(--text-faint);
   font-size: 11px;
   max-width: min(62ch, 54vw);
