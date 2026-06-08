@@ -1680,6 +1680,19 @@ export const Messages = memo(function Messages({
     },
     [isThinking, latestReasoningId, renderSourceItems],
   );
+  const liveTailAutoFollowKey = [
+    liveAssistantItem?.id ?? "no-live-assistant",
+    liveAssistantItem?.text.length ?? 0,
+    liveReasoningItem?.id ?? "no-live-reasoning",
+    liveReasoningItem?.content.length ?? 0,
+    isWorking ? "working" : "idle",
+  ].join(":");
+  useEffect(() => {
+    if (!isWorking || !liveAutoFollowEnabled) {
+      return;
+    }
+    requestAutoScroll();
+  }, [isWorking, liveAutoFollowEnabled, liveTailAutoFollowKey, requestAutoScroll]);
   useEffect(() => {
     if (!threadId || !isThinking) {
       lastStreamSurfaceDiagnosticKeyRef.current = null;
