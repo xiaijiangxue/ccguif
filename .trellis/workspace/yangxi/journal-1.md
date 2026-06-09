@@ -994,3 +994,36 @@ Extended the resize system to support east/west/ne/nw resize handles alongside t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 24: Default expanded composer tool dock
+
+**Date**: 2026-06-10
+**Task**: Default expanded composer tool dock
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Defaulted the composer input tool dock to expanded and updated ButtonArea tests to assert the new initial state.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cdd6f34a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

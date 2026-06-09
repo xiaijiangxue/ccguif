@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 23
-- **Last Active**: 2026-06-08
+- **Total Sessions**: 24
+- **Last Active**: 2026-06-10
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~996 | Active |
+| `journal-1.md` | ~1029 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 24 | 2026-06-10 | Default expanded composer tool dock | `cdd6f34a` | `refactor/liquid-precision-ui` |
 | 23 | 2026-06-08 | Auto-select first search match in FileViewPanel | `fafe9b0d` | `refactor/liquid-precision-ui` |
 | 22 | 2026-06-08 | Highlight matched text in content search preview | `ae1ff39b` | `refactor/liquid-precision-ui` |
 | 21 | 2026-06-08 | Add file content search to search palette | `91cfbb16` | `refactor/liquid-precision-ui` |
