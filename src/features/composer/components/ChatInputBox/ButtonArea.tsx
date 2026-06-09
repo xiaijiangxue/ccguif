@@ -99,7 +99,7 @@ export const ButtonArea = ({
   const resolvedStopButtonPhase =
     supportsStreamActivityPhaseFx ? streamActivityPhase : 'idle';
 
-  const [isToolDockOpen, setIsToolDockOpen] = useState(false);
+  const [isToolDockOpen, setIsToolDockOpen] = useState(true);
   const [isMemoryReferencePopoverOpen, setIsMemoryReferencePopoverOpen] = useState(false);
   const [memoryReferencePopoverPlacement, setMemoryReferencePopoverPlacement] =
     useState<'top' | 'bottom'>('top');

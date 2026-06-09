@@ -60,8 +60,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
-
     expect(screen.getByTestId("reasoning-select")).toBeTruthy();
     expect(screen.getByTestId("reasoning-value").textContent).toBe("");
     expect(screen.getByTestId("reasoning-options").textContent).toBe("low,medium,high,xhigh,max");
@@ -81,8 +79,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
-
     expect(screen.queryByTestId("reasoning-select")).toBeNull();
   });
 
@@ -101,15 +97,13 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
-
     expect(screen.getByTestId("reasoning-select")).toBeTruthy();
     expect(screen.getByTestId("reasoning-value").textContent).toBe("high");
     expect(screen.getByTestId("reasoning-options").textContent).toBe("medium,high");
     expect(screen.getByTestId("reasoning-default").textContent).toBe("");
   });
 
-  it("keeps secondary tools collapsed until the tool dock is opened", () => {
+  it("opens secondary tools by default and keeps them after the dock toggle", () => {
     const { container } = render(
       <ButtonArea
         currentProvider="claude"
@@ -125,20 +119,13 @@ describe("ButtonArea custom model storage refresh", () => {
 
     const toggle = screen.getByRole("button", { name: "Expand or collapse input tools" });
 
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(toggle.querySelector(".selector-tool-icon.codicon-extensions")).toBeTruthy();
     expect(container.querySelector(".selector-tool-dock-toggle")?.textContent).not.toContain("工具");
-    expect(screen.queryByTestId("config-select")).toBeNull();
-    expect(screen.queryByTestId("provider-select")).toBeNull();
-    expect(screen.queryByTestId("reasoning-select")).toBeNull();
-    expect(screen.queryByTestId("model-select")).toBeNull();
-
-    fireEvent.click(toggle);
-
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByTestId("config-select")).toBeTruthy();
     expect(screen.queryByTestId("provider-select")).toBeNull();
     expect(screen.getByTestId("reasoning-select")).toBeTruthy();
+    expect(screen.queryByTestId("model-select")).toBeNull();
     expect(
       toggle.compareDocumentPosition(screen.getByTestId("config-select")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -169,9 +156,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    expect(screen.queryByRole("button", { name: "Collapse status panel" })).toBeNull();
-
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
     screen.getByRole("button", { name: "Collapse status panel" }).click();
 
     expect(onToggleStatusPanel).toHaveBeenCalledTimes(1);
@@ -193,7 +177,6 @@ describe("ButtonArea custom model storage refresh", () => {
 
     const toggle = screen.getByRole("button", { name: "Expand or collapse input tools" });
 
-    fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByTestId("config-select")).toBeTruthy();
 
@@ -224,8 +207,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
-
     const mainSurface = screen.getByTestId("main-surface");
     const reasoningSelect = screen.getByTestId("reasoning-select");
     const memoryReferenceToggle = screen.getByRole("button", { name: "composer.memoryReferenceToggle" });
@@ -249,8 +230,6 @@ describe("ButtonArea custom model storage refresh", () => {
         onSetMemoryReferenceMode={onSetMemoryReferenceMode}
       />,
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
 
     const toggle = screen.getByRole("button", { name: "composer.memoryReferenceToggle" });
     fireEvent.click(toggle);
@@ -280,7 +259,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
     fireEvent.click(screen.getByRole("button", { name: "composer.memoryReferenceToggle" }));
 
     const dialog = screen.getByRole("dialog", { name: "composer.memoryReferenceDialogTitle" });
@@ -305,7 +283,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
     fireEvent.click(screen.getByRole("button", { name: "composer.memoryReferenceToggle" }));
 
     const alwaysButton = screen.getByRole("button", {
@@ -333,7 +310,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
     fireEvent.click(screen.getByRole("button", { name: "composer.memoryReferenceToggle" }));
     expect(screen.getByRole("dialog", { name: "composer.memoryReferenceDialogTitle" })).toBeTruthy();
 
@@ -363,8 +339,6 @@ describe("ButtonArea custom model storage refresh", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
-
     fireEvent.click(screen.getByRole("button", { name: "composer.memoryReferenceToggle" }));
     fireEvent.click(screen.getByRole("button", { name: "composer.memoryReferenceEnableAlways" }));
 
@@ -387,8 +361,6 @@ describe("ButtonArea custom model storage refresh", () => {
         onSetMemoryReferenceMode={onSetMemoryReferenceMode}
       />,
     );
-
-    fireEvent.click(screen.getByRole("button", { name: "Expand or collapse input tools" }));
 
     fireEvent.click(screen.getByRole("button", { name: "composer.memoryReferenceToggle" }));
 
