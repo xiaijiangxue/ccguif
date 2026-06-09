@@ -140,7 +140,7 @@ type FileTreePanelProps = {
   gitStatusFiles?: GitFileStatus[];
   gitignoredFiles?: Set<string>;
   gitignoredDirectories?: Set<string>;
-  onRefreshFiles?: () => void;
+  onRefreshFiles?: () => void | Promise<void>;
 };
 
 type FileOpenLocation = {
@@ -261,6 +261,53 @@ function filterDeletedFileTreePathFromMap<T>(valuesByPath: Map<string, T>, delet
     next.set(path, value);
   });
   return changed ? next : valuesByPath;
+}
+
+function isKnownFileTreePath(
+  path: string,
+  files: string[],
+  directories: string[],
+) {
+  return (
+    files.some((entry) => isSameOrDescendantFileTreePath(entry, path)) ||
+    directories.some((entry) => isSameOrDescendantFileTreePath(entry, path))
+  );
+}
+
+function shouldReloadLazyFileTreePath(
+  path: string,
+  files: string[],
+  directories: string[],
+  directoryMetadataByPath: Map<string, WorkspaceDirectoryEntry>,
+) {
+  if (!isKnownFileTreePath(path, files, directories)) {
+    return false;
+  }
+  if (isSpecialDirectoryPath(path)) {
+    return true;
+  }
+  const childState = directoryMetadataByPath.get(path)?.child_state;
+  return childState === "unknown" || childState === "partial";
+}
+
+function filterUnknownExpandedFileTreePaths(
+  expandedPaths: Set<string>,
+  files: string[],
+  directories: string[],
+) {
+  if (expandedPaths.size === 0) {
+    return expandedPaths;
+  }
+  let changed = false;
+  const next = new Set<string>();
+  expandedPaths.forEach((path) => {
+    if (!path || isKnownFileTreePath(path, files, directories)) {
+      next.add(path);
+      return;
+    }
+    changed = true;
+  });
+  return changed ? next : expandedPaths;
 }
 
 function getFileTreePathLeaf(path: string) {
@@ -1604,10 +1651,27 @@ export function FileTreePanel({
       ...loadedLazyDirectoriesRef.current,
       ...loadingLazyDirectoriesRef.current,
     ]);
+    const rootDirectoryMetadataByPath = new Map<string, WorkspaceDirectoryEntry>();
+    directoryMetadata.forEach((entry) => {
+      if (entry.path) {
+        rootDirectoryMetadataByPath.set(entry.path, entry);
+      }
+    });
     const expandedLazyFolders = Array.from(previouslyLoadedLazyFolders).filter(
-      (path) => path && expandedFolders.has(path),
+      (path) =>
+        path &&
+        expandedFolders.has(path) &&
+        shouldReloadLazyFileTreePath(
+          path,
+          files,
+          directoryEntries,
+          rootDirectoryMetadataByPath,
+        ),
     );
     resetLazyTreeState();
+    setExpandedFolders((prev) =>
+      filterUnknownExpandedFileTreePaths(prev, files, directoryEntries),
+    );
     expandedLazyFolders.forEach((path) => {
       void loadLazyDirectoryChildren(path);
     });
@@ -2292,6 +2356,33 @@ export function FileTreePanel({
   const canTrashSelectedNode =
     selectedNodeType !== null && selectedNodePath !== null && selectedNodePath.length > 0;
 
+  const handleRefreshFiles = useCallback(() => {
+    const loadedLazyFolders = Array.from(new Set([
+      ...loadedLazyDirectoriesRef.current,
+      ...loadingLazyDirectoriesRef.current,
+    ])).filter(Boolean);
+    const expandedLazyFoldersToReload = loadedLazyFolders.filter((path) =>
+      expandedFoldersRef.current.has(path),
+    );
+
+    const reloadLazyFolders = () => {
+      if (expandedLazyFoldersToReload.length === 0 || activeWorkspaceIdRef.current !== workspaceId) {
+        return;
+      }
+      resetLazyTreeState();
+      expandedLazyFoldersToReload.forEach((path) => {
+        void loadLazyDirectoryChildren(path);
+      });
+    };
+
+    const refreshResult = onRefreshFiles?.();
+    if (refreshResult !== undefined) {
+      void Promise.resolve(refreshResult).finally(reloadLazyFolders);
+      return;
+    }
+    reloadLazyFolders();
+  }, [loadLazyDirectoryChildren, onRefreshFiles, resetLazyTreeState, workspaceId]);
+
   const showContextMenu = useCallback(
     (event: MouseEvent<HTMLButtonElement>, relativePath: string, isFolder: boolean) => {
       event.preventDefault();
@@ -2950,22 +3041,9 @@ export function FileTreePanel({
             </button>
           </div>
           <FileTreeRootActions
-            canTrashSelectedNode={canTrashSelectedNode}
-            isSpecHubActive={isSpecHubActive}
-            selectedParentFolder={selectedParentFolder}
             onOpenDetachedExplorer={onOpenDetachedExplorer}
             detachedInitialFilePath={detachedInitialFilePath}
-            onOpenNewFile={(parentFolder) => openNewFilePrompt(parentFolder ?? "")}
-            onOpenNewFolder={(parentFolder) => openNewFolderPrompt(parentFolder ?? "")}
-            onRefreshFiles={onRefreshFiles}
-            onTrashSelected={() => {
-              if (!canTrashSelectedNode || !selectedNodePath || !selectedNodeType) {
-                return;
-              }
-              void trashItem(selectedNodePath, selectedNodeType === "folder");
-            }}
-            onOpenSpecHub={onOpenSpecHub}
-            showSpecHubAction={showSpecHubAction}
+            onRefreshFiles={onRefreshFiles ? handleRefreshFiles : undefined}
             showDetachedExplorerAction={showDetachedExplorerAction}
           />
         </div>
@@ -2987,7 +3065,7 @@ export function FileTreePanel({
               <button
                 type="button"
                 className="file-tree-lazy-retry"
-                onClick={() => void onRefreshFiles()}
+                onClick={() => void handleRefreshFiles()}
                 title={normalizedLoadError}
               >
                 {t("files.retryLoadFiles")}

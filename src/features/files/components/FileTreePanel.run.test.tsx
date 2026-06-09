@@ -1044,6 +1044,247 @@ describe("FileTreePanel run action isolation", () => {
     });
   });
 
+  it("drops externally deleted lazy child folders after root refresh props change", async () => {
+    invokeMock.mockImplementation(async (...args: any[]) => {
+      const command = args[0];
+      const payload = args[1] as { path?: string };
+      if (
+        command === "list_workspace_directory_children_visible" &&
+        payload.path === ".claude/worktrees"
+      ) {
+        return {
+          files: [] as string[],
+          directories: [".claude/worktrees/agent-old"],
+          gitignored_files: [] as string[],
+          gitignored_directories: [] as string[],
+          directory_entries: [{ path: ".claude/worktrees/agent-old", child_state: "loaded" }],
+        };
+      }
+      if (
+        command === "list_workspace_directory_children_ignored" ||
+        command === "list_workspace_directory_children"
+      ) {
+        return {
+          files: [] as string[],
+          directories: [] as string[],
+          gitignored_files: [] as string[],
+          gitignored_directories: [] as string[],
+          directory_entries: [] as any[],
+        };
+      }
+      return null;
+    });
+
+    const { rerender } = render(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace"
+        files={[]}
+        directories={[".claude", ".claude/worktrees"]}
+        directoryMetadata={[
+          { path: ".claude", child_state: "loaded" },
+          { path: ".claude/worktrees", child_state: "unknown" },
+        ]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+      />,
+    );
+
+    fireEvent.doubleClick(screen.getByRole("button", { name: /\.claude/ }));
+    fireEvent.doubleClick(screen.getByRole("button", { name: /worktrees/ }));
+    expect(await screen.findByRole("button", { name: /agent-old/ })).toBeTruthy();
+
+    rerender(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace"
+        files={[]}
+        directories={[".claude", ".claude/worktrees"]}
+        directoryMetadata={[
+          { path: ".claude", child_state: "loaded" },
+          { path: ".claude/worktrees", child_state: "empty" },
+        ]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /agent-old/ })).toBeNull();
+    });
+  });
+
+  it("drops externally deleted lazy child folders after manual refresh", async () => {
+    const onRefreshFiles = vi.fn(async () => undefined);
+    let worktreesDeleted = false;
+    invokeMock.mockImplementation(async (...args: any[]) => {
+      const command = args[0];
+      const payload = args[1] as { path?: string };
+      if (
+        command === "list_workspace_directory_children_visible" &&
+        payload.path === ".claude/worktrees"
+      ) {
+        return {
+          files: [] as string[],
+          directories: worktreesDeleted ? [] : [".claude/worktrees/agent-old"],
+          gitignored_files: [] as string[],
+          gitignored_directories: [] as string[],
+          directory_entries: worktreesDeleted
+            ? [{ path: ".claude/worktrees", child_state: "empty" }]
+            : [{ path: ".claude/worktrees/agent-old", child_state: "loaded" }],
+        };
+      }
+      if (
+        command === "list_workspace_directory_children_ignored" ||
+        command === "list_workspace_directory_children"
+      ) {
+        return {
+          files: [] as string[],
+          directories: [] as string[],
+          gitignored_files: [] as string[],
+          gitignored_directories: [] as string[],
+          directory_entries: [] as any[],
+        };
+      }
+      return null;
+    });
+
+    render(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace"
+        files={[]}
+        directories={[".claude", ".claude/worktrees"]}
+        directoryMetadata={[
+          { path: ".claude", child_state: "loaded" },
+          { path: ".claude/worktrees", child_state: "unknown" },
+        ]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        onRefreshFiles={onRefreshFiles}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+      />,
+    );
+
+    fireEvent.doubleClick(screen.getByRole("button", { name: /\.claude/ }));
+    fireEvent.doubleClick(screen.getByRole("button", { name: /worktrees/ }));
+    expect(await screen.findByRole("button", { name: /agent-old/ })).toBeTruthy();
+
+    worktreesDeleted = true;
+    fireEvent.click(screen.getByRole("button", { name: "files.refreshFiles" }));
+
+    await waitFor(() => {
+      expect(onRefreshFiles).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole("button", { name: /agent-old/ })).toBeNull();
+    });
+    expect(invokeMock).toHaveBeenCalledWith("list_workspace_directory_children_visible", {
+      workspaceId: "workspace-1",
+      path: ".claude/worktrees",
+    });
+  });
+
+  it("shows externally added lazy child folders after manual refresh", async () => {
+    const onRefreshFiles = vi.fn(async () => undefined);
+    let worktreeCreated = false;
+    invokeMock.mockImplementation(async (...args: any[]) => {
+      const command = args[0];
+      const payload = args[1] as { path?: string };
+      if (
+        command === "list_workspace_directory_children_visible" &&
+        payload.path === ".claude/worktrees"
+      ) {
+        return {
+          files: [] as string[],
+          directories: worktreeCreated ? [".claude/worktrees/agent-new"] : [],
+          gitignored_files: [] as string[],
+          gitignored_directories: [] as string[],
+          directory_entries: worktreeCreated
+            ? [{ path: ".claude/worktrees/agent-new", child_state: "loaded" }]
+            : [{ path: ".claude/worktrees", child_state: "empty" }],
+        };
+      }
+      if (
+        command === "list_workspace_directory_children_ignored" ||
+        command === "list_workspace_directory_children"
+      ) {
+        return {
+          files: [] as string[],
+          directories: [] as string[],
+          gitignored_files: [] as string[],
+          gitignored_directories: [] as string[],
+          directory_entries: [] as any[],
+        };
+      }
+      return null;
+    });
+
+    render(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace"
+        files={[]}
+        directories={[".claude", ".claude/worktrees"]}
+        directoryMetadata={[
+          { path: ".claude", child_state: "loaded" },
+          { path: ".claude/worktrees", child_state: "unknown" },
+        ]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        onRefreshFiles={onRefreshFiles}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+      />,
+    );
+
+    fireEvent.doubleClick(screen.getByRole("button", { name: /\.claude/ }));
+    fireEvent.doubleClick(screen.getByRole("button", { name: /worktrees/ }));
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith("list_workspace_directory_children_ignored", {
+        workspaceId: "workspace-1",
+        path: ".claude/worktrees",
+      });
+    });
+
+    worktreeCreated = true;
+    fireEvent.click(screen.getByRole("button", { name: "files.refreshFiles" }));
+
+    expect(await screen.findByRole("button", { name: /agent-new/ })).toBeTruthy();
+    expect(onRefreshFiles).toHaveBeenCalledTimes(1);
+  });
+
   it("shows root action buttons and trashes selected node from root row", async () => {
     const onRefreshFiles = vi.fn();
 
