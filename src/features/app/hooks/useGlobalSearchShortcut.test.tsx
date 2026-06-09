@@ -49,7 +49,7 @@ describe("useGlobalSearchShortcut", () => {
     }
   });
 
-  it("does not steal configured shortcut from editable targets", () => {
+  it("triggers configured shortcut from editable targets", () => {
     const originalPlatform = window.navigator.platform;
     Object.defineProperty(window.navigator, "platform", {
       value: "Win32",
@@ -64,9 +64,8 @@ describe("useGlobalSearchShortcut", () => {
       input.focus();
 
       fireEvent.keyDown(input, { key: "o", ctrlKey: true });
-      fireEvent.keyDown(window, { key: "o", ctrlKey: true });
 
-      expect(onTrigger).not.toHaveBeenCalled();
+      expect(onTrigger).toHaveBeenCalledTimes(1);
     } finally {
       Object.defineProperty(window.navigator, "platform", {
         value: originalPlatform,

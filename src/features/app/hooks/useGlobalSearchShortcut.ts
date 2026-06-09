@@ -1,8 +1,5 @@
 import { useEffect } from "react";
-import {
-  isEditableShortcutTarget,
-  matchesShortcutForPlatform,
-} from "../../../utils/shortcuts";
+import { matchesShortcutForPlatform } from "../../../utils/shortcuts";
 import { registerKeydownHandler } from "./keyboardDispatcher";
 
 type UseGlobalSearchShortcutOptions = {
@@ -46,12 +43,6 @@ export function useGlobalSearchShortcut({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) {
-        return;
-      }
-      if (
-        isEditableShortcutTarget(event.target) ||
-        isEditableShortcutTarget(document.activeElement)
-      ) {
         return;
       }
       if (!matchesShortcutForPlatform(event, normalizedConfiguredShortcut)) {
