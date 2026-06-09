@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SearchResult } from "../features/search/types";
 import type { AppSettings, WorkspaceInfo } from "../types";
@@ -15,6 +15,9 @@ type PaletteContentSearchMockResult = {
 
 const prewarmSessionRadarForWorkspaceMock = vi.hoisted(() => vi.fn());
 const useUnifiedSearchMock = vi.hoisted(() => vi.fn(() => []));
+const getWorkspaceFilesMock = vi.hoisted(() =>
+  vi.fn(async () => ({ files: [] })),
+);
 const usePaletteContentSearchMock = vi.hoisted(() =>
   vi.fn<() => PaletteContentSearchMockResult>(() => ({
     contentResults: [],
@@ -90,7 +93,7 @@ vi.mock("../services/systemNotification", () => ({
 }));
 
 vi.mock("../services/tauri", () => ({
-  getWorkspaceFiles: vi.fn(async () => ({ files: [] })),
+  getWorkspaceFiles: getWorkspaceFilesMock,
 }));
 
 function createWorkspace(id: string, name: string): WorkspaceInfo {
@@ -161,6 +164,8 @@ describe("useAppShellSearchRadarSection", () => {
     });
     isBackgroundRenderGatingEnabledMock.mockReset();
     isBackgroundRenderGatingEnabledMock.mockReturnValue(true);
+    getWorkspaceFilesMock.mockReset();
+    getWorkspaceFilesMock.mockResolvedValue({ files: [] });
   });
 
   it("keeps recent thread titles aligned with sidebar thread summaries", () => {
@@ -422,5 +427,34 @@ describe("useAppShellSearchRadarSection", () => {
     expect(useUnifiedSearchMock).toHaveBeenCalledWith(
       expect.objectContaining({ matchOptions }),
     );
+  });
+
+  it("uses full workspace file index for current-scope file palette search", async () => {
+    const workspace = createWorkspace("ws-1", "Workspace 1");
+    getWorkspaceFilesMock.mockResolvedValue({
+      files: ["icon/sousuo.svg", "src/app-shell.tsx"],
+    });
+
+    renderHook(() =>
+      useAppShellSearchRadarSection({
+        ...createBaseOptions(workspace),
+        files: ["README.md"],
+        searchPaletteQuery: "sousuo",
+        searchScope: "active-workspace",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(useUnifiedSearchMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          workspaceSources: [
+            expect.objectContaining({
+              workspaceId: "ws-1",
+              files: ["icon/sousuo.svg", "src/app-shell.tsx"],
+            }),
+          ],
+        }),
+      );
+    });
   });
 });

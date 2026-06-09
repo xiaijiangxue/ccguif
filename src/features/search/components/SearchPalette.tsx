@@ -8,6 +8,7 @@ import { PALETTE_CONTENT_SEARCH_MIN_QUERY_LENGTH } from "../perf/limits";
 import type {
   PaletteContentSearchStatus,
   SearchContentFilter,
+  SearchHighlightRange,
   SearchMatchOptions,
   SearchResult,
   SearchScope,
@@ -62,6 +63,52 @@ function renderHighlightedPreview(
   }
   if (cursor < preview.length) {
     segments.push(preview.slice(cursor));
+  }
+
+  return <>{segments}</>;
+}
+
+function renderHighlightedRanges(
+  text: string,
+  ranges: SearchHighlightRange[] | undefined,
+) {
+  if (!ranges || ranges.length === 0) {
+    return text;
+  }
+
+  const segments = [];
+  let cursor = 0;
+  const normalizedRanges = ranges
+    .map((range) => ({
+      start: Math.max(0, Math.min(text.length, range.start)),
+      end: Math.max(0, Math.min(text.length, range.end)),
+    }))
+    .filter((range) => range.end > range.start)
+    .sort((left, right) => left.start - right.start || left.end - right.end);
+
+  for (const range of normalizedRanges) {
+    if (range.start < cursor) {
+      continue;
+    }
+    if (range.start > cursor) {
+      segments.push(text.slice(cursor, range.start));
+    }
+    segments.push(
+      <mark
+        className="search-palette-result-highlight"
+        key={`${range.start}-${range.end}`}
+      >
+        {text.slice(range.start, range.end)}
+      </mark>,
+    );
+    cursor = range.end;
+  }
+
+  if (cursor === 0) {
+    return text;
+  }
+  if (cursor < text.length) {
+    segments.push(text.slice(cursor));
   }
 
   return <>{segments}</>;
@@ -400,7 +447,9 @@ export function SearchPalette({
                 onClick={() => onSelect(result)}
               >
                 <span className="search-palette-result-main">
-                  <span className="search-palette-result-title">{result.title}</span>
+                  <span className="search-palette-result-title">
+                    {renderHighlightedRanges(result.title, result.titleHighlightRanges)}
+                  </span>
                   {result.kind === "content" && result.preview ? (
                     <span className="search-palette-result-preview">
                       {renderHighlightedPreview(
@@ -428,7 +477,11 @@ export function SearchPalette({
                     ) : null}
                     {result.locationLabel ? (
                       <span className="search-palette-result-tag">
-                        {t("searchPalette.locationTag")}: {result.locationLabel}
+                        {t("searchPalette.locationTag")}:{" "}
+                        {renderHighlightedRanges(
+                          result.locationLabel,
+                          result.locationHighlightRanges,
+                        )}
                       </span>
                     ) : null}
                   </span>

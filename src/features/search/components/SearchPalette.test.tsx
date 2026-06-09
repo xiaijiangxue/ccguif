@@ -371,6 +371,46 @@ describe("SearchPalette", () => {
     expect(screen.getByText(/searchPalette.locationTag: src\/index\.ts:3:15/)).toBeTruthy();
   });
 
+  it("highlights file result title and location using provider match ranges", () => {
+    render(
+      <SearchPalette
+        isOpen
+        scope="active-workspace"
+        contentFilters={["files"]}
+        workspaceName="mossx"
+        query="clear"
+        results={[
+          {
+            id: "file:w-1:src/clear.ts",
+            kind: "file",
+            title: "src/clear.ts",
+            subtitle: "File",
+            score: 10,
+            workspaceId: "w-1",
+            sourceKind: "files",
+            locationLabel: "src/clear.ts",
+            titleHighlightRanges: [{ start: 4, end: 9 }],
+            locationHighlightRanges: [{ start: 4, end: 9 }],
+          },
+        ]}
+        selectedIndex={0}
+        onQueryChange={() => undefined}
+        onMoveSelection={() => undefined}
+        onSelect={() => undefined}
+        onScopeChange={() => undefined}
+        onContentFilterToggle={() => undefined}
+        onClose={() => undefined}
+      />,
+    );
+
+    const highlightedMatches = screen.getAllByText("clear");
+    expect(highlightedMatches.length).toBeGreaterThanOrEqual(2);
+    highlightedMatches.forEach((match) => {
+      expect(match.tagName).toBe("MARK");
+      expect(match.classList.contains("search-palette-result-highlight")).toBe(true);
+    });
+  });
+
   it("highlights content preview with the current query when result has no matched text", () => {
     const resultWithoutMatchedText = {
       ...makeContentResult(),

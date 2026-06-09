@@ -1,5 +1,8 @@
-import type { SearchResult } from "../types";
-import type { SearchMatchOptions } from "../types";
+import type {
+  SearchHighlightRange,
+  SearchMatchOptions,
+  SearchResult,
+} from "../types";
 import {
   DEFAULT_SEARCH_MATCH_OPTIONS,
   findSearchMatchIndex,
@@ -94,6 +97,62 @@ function findFuzzyFileMatch(
   return bestMatch;
 }
 
+function findSubsequenceIndexes(
+  text: string,
+  query: string,
+  caseSensitive: boolean,
+): number[] | null {
+  const haystack = normalizeCase(text, caseSensitive);
+  const needle = normalizeCase(query, caseSensitive);
+  if (needle.length < MIN_FUZZY_FILENAME_QUERY_LENGTH) {
+    return null;
+  }
+
+  const indexes: number[] = [];
+  let queryIndex = 0;
+  for (let index = 0; index < haystack.length; index += 1) {
+    if (haystack[index] !== needle[queryIndex]) {
+      continue;
+    }
+    indexes.push(index);
+    queryIndex += 1;
+    if (queryIndex === needle.length) {
+      return indexes;
+    }
+  }
+
+  return null;
+}
+
+function findFuzzyPathHighlightRanges(
+  path: string,
+  query: string,
+  options: SearchMatchOptions,
+): SearchHighlightRange[] | undefined {
+  const fileName = getFileName(path);
+  const fileStem = getFileStem(fileName);
+  const fileNameStart = path.replace(/\\/g, "/").lastIndexOf("/") + 1;
+  const candidates = fileStem === fileName
+    ? [{ text: fileName, offset: fileNameStart }]
+    : [
+      { text: fileStem, offset: fileNameStart },
+      { text: fileName, offset: fileNameStart },
+    ];
+
+  for (const candidate of candidates) {
+    const indexes = findSubsequenceIndexes(candidate.text, query, options.caseSensitive);
+    if (!indexes) {
+      continue;
+    }
+    return indexes.map((index) => ({
+      start: candidate.offset + index,
+      end: candidate.offset + index + 1,
+    }));
+  }
+
+  return undefined;
+}
+
 export function searchFiles(
   query: string,
   files: string[],
@@ -108,6 +167,7 @@ export function searchFiles(
   for (const path of files) {
     const index = findSearchMatchIndex(path, normalizedQuery, matchOptions);
     if (index >= 0) {
+      const highlightRanges = [{ start: index, end: index + normalizedQuery.length }];
       results.push({
         id: `file:${workspaceId}:${path}`,
         kind: "file",
@@ -116,6 +176,8 @@ export function searchFiles(
         score: index === 0 ? 20 : 200 + index,
         workspaceId,
         filePath: path,
+        titleHighlightRanges: highlightRanges,
+        locationHighlightRanges: highlightRanges,
         sourceKind: "files",
         locationLabel: path,
       });
@@ -127,6 +189,11 @@ export function searchFiles(
       continue;
     }
 
+    const highlightRanges = findFuzzyPathHighlightRanges(
+      path,
+      normalizedQuery,
+      matchOptions ?? DEFAULT_SEARCH_MATCH_OPTIONS,
+    );
     results.push({
       id: `file:${workspaceId}:${path}`,
       kind: "file",
@@ -135,6 +202,8 @@ export function searchFiles(
       score: 320 + fuzzyMatch.start * 2 + fuzzyMatch.gapCount * 12,
       workspaceId,
       filePath: path,
+      titleHighlightRanges: highlightRanges,
+      locationHighlightRanges: highlightRanges,
       sourceKind: "files",
       locationLabel: path,
     });

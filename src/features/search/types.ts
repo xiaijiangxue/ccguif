@@ -25,6 +25,11 @@ export type SearchContentFilter =
   | "skills"
   | "commands";
 
+export type SearchHighlightRange = {
+  start: number;
+  end: number;
+};
+
 export type SearchResult = {
   id: string;
   kind: SearchResultKind;
@@ -42,6 +47,8 @@ export type SearchResult = {
   column?: number;
   preview?: string;
   matchedText?: string;
+  titleHighlightRanges?: SearchHighlightRange[];
+  locationHighlightRanges?: SearchHighlightRange[];
   matchCount?: number;
   matchId?: string;
   historyText?: string;

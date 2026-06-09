@@ -4,6 +4,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import type {
   Dispatch,
@@ -189,6 +190,8 @@ export function useAppShellSearchRadarSection({
     onDraftChange: handleDraftChange,
     textareaRef: composerInputRef,
   });
+  const [activeWorkspaceSearchFilesByWorkspace, setActiveWorkspaceSearchFilesByWorkspace] =
+    useState<Record<string, string[]>>({});
 
   const perfSnapshotRef = useRef({
     activeThreadId: null as string | null,
@@ -398,6 +401,66 @@ export function useAppShellSearchRadarSection({
   }, [activeWorkspaceId, files, setGlobalSearchFilesByWorkspace]);
 
   useEffect(() => {
+    const normalizedQuery = searchPaletteQuery
+      .replace(INVISIBLE_SEARCH_QUERY_CHARS_REGEX, "")
+      .trim();
+    const shouldSearchFiles =
+      searchContentFilters.includes("all") || searchContentFilters.includes("files");
+    if (
+      !isSearchPaletteOpen ||
+      searchScope !== "active-workspace" ||
+      !normalizedQuery ||
+      !shouldSearchFiles ||
+      !activeWorkspaceId ||
+      !activeWorkspace?.connected
+    ) {
+      return;
+    }
+    if (activeWorkspaceSearchFilesByWorkspace[activeWorkspaceId]) {
+      return;
+    }
+
+    let cancelled = false;
+    void getWorkspaceFiles(activeWorkspaceId)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+        const workspaceFiles = Array.isArray(response.files) ? response.files : [];
+        setActiveWorkspaceSearchFilesByWorkspace((prev) => ({
+          ...prev,
+          [activeWorkspaceId]: workspaceFiles,
+        }));
+      })
+      .catch(() => {
+        if (cancelled) {
+          return;
+        }
+        setActiveWorkspaceSearchFilesByWorkspace((prev) => {
+          if (prev[activeWorkspaceId]) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [activeWorkspaceId]: [],
+          };
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    activeWorkspace?.connected,
+    activeWorkspaceId,
+    activeWorkspaceSearchFilesByWorkspace,
+    isSearchPaletteOpen,
+    searchContentFilters,
+    searchPaletteQuery,
+    searchScope,
+  ]);
+
+  useEffect(() => {
     if (!isSearchPaletteOpen || searchScope !== "global") {
       return;
     }
@@ -461,13 +524,14 @@ export function useAppShellSearchRadarSection({
       {
         workspaceId: activeWorkspaceId,
         workspaceName: activeWorkspace.name,
-        files,
+        files: activeWorkspaceSearchFilesByWorkspace[activeWorkspaceId] ?? files,
         threads: activeWorkspaceThreads,
       },
     ];
   }, [
     activeWorkspace,
     activeWorkspaceId,
+    activeWorkspaceSearchFilesByWorkspace,
     activeWorkspaceThreads,
     files,
     globalSearchFilesByWorkspace,
