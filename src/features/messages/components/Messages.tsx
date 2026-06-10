@@ -418,6 +418,11 @@ export const Messages = memo(function Messages({
   const agentTaskNodeByToolUseIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
   const anchorRowScrollerRef = useRef<((messageId: string) => boolean) | null>(null);
   const autoScrollRef = useRef(true);
+  const latestUserAnchorSeenRef = useRef<{
+    threadId: string | null;
+    messageId: string | null;
+  }>({ threadId: null, messageId: null });
+  const suppressNextAutoFollowForUserAnchorRef = useRef<string | null>(null);
   const anchorUpdateRafRef = useRef<number | null>(null);
   const historyStickyUpdateRafRef = useRef<number | null>(null);
   const anchorOffsetsRefreshRafRef = useRef<number | null>(null);
@@ -1512,6 +1517,15 @@ export const Messages = memo(function Messages({
     ? renderedItemsWindow.visibleCollapsedHistoryItemCount
       + liveTailWorkingSet.omittedBeforeWorkingSetCount
     : 0;
+  const latestRenderedUserMessageId = useMemo(() => {
+    for (let index = renderedItems.length - 1; index >= 0; index -= 1) {
+      const item = renderedItems[index];
+      if (isUserMessageConversationItem(item)) {
+        return item.id;
+      }
+    }
+    return null;
+  }, [renderedItems]);
   const currentLatestAssistantTextLength = useMemo(
     () => findLatestAssistantTextLength(renderedItems),
     [renderedItems],
@@ -2213,6 +2227,13 @@ export const Messages = memo(function Messages({
     if (!liveAutoFollowEnabled) {
       return undefined;
     }
+    if (
+      latestRenderedUserMessageId &&
+      suppressNextAutoFollowForUserAnchorRef.current === latestRenderedUserMessageId
+    ) {
+      suppressNextAutoFollowForUserAnchorRef.current = null;
+      return undefined;
+    }
     const container = containerRef.current;
     const shouldScroll =
       liveAutoFollowEnabled ||
@@ -2235,7 +2256,14 @@ export const Messages = memo(function Messages({
         window.cancelAnimationFrame(raf);
       }
     };
-  }, [isAssistantFinalizing, scrollKey, isThinking, isNearBottom, liveAutoFollowEnabled]);
+  }, [
+    isAssistantFinalizing,
+    scrollKey,
+    isThinking,
+    isNearBottom,
+    latestRenderedUserMessageId,
+    liveAutoFollowEnabled,
+  ]);
 
   const groupedEntries = useMemo(
     () => groupToolItems(timelinePresentationItems),
@@ -2375,6 +2403,34 @@ export const Messages = memo(function Messages({
     }
     scrollToAnchor(messageId);
   }, [handleShowAllHistoryItems, scrollToAnchor, showAllHistoryItems]);
+
+  useLayoutEffect(() => {
+    const current = {
+      threadId: threadId ?? null,
+      messageId: latestRenderedUserMessageId,
+    };
+    const previous = latestUserAnchorSeenRef.current;
+
+    if (!current.threadId || !current.messageId) {
+      latestUserAnchorSeenRef.current = current;
+      return;
+    }
+    if (previous.threadId !== current.threadId) {
+      latestUserAnchorSeenRef.current = current;
+      return;
+    }
+    if (previous.messageId === current.messageId) {
+      return;
+    }
+
+    latestUserAnchorSeenRef.current = current;
+    if (!messageNodeByIdRef.current.get(current.messageId)) {
+      return;
+    }
+
+    suppressNextAutoFollowForUserAnchorRef.current = current.messageId;
+    scrollToAnchor(current.messageId);
+  }, [latestRenderedUserMessageId, scrollToAnchor, threadId]);
 
   useEffect(() => {
     if (!pendingJumpMessageId) {
