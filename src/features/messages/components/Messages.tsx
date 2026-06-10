@@ -2376,7 +2376,7 @@ export const Messages = memo(function Messages({
     autoScrollRef.current = false;
     container.scrollTo({
       top: Math.max(0, targetTop),
-      behavior: "smooth",
+      behavior: "instant",
     });
     setActiveAnchorId((previous) => (previous === messageId ? previous : messageId));
   }, []);
@@ -2404,32 +2404,44 @@ export const Messages = memo(function Messages({
     scrollToAnchor(messageId);
   }, [handleShowAllHistoryItems, scrollToAnchor, showAllHistoryItems]);
 
-  useLayoutEffect(() => {
-    const current = {
-      threadId: threadId ?? null,
-      messageId: latestRenderedUserMessageId,
-    };
+  useEffect(() => {
+    const currentThreadId = threadId ?? null;
+    const currentMessageId = latestRenderedUserMessageId;
     const previous = latestUserAnchorSeenRef.current;
 
-    if (!current.threadId || !current.messageId) {
-      latestUserAnchorSeenRef.current = current;
+    if (!currentThreadId || !currentMessageId) {
+      latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
       return;
     }
-    if (previous.threadId !== current.threadId) {
-      latestUserAnchorSeenRef.current = current;
+    if (previous.threadId !== currentThreadId) {
+      latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
       return;
     }
-    if (previous.messageId === current.messageId) {
-      return;
-    }
-
-    latestUserAnchorSeenRef.current = current;
-    if (!messageNodeByIdRef.current.get(current.messageId)) {
+    if (previous.messageId === currentMessageId) {
       return;
     }
 
-    suppressNextAutoFollowForUserAnchorRef.current = current.messageId;
-    scrollToAnchor(current.messageId);
+    // Don't update latestUserAnchorSeenRef yet — only mark seen after we
+    // successfully find the node and scroll, so subsequent renders can retry.
+    const node = messageNodeByIdRef.current.get(currentMessageId);
+    if (!node) {
+      // Retry once after layout settles (callback refs may not have fired yet).
+      let raf = 0;
+      raf = window.requestAnimationFrame(() => {
+        if (messageNodeByIdRef.current.get(currentMessageId)) {
+          latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
+          suppressNextAutoFollowForUserAnchorRef.current = currentMessageId;
+          scrollToAnchor(currentMessageId);
+        }
+      });
+      return () => {
+        if (raf) { window.cancelAnimationFrame(raf); }
+      };
+    }
+
+    latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
+    suppressNextAutoFollowForUserAnchorRef.current = currentMessageId;
+    scrollToAnchor(currentMessageId);
   }, [latestRenderedUserMessageId, scrollToAnchor, threadId]);
 
   useEffect(() => {
