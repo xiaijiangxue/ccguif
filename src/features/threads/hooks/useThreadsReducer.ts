@@ -1,4 +1,8 @@
-import type { ConversationItem, ThreadSummary } from "../../../types";
+import type {
+  ConversationItem,
+  ThreadSummary,
+  ThreadTokenUsage,
+} from "../../../types";
 import type { SidebarSnapshot } from "../utils/sidebarSnapshot";
 import {
   MAX_ITEM_TEXT,
@@ -132,6 +136,54 @@ export function createInitialThreadState(snapshot?: SidebarSnapshot | null): Thr
   return {
     ...initialState,
     threadsByWorkspace: snapshot.threadsByWorkspace,
+  };
+}
+
+function preserveNonNullish<T>(next: T | null | undefined, prev: T): T {
+  return (next != null && next !== 0) ? next : prev;
+}
+
+/**
+ * 合并两次 token usage 快照，防止后端在新一轮对话开始时发来的空快照
+ * 覆盖掉前一轮的累计数据。
+ *
+ * - total（累计）：取新旧最大值，累计值只增不减
+ * - last（本轮）：直接用新值（每轮重置是正确行为）
+ * - contextUsedTokens：取新旧最大值（上下文占用量在单轮对话中应单调递增）
+ * - 标量字段（modelContextWindow 等）：新值为 null/0 时保留旧值
+ */
+function mergeTokenUsageSnapshots(
+  prev: ThreadTokenUsage | null,
+  next: ThreadTokenUsage,
+): ThreadTokenUsage {
+  if (!prev) return next;
+  const prevTotal = prev.total;
+  const nextTotal = next.total;
+  const hasRealTotalData =
+    nextTotal.inputTokens > 0 ||
+    nextTotal.outputTokens > 0 ||
+    nextTotal.totalTokens > 0;
+  const mergedTotal = hasRealTotalData
+    ? {
+        inputTokens: Math.max(prevTotal.inputTokens, nextTotal.inputTokens),
+        outputTokens: Math.max(prevTotal.outputTokens, nextTotal.outputTokens),
+        cachedInputTokens: Math.max(prevTotal.cachedInputTokens, nextTotal.cachedInputTokens),
+        totalTokens: Math.max(prevTotal.totalTokens, nextTotal.totalTokens),
+        reasoningOutputTokens: Math.max(prevTotal.reasoningOutputTokens, nextTotal.reasoningOutputTokens),
+      }
+    : prevTotal;
+  const prevUsed = prev.contextUsedTokens ?? 0;
+  const nextUsed = next.contextUsedTokens;
+  const mergedUsedTokens = nextUsed != null ? Math.max(nextUsed, prevUsed) : prev.contextUsedTokens;
+  return {
+    ...next,
+    total: mergedTotal,
+    contextUsedTokens: mergedUsedTokens,
+    modelContextWindow: preserveNonNullish(next.modelContextWindow, prev.modelContextWindow),
+    contextUsedPercent: preserveNonNullish(next.contextUsedPercent, prev.contextUsedPercent),
+    contextRemainingPercent: preserveNonNullish(next.contextRemainingPercent, prev.contextRemainingPercent),
+    contextToolUsages: next.contextToolUsages ?? prev.contextToolUsages,
+    contextCategoryUsages: next.contextCategoryUsages ?? prev.contextCategoryUsages,
   };
 }
 
@@ -2082,11 +2134,12 @@ export function threadReducer(state: ThreadState, action: ThreadAction): ThreadS
       const tokenUsageUpdatedAt = usageSnapshotChanged
         ? Date.now()
         : existingStatus.lastTokenUsageUpdatedAt;
+      const mergedTokenUsage = mergeTokenUsageSnapshots(previousTokenUsage, action.tokenUsage);
       return {
         ...state,
         tokenUsageByThread: {
           ...state.tokenUsageByThread,
-          [action.threadId]: action.tokenUsage,
+          [action.threadId]: mergedTokenUsage,
         },
         threadStatusById: {
           ...state.threadStatusById,

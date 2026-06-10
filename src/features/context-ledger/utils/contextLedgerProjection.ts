@@ -49,9 +49,13 @@ export function resolveDualContextUsageModel(
   lastTokenUsageUpdatedAt: number | null,
 ): DualContextUsageViewModel {
   const contextWindow = Math.max(contextUsage?.modelContextWindow ?? 0, 0);
+  const explicitUsed = contextUsage?.contextUsedTokens;
   const lastInput = Math.max(contextUsage?.last.inputTokens ?? 0, 0);
   const lastCached = Math.max(contextUsage?.last.cachedInputTokens ?? 0, 0);
-  const usedTokens = lastInput + lastCached;
+  const lastBasedUsed = lastInput + lastCached;
+  const usedTokens = (explicitUsed != null && explicitUsed > 0)
+    ? explicitUsed
+    : lastBasedUsed;
   const hasUsage = usedTokens > 0 && contextWindow > 0;
   const percent =
     contextWindow > 0

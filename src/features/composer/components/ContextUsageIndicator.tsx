@@ -8,11 +8,11 @@
  * 什么是"上下文"？
  * - AI 聊天时，它能记住的内容是有限的，就像人的短期记忆一样
  * - 这个限制叫做"上下文窗口"（context window）
- * - 比如 200k 表示能记住 200,000 个"词元"（tokens）
+ * - 比如 1m 表示能记住 1,000,000 个"词元"（tokens）
  *
  * 显示的内容：
  * - 百分比：已经用了多少（比如 50% 表示用了一半）
- * - 具体数字：比如 "100k / 200k" 表示用了 10万，总共 20万
+ * - 具体数字：比如 "100k / 1m" 表示用了 10万，总共 100万
  *
  * 颜色含义：
  * - 统一灰白配色，与界面风格保持一致
@@ -25,11 +25,10 @@ import { useTranslation } from "react-i18next";
 import type { ThreadTokenUsage } from "../../../types";
 
 /**
- * 默认的上下文窗口大小
- * - Claude 模型通常是 200k tokens
- * - 当后端没有提供具体数值时，使用这个默认值
+ * 默认的上下文窗口大小。
+ * 只用于底部紧凑 indicator 的显示兜底，不代表真实模型 telemetry。
  */
-const DEFAULT_CONTEXT_WINDOW = 200_000;
+const DEFAULT_CONTEXT_WINDOW = 1_000_000;
 
 /**
  * 组件属性定义
@@ -74,21 +73,23 @@ export const ContextUsageIndicator = memo(function ContextUsageIndicator({
   // 计算各种数值
   const computedValues = useMemo(() => {
     // 获取上下文窗口大小（AI 能记住的最大容量）
-    // 如果后端没有提供，使用默认值 200k
+    // 如果后端没有提供，使用紧凑 indicator 的显示兜底
     const contextWindow = contextUsage?.modelContextWindow ?? DEFAULT_CONTEXT_WINDOW;
 
     // 计算已使用的 token 数量
-    // 重要：上下文使用量 = input_tokens + cached_tokens
-    // 不包括 output_tokens（输出不占用上下文窗口，它是生成的）
+    // 优先使用后端显式报告的 contextUsedTokens（如果有）
+    // 否则 fallback 到 last.input + last.cached，再 fallback 到 total
+    const explicitUsed = contextUsage?.contextUsedTokens;
     const lastInput = contextUsage?.last?.inputTokens ?? 0;
     const lastCached = contextUsage?.last?.cachedInputTokens ?? 0;
     const totalInput = contextUsage?.total?.inputTokens ?? 0;
     const totalCached = contextUsage?.total?.cachedInputTokens ?? 0;
+    const lastBasedUsed = lastInput + lastCached;
+    const totalBasedUsed = totalInput + totalCached;
 
-    // 优先使用 last（最近一轮），如果没有则用 total
-    const usedTokens = (lastInput + lastCached) > 0
-      ? (lastInput + lastCached)
-      : (totalInput + totalCached);
+    const usedTokens = (explicitUsed != null && explicitUsed > 0)
+      ? explicitUsed
+      : (lastBasedUsed > 0 ? lastBasedUsed : totalBasedUsed);
 
     // 计算使用百分比
     const usedPercent = contextWindow > 0
