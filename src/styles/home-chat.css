@@ -956,13 +956,13 @@
 }
 
 .home-chat .home-chat-composer-host .submit-button.stop-button {
-  background: var(--error-color, #f44336) url('../assets/icon.png') center / cover no-repeat;
+  background: var(--error-color, #f44336);
 }
 
 .home-chat .home-chat-composer-host .submit-button.stop-button:hover:not(:disabled) {
-  background: var(--error-color, #f44336) url('../assets/icon.png') center / cover no-repeat;
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--error-color, #f44336) 28%, transparent);
-  opacity: 0.9;
+  background: color-mix(in srgb, var(--error-color, #f44336) 92%, #7f1d1d);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--error-color, #f44336) 30%, transparent);
+  opacity: 1;
   transform: none;
 }
 
@@ -982,13 +982,13 @@
   }
 
   :root:not([data-theme]) .home-chat .home-chat-composer-host .submit-button.stop-button {
-    background: var(--error-color, #f44336) url('../assets/icon.png') center / cover no-repeat;
+    background: var(--error-color, #f44336);
   }
 
   :root:not([data-theme]) .home-chat .home-chat-composer-host .submit-button.stop-button:hover:not(:disabled) {
-    background: var(--error-color, #f44336) url('../assets/icon.png') center / cover no-repeat;
-    box-shadow: 0 8px 22px color-mix(in srgb, var(--error-color, #f44336) 28%, transparent);
-    opacity: 0.9;
+    background: color-mix(in srgb, var(--error-color, #f44336) 92%, #7f1d1d);
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--error-color, #f44336) 30%, transparent);
+    opacity: 1;
     transform: none;
   }
 }

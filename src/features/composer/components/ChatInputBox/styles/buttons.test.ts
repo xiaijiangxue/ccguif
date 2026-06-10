@@ -8,29 +8,23 @@ const buttonsCss = readFileSync(
 );
 
 describe("chat input button styles", () => {
-  it("keeps the streaming stop button smaller and circular", () => {
+  it("keeps the streaming stop button as a compact red square", () => {
     expect(buttonsCss).toMatch(/\.stop-button\s*\{[^}]*width:\s*24px/s);
     expect(buttonsCss).toMatch(/\.stop-button\s*\{[^}]*height:\s*24px/s);
     expect(buttonsCss).toMatch(/\.stop-button\s*\{[^}]*aspect-ratio:\s*1 \/ 1/s);
-    expect(buttonsCss).toMatch(/\.stop-button\s*\{[^}]*border-radius:\s*999px/s);
+    expect(buttonsCss).toMatch(/\.stop-button\s*\{[^}]*background:\s*var\(--error-color, #f44336\)/s);
+    expect(buttonsCss).toMatch(/\.stop-button\s*\{[^}]*border-radius:\s*6px/s);
     expect(buttonsCss).not.toMatch(/\.stop-button\s*\{[^}]*clip-path:/s);
     expect(buttonsCss).not.toMatch(/\.stop-button\s*\{[^}]*overflow:\s*hidden/s);
-    expect(buttonsCss).toMatch(
-      /\.stop-button\s*\{[^}]*url\('\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/assets\/icon\.png'\) center \/ 136% 136% no-repeat/s,
-    );
-    expect(buttonsCss).toMatch(
-      /\.submit-button\.stop-button:hover:not\(:disabled\)\s*\{[^}]*url\([^}]*136% 136% no-repeat/s,
-    );
-    expect(buttonsCss).toMatch(/\.stop-button \.codicon\s*\{[^}]*opacity:\s*0/s);
+    expect(buttonsCss).not.toContain("assets/icon.png");
+    expect(buttonsCss).not.toContain("stop-button-spin");
+    expect(buttonsCss).toMatch(/\.stop-button \.codicon\s*\{[^}]*opacity:\s*1/s);
   });
 
-  it("keeps the ingress halo scaled to the smaller stop button", () => {
-    expect(buttonsCss).toMatch(
-      /\.stop-button\.is-ingress::before\s*\{[^}]*inset:\s*-5px/s,
-    );
-    expect(buttonsCss).not.toMatch(
-      /\.stop-button\.is-ingress::before\s*\{[^}]*inset:\s*-3px/s,
-    );
-    expect(buttonsCss).toContain("0 -12px 0");
+  it("keeps ingress and waiting phases visually stable", () => {
+    expect(buttonsCss).toMatch(/\.stop-button\.is-waiting\s*\{[^}]*filter:\s*none/s);
+    expect(buttonsCss).toMatch(/\.stop-button\.is-ingress\s*\{[^}]*filter:\s*none/s);
+    expect(buttonsCss).not.toContain(".stop-button.is-ingress::before");
+    expect(buttonsCss).not.toContain(".stop-button.is-ingress::after");
   });
 });
