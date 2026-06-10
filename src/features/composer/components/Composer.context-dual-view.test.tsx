@@ -202,8 +202,8 @@ describe("Composer dual context usage model", () => {
             reasoningOutputTokens: 0,
           },
           last: {
-            totalTokens: 167_800,
-            inputTokens: 120_000,
+            totalTokens: 167_960,
+            inputTokens: 120_160,
             cachedInputTokens: 47_800,
             outputTokens: 0,
             reasoningOutputTokens: 0,
@@ -211,7 +211,7 @@ describe("Composer dual context usage model", () => {
           modelContextWindow: 258_400,
           contextUsageSource: "context_window",
           contextUsageFreshness: "live",
-          contextUsedTokens: 167_800,
+          contextUsedTokens: 167_960,
           contextUsedPercent: 65,
           contextRemainingPercent: 35,
         }}
@@ -219,9 +219,9 @@ describe("Composer dual context usage model", () => {
     );
 
     const adapter = screen.getByTestId("chat-input-box-adapter");
-    expect(adapter.getAttribute("data-legacy-used")).toBe("167800");
+    expect(adapter.getAttribute("data-legacy-used")).toBe("167960");
     expect(adapter.getAttribute("data-legacy-total")).toBe("258400");
-    expect(adapter.getAttribute("data-claude-used")).toBe("167800");
+    expect(adapter.getAttribute("data-claude-used")).toBe("167960");
     expect(adapter.getAttribute("data-claude-total")).toBe("258400");
     expect(adapter.getAttribute("data-claude-total-tokens")).toBe("570400");
     expect(adapter.getAttribute("data-claude-input")).toBe("400000");

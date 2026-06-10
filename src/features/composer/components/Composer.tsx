@@ -1745,21 +1745,15 @@ export const Composer = memo(function Composer({
       return null;
     }
     const usedTokens = resolveClaudeWindowUsedTokens(contextUsage);
-    const contextWindow = finitePositive(contextUsage.modelContextWindow);
+    const contextWindow = finitePositive(contextUsage.modelContextWindow) ?? 1_000_000;
     const totalTokens = finiteNonNegative(contextUsage.total.totalTokens);
     const inputTokens = finiteNonNegative(contextUsage.total.inputTokens);
     const cachedInputTokens = finiteNonNegative(contextUsage.total.cachedInputTokens);
     const outputTokens = finiteNonNegative(contextUsage.total.outputTokens);
-    const explicitUsedPercent = finiteNonNegative(contextUsage.contextUsedPercent);
-    const usedPercent = explicitUsedPercent
-      ?? (
-        usedTokens !== null && contextWindow !== null
-          ? (usedTokens / contextWindow) * 100
-          : null
-      );
-    const explicitRemainingPercent = finiteNonNegative(contextUsage.contextRemainingPercent);
-    const remainingPercent = explicitRemainingPercent
-      ?? (usedPercent !== null ? Math.max(100 - usedPercent, 0) : null);
+    const usedPercent = usedTokens !== null && contextWindow > 0
+      ? (usedTokens / contextWindow) * 100
+      : null;
+    const remainingPercent = usedPercent !== null ? Math.max(100 - usedPercent, 0) : null;
 
     return {
       usedTokens,
