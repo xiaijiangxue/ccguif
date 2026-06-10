@@ -457,4 +457,50 @@ describe("useAppShellSearchRadarSection", () => {
       );
     });
   });
+
+  it("does not seed global search cache from shallow file-tree entries", () => {
+    const workspace = createWorkspace("ws-1", "Workspace 1");
+    const setGlobalSearchFilesByWorkspace = vi.fn();
+
+    renderHook(() =>
+      useAppShellSearchRadarSection({
+        ...createBaseOptions(workspace),
+        files: ["README.md"],
+        isSearchPaletteOpen: false,
+        setGlobalSearchFilesByWorkspace,
+      }),
+    );
+
+    expect(setGlobalSearchFilesByWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("refreshes global search with a full file index even when a shallow cache exists", async () => {
+    const workspace = createWorkspace("ws-1", "Workspace 1");
+    const setGlobalSearchFilesByWorkspace = vi.fn();
+    getWorkspaceFilesMock.mockResolvedValue({
+      files: ["src-tauri/src/files/io.rs"],
+    });
+
+    renderHook(() =>
+      useAppShellSearchRadarSection({
+        ...createBaseOptions(workspace),
+        globalSearchFilesByWorkspace: { "ws-1": ["README.md"] },
+        searchPaletteQuery: "io.rs",
+        searchScope: "global",
+        setGlobalSearchFilesByWorkspace,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(getWorkspaceFilesMock).toHaveBeenCalledTimes(1);
+      expect(setGlobalSearchFilesByWorkspace).toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    const updater = setGlobalSearchFilesByWorkspace.mock.calls[0]?.[0] as
+      | ((prev: Record<string, string[]>) => Record<string, string[]>)
+      | undefined;
+    expect(updater?.({ "ws-1": ["README.md"] })).toEqual({
+      "ws-1": ["src-tauri/src/files/io.rs"],
+    });
+  });
 });

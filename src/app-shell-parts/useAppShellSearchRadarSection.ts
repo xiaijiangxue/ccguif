@@ -192,6 +192,9 @@ export function useAppShellSearchRadarSection({
   });
   const [activeWorkspaceSearchFilesByWorkspace, setActiveWorkspaceSearchFilesByWorkspace] =
     useState<Record<string, string[]>>({});
+  const activeWorkspaceSearchFilesInFlightRef = useRef<Set<string>>(new Set());
+  const globalSearchFullIndexLoadedWorkspaceIdsRef = useRef<Set<string>>(new Set());
+  const globalSearchFilesInFlightRef = useRef<Set<string>>(new Set());
 
   const perfSnapshotRef = useRef({
     activeThreadId: null as string | null,
@@ -384,23 +387,6 @@ export function useAppShellSearchRadarSection({
   ]);
 
   useEffect(() => {
-    if (!activeWorkspaceId) {
-      return;
-    }
-    setGlobalSearchFilesByWorkspace((prev) => {
-      const nextFiles = files;
-      const previousFiles = prev[activeWorkspaceId];
-      if (previousFiles === nextFiles) {
-        return prev;
-      }
-      return {
-        ...prev,
-        [activeWorkspaceId]: nextFiles,
-      };
-    });
-  }, [activeWorkspaceId, files, setGlobalSearchFilesByWorkspace]);
-
-  useEffect(() => {
     const normalizedQuery = searchPaletteQuery
       .replace(INVISIBLE_SEARCH_QUERY_CHARS_REGEX, "")
       .trim();
@@ -419,8 +405,12 @@ export function useAppShellSearchRadarSection({
     if (activeWorkspaceSearchFilesByWorkspace[activeWorkspaceId]) {
       return;
     }
+    if (activeWorkspaceSearchFilesInFlightRef.current.has(activeWorkspaceId)) {
+      return;
+    }
 
     let cancelled = false;
+    activeWorkspaceSearchFilesInFlightRef.current.add(activeWorkspaceId);
     void getWorkspaceFiles(activeWorkspaceId)
       .then((response) => {
         if (cancelled) {
@@ -433,18 +423,10 @@ export function useAppShellSearchRadarSection({
         }));
       })
       .catch(() => {
-        if (cancelled) {
-          return;
-        }
-        setActiveWorkspaceSearchFilesByWorkspace((prev) => {
-          if (prev[activeWorkspaceId]) {
-            return prev;
-          }
-          return {
-            ...prev,
-            [activeWorkspaceId]: [],
-          };
-        });
+        // Do not cache failures as an empty search index; a later query/open should retry.
+      })
+      .finally(() => {
+        activeWorkspaceSearchFilesInFlightRef.current.delete(activeWorkspaceId);
       });
 
     return () => {
@@ -466,12 +448,17 @@ export function useAppShellSearchRadarSection({
     }
     const targetWorkspaceIds = workspaces.map((workspace) => workspace.id);
     const uncachedWorkspaceIds = targetWorkspaceIds.filter(
-      (workspaceId) => !(workspaceId in globalSearchFilesByWorkspace),
+      (workspaceId) =>
+        !globalSearchFullIndexLoadedWorkspaceIdsRef.current.has(workspaceId) &&
+        !globalSearchFilesInFlightRef.current.has(workspaceId),
     );
     if (uncachedWorkspaceIds.length === 0) {
       return;
     }
     let cancelled = false;
+    for (const workspaceId of uncachedWorkspaceIds) {
+      globalSearchFilesInFlightRef.current.add(workspaceId);
+    }
     void Promise.all(
       uncachedWorkspaceIds.map(async (workspaceId) => {
         try {
@@ -481,20 +468,31 @@ export function useAppShellSearchRadarSection({
             Array.isArray(response.files) ? response.files : ([] as string[]),
           ] as const;
         } catch {
-          return [workspaceId, [] as string[]] as const;
+          return null;
         }
       }),
     ).then((entries) => {
-      if (cancelled || entries.length === 0) {
+      const successfulEntries = entries.filter(
+        (entry): entry is readonly [string, string[]] => entry !== null,
+      );
+      for (const workspaceId of uncachedWorkspaceIds) {
+        globalSearchFilesInFlightRef.current.delete(workspaceId);
+      }
+      if (cancelled || successfulEntries.length === 0) {
         return;
       }
       setGlobalSearchFilesByWorkspace((prev) => {
         const next = { ...prev };
-        for (const [workspaceId, workspaceFiles] of entries) {
+        for (const [workspaceId, workspaceFiles] of successfulEntries) {
+          globalSearchFullIndexLoadedWorkspaceIdsRef.current.add(workspaceId);
           next[workspaceId] = workspaceFiles;
         }
         return next;
       });
+    }).catch(() => {
+      for (const workspaceId of uncachedWorkspaceIds) {
+        globalSearchFilesInFlightRef.current.delete(workspaceId);
+      }
     });
 
     return () => {
