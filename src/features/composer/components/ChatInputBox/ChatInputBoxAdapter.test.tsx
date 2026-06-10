@@ -18,6 +18,7 @@ const mockState = vi.hoisted(() => ({
   updateClaudeProvider: vi.fn(),
   switchClaudeProvider: vi.fn(),
   getWorkspaceDirectoryChildren: vi.fn(),
+  getWorkspaceFiles: vi.fn(),
   getSkillsList: vi.fn(),
   projectMemoryList: vi.fn(),
   noteCardList: vi.fn(),
@@ -49,6 +50,7 @@ vi.mock('../../../../services/tauri', () => ({
   updateClaudeProvider: mockState.updateClaudeProvider,
   switchClaudeProvider: mockState.switchClaudeProvider,
   getWorkspaceDirectoryChildren: mockState.getWorkspaceDirectoryChildren,
+  getWorkspaceFiles: mockState.getWorkspaceFiles,
   getSkillsList: mockState.getSkillsList,
 }));
 
@@ -107,6 +109,12 @@ describe('ChatInputBoxAdapter toggle bridge', () => {
     mockState.getWorkspaceDirectoryChildren.mockReset().mockResolvedValue({
       files: [],
       directories: [],
+    });
+    mockState.getWorkspaceFiles.mockReset().mockResolvedValue({
+      files: [],
+      directories: [],
+      gitignored_files: [],
+      gitignored_directories: [],
     });
     mockState.getSkillsList.mockReset().mockResolvedValue([]);
     mockState.projectMemoryList.mockReset().mockResolvedValue({ items: [], total: 0 });
@@ -313,6 +321,44 @@ describe('ChatInputBoxAdapter toggle bridge', () => {
       expect.objectContaining({
         name: 'index.ts',
         path: 'src/index.ts',
+        type: 'file',
+      }),
+    ]);
+  });
+
+  it('searches all workspace files case-insensitively for root file-reference queries', async () => {
+    mockState.getWorkspaceFiles.mockResolvedValue({
+      directories: ['src/features/composer'],
+      files: ['src/features/composer/ChatInputBoxAdapter.tsx', 'README.md'],
+      gitignored_files: [],
+      gitignored_directories: [],
+    });
+
+    renderAdapter({
+      workspaceId: 'workspace-1',
+      directories: ['src'],
+      files: ['README.md'],
+    });
+
+    await waitFor(() => expect(mockState.latestProps).toBeTruthy());
+
+    const latest = mockState.latestProps as {
+      fileCompletionProvider?: (
+        query: string,
+        signal: AbortSignal,
+      ) => Promise<Array<{ name: string; path: string; type: string }>>;
+    };
+
+    const results = await latest.fileCompletionProvider?.(
+      'chatinputbox',
+      new AbortController().signal,
+    );
+
+    expect(mockState.getWorkspaceFiles).toHaveBeenCalledWith('workspace-1');
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: 'ChatInputBoxAdapter.tsx',
+        path: 'src/features/composer/ChatInputBoxAdapter.tsx',
         type: 'file',
       }),
     ]);

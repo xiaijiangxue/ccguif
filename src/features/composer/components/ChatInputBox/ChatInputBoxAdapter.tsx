@@ -53,6 +53,7 @@ import {
   switchClaudeProvider,
   updateClaudeProvider,
   getWorkspaceDirectoryChildren,
+  getWorkspaceFiles,
   getSkillsList,
 } from '../../../../services/tauri';
 import {
@@ -822,6 +823,14 @@ function fileNameFromPath(path: string): string {
   return segments.length > 0 ? (segments[segments.length - 1] ?? path) : path;
 }
 
+function completionPathMatchesFragment(path: string, lowerFragment: string): boolean {
+  const lowerPath = path.toLowerCase();
+  return (
+    fileNameFromPath(path).toLowerCase().includes(lowerFragment) ||
+    lowerPath.includes(lowerFragment)
+  );
+}
+
 function extensionFromFileName(fileName: string): string {
   const idx = fileName.lastIndexOf('.');
   if (idx <= 0 || idx >= fileName.length - 1) {
@@ -1388,8 +1397,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
                 if (!normalizedDir) {
                   continue;
                 }
-                const name = fileNameFromPath(normalizedDir);
-                if (name.toLowerCase().includes(lowerFragment)) {
+                if (completionPathMatchesFragment(normalizedDir, lowerFragment)) {
                   pushDirectoryFromPath(normalizedDir);
                   if (results.length >= maxSuggestions) break;
                 }
@@ -1399,11 +1407,43 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
                 if (!normalizedFile) {
                   continue;
                 }
-                const name = fileNameFromPath(normalizedFile);
-                if (name.toLowerCase().includes(lowerFragment)) {
+                if (completionPathMatchesFragment(normalizedFile, lowerFragment)) {
                   pushFileFromPath(normalizedFile);
                   if (results.length >= maxSuggestions) break;
                 }
+              }
+            }
+            return results;
+          } catch (error) {
+            if ((error as Error).name === 'AbortError') throw error;
+            // Fallback to local filtering on error
+          }
+        }
+
+        if (workspaceId && normalizedQuery) {
+          try {
+            const response = await getWorkspaceFiles(workspaceId);
+            if (signal.aborted) {
+              throw new DOMException('Aborted', 'AbortError');
+            }
+            for (const dir of getResponseDirectories(response)) {
+              const normalizedDir = normalizeCompletionSourcePath(dir);
+              if (!normalizedDir) {
+                continue;
+              }
+              if (completionPathMatchesFragment(normalizedDir, lowerFragment)) {
+                pushDirectoryFromPath(normalizedDir);
+                if (results.length >= maxSuggestions) return results;
+              }
+            }
+            for (const file of getResponseFiles(response)) {
+              const normalizedFile = normalizeCompletionSourcePath(file);
+              if (!normalizedFile) {
+                continue;
+              }
+              if (completionPathMatchesFragment(normalizedFile, lowerFragment)) {
+                pushFileFromPath(normalizedFile);
+                if (results.length >= maxSuggestions) return results;
               }
             }
             return results;
@@ -1442,8 +1482,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
           if (!normalizedPath) {
             continue;
           }
-          const name = fileNameFromPath(normalizedPath);
-          if (name.toLowerCase().includes(lowerFragment) || normalizedPath.toLowerCase().includes(lowerFragment)) {
+          if (completionPathMatchesFragment(normalizedPath, lowerFragment)) {
             pushDirectoryFromPath(normalizedPath);
             if (results.length >= maxSuggestions) return results;
           }
@@ -1453,8 +1492,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
           if (!normalizedPath) {
             continue;
           }
-          const name = fileNameFromPath(normalizedPath);
-          if (name.toLowerCase().includes(lowerFragment) || normalizedPath.toLowerCase().includes(lowerFragment)) {
+          if (completionPathMatchesFragment(normalizedPath, lowerFragment)) {
             pushFileFromPath(normalizedPath);
             if (results.length >= maxSuggestions) return results;
           }
