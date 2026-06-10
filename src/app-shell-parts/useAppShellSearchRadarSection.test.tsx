@@ -16,7 +16,7 @@ type PaletteContentSearchMockResult = {
 const prewarmSessionRadarForWorkspaceMock = vi.hoisted(() => vi.fn());
 const useUnifiedSearchMock = vi.hoisted(() => vi.fn(() => []));
 const getWorkspaceFilesMock = vi.hoisted(() =>
-  vi.fn(async () => ({ files: [] })),
+  vi.fn<() => Promise<{ files: string[] }>>(async () => ({ files: [] })),
 );
 const usePaletteContentSearchMock = vi.hoisted(() =>
   vi.fn<() => PaletteContentSearchMockResult>(() => ({

@@ -25,33 +25,29 @@ describe("FileTreeRootActions", () => {
   });
 
   it("replays spin animation when clicking the same action repeatedly", () => {
-    const onOpenNewFile = vi.fn();
+    const onRefreshFiles = vi.fn();
 
     render(
       <FileTreeRootActions
-        canTrashSelectedNode={false}
-        selectedParentFolder={null}
-        onOpenNewFile={onOpenNewFile}
-        onOpenNewFolder={() => undefined}
-        onTrashSelected={() => undefined}
+        onRefreshFiles={onRefreshFiles}
       />,
     );
 
-    const button = screen.getByRole("button", { name: "files.newFile" });
+    const button = screen.getByRole("button", { name: "files.refreshFiles" });
 
     fireEvent.click(button);
     act(() => {
       vi.advanceTimersByTime(16);
     });
     expect(button.className).toContain("is-spinning");
-    expect(onOpenNewFile).toHaveBeenCalledTimes(1);
+    expect(onRefreshFiles).toHaveBeenCalledTimes(1);
 
     fireEvent.click(button);
     act(() => {
       vi.advanceTimersByTime(16);
     });
     expect(button.className).toContain("is-spinning");
-    expect(onOpenNewFile).toHaveBeenCalledTimes(2);
+    expect(onRefreshFiles).toHaveBeenCalledTimes(2);
 
     act(() => {
       vi.advanceTimersByTime(420);

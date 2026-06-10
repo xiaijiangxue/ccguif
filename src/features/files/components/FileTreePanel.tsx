@@ -725,10 +725,10 @@ export function FileTreePanel({
   onSelectOpenAppId,
   onToggleRuntimeConsole: _onToggleRuntimeConsole,
   isRuntimeConsoleVisible: _isRuntimeConsoleVisible = false,
-  onOpenSpecHub,
-  isSpecHubActive = false,
+  onOpenSpecHub: _onOpenSpecHub,
+  isSpecHubActive: _isSpecHubActive = false,
   onOpenDetachedExplorer,
-  showSpecHubAction = true,
+  showSpecHubAction: _showSpecHubAction = true,
   showDetachedExplorerAction = true,
   crossWindowDragTargetLabel = null,
   gitStatusFiles,
@@ -2306,10 +2306,6 @@ export function FileTreePanel({
     [],
   );
 
-  const selectedParentFolder = useMemo(
-    () => resolveParentFolderForNode(selectedNodePath, selectedNodeType),
-    [resolveParentFolderForNode, selectedNodePath, selectedNodeType],
-  );
   const detachedInitialFilePath = selectedNodeType === "file" ? selectedNodePath : null;
   const orderedSelectedNodePaths = useMemo(
     () =>
@@ -2353,8 +2349,6 @@ export function FileTreePanel({
       paths,
     });
   }, [broadcastCrossWindowTreeDrag, crossWindowDragTargetLabel]);
-  const canTrashSelectedNode =
-    selectedNodeType !== null && selectedNodePath !== null && selectedNodePath.length > 0;
 
   const handleRefreshFiles = useCallback(() => {
     const loadedLazyFolders = Array.from(new Set([
