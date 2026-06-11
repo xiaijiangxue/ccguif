@@ -2323,6 +2323,7 @@ describe("SettingsView Shortcuts", () => {
         embedded: true,
         appSettings: expect.objectContaining({
           customSkillDirectories: [],
+          slashMenuSkillsEnabled: false,
         }),
         onUpdateAppSettings: expect.any(Function),
       }),

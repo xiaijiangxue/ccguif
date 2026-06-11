@@ -28,6 +28,7 @@ import X from "lucide-react/dist/esm/icons/x";
 import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
@@ -297,6 +298,8 @@ export function SkillsSection({
   const [customDirsSaving, setCustomDirsSaving] = useState(false);
   const [customDirsMessage, setCustomDirsMessage] = useState<string | null>(null);
   const [customDirsError, setCustomDirsError] = useState<string | null>(null);
+  const [slashMenuSkillsSaving, setSlashMenuSkillsSaving] = useState(false);
+  const [slashMenuSkillsError, setSlashMenuSkillsError] = useState<string | null>(null);
   const [selectedNodePath, setSelectedNodePath] = useState<string | null>(null);
   const [selectedNodeKind, setSelectedNodeKind] = useState<SelectedNodeKind>(null);
   const [expandedDirectoryKeys, setExpandedDirectoryKeys] = useState<Set<string>>(new Set());
@@ -376,6 +379,26 @@ export function SkillsSection({
     refreshSkills,
     t,
   ]);
+
+  const handleSlashMenuSkillsEnabledChange = useCallback(
+    async (enabled: boolean) => {
+      setSlashMenuSkillsSaving(true);
+      setSlashMenuSkillsError(null);
+      try {
+        await onUpdateAppSettings({
+          ...appSettings,
+          slashMenuSkillsEnabled: enabled,
+        });
+      } catch (saveError) {
+        setSlashMenuSkillsError(
+          saveError instanceof Error ? saveError.message : String(saveError),
+        );
+      } finally {
+        setSlashMenuSkillsSaving(false);
+      }
+    },
+    [appSettings, onUpdateAppSettings],
+  );
 
   useEffect(() => {
     void loadSkills();
@@ -995,6 +1018,25 @@ export function SkillsSection({
           </div>
 
           <div className="settings-skills-custom-dirs">
+            <div className="settings-toggle-row settings-skills-slash-menu-toggle">
+              <div>
+                <div className="settings-toggle-title">
+                  {t("settings.skillsPanel.slashMenuSkillsTitle")}
+                </div>
+                <div className="settings-toggle-subtitle">
+                  {t("settings.skillsPanel.slashMenuSkillsDescription")}
+                </div>
+                {slashMenuSkillsError ? (
+                  <div className="settings-inline-error">{slashMenuSkillsError}</div>
+                ) : null}
+              </div>
+              <Switch
+                checked={appSettings.slashMenuSkillsEnabled === true}
+                disabled={slashMenuSkillsSaving}
+                onCheckedChange={handleSlashMenuSkillsEnabledChange}
+                aria-label={t("settings.skillsPanel.slashMenuSkillsTitle")}
+              />
+            </div>
             <div className="settings-skills-custom-dirs-copy">
               <div className="settings-skills-custom-dirs-title">
                 {t("settings.skillsPanel.customDirsTitle")}

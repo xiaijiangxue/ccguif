@@ -8,7 +8,7 @@ export type AutocompleteItem = {
   hint?: string;
   cursorOffset?: number;
   isDirectory?: boolean;
-  kind?: "manual-memory" | "note-card";
+  kind?: "manual-memory" | "note-card" | "skill";
   memoryId?: string;
   memoryTitle?: string;
   memorySummary?: string;

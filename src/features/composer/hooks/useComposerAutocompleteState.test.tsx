@@ -641,4 +641,50 @@ describe("useComposerAutocompleteState", () => {
       "mode",
     ]);
   });
+
+  it("includes skills in slash suggestions and selects them as context chips", () => {
+    const text = "/ce";
+    const selectionStart = text.length;
+    const textareaRef = createTextareaRef();
+    const setText = vi.fn();
+    const setSelectionStart = vi.fn();
+    const onSkillSelect = vi.fn();
+
+    const { result } = renderHook(() =>
+      useComposerAutocompleteState({
+        text,
+        selectionStart,
+        disabled: false,
+        skills: [
+          {
+            name: "ce-plan",
+            description: "Plan implementation steps",
+          },
+        ],
+        prompts: [],
+        files: [],
+        onSkillSelect,
+        textareaRef,
+        setText,
+        setSelectionStart,
+      }),
+    );
+
+    expect(result.current.isAutocompleteOpen).toBe(true);
+    const skillItem = result.current.autocompleteMatches.find(
+      (item) => item.label === "ce-plan",
+    );
+    expect(skillItem).toMatchObject({
+      label: "ce-plan",
+      description: "Plan implementation steps",
+      kind: "skill",
+    });
+
+    act(() => {
+      result.current.applyAutocomplete(skillItem!);
+    });
+
+    expect(setText).toHaveBeenCalledWith("");
+    expect(onSkillSelect).toHaveBeenCalledWith("ce-plan");
+  });
 });

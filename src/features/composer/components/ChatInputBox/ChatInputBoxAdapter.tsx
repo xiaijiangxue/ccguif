@@ -41,6 +41,7 @@ import type { QueuedMessage as ComposerQueuedMessage } from '../../../../types';
 import type { CustomCommandOption, CustomPromptOption } from '../../../../types';
 import type { EngineType } from '../../../../types';
 import type { RateLimitSnapshot } from '../../../../types';
+import type { SkillOption } from '../../../../types';
 import type { ComposerSendReadiness } from '../../utils/composerSendReadiness';
 import { formatEngineVersionLabel } from '../../../engine/utils/engineLabels';
 import { projectMemoryFacade } from '../../../project-memory/services/projectMemoryFacade';
@@ -530,7 +531,9 @@ export interface ChatInputBoxAdapterProps {
 
   // Local completion data sources (from Composer)
   files?: string[];
+  skills?: SkillOption[];
   customSkillDirectories?: string[];
+  slashMenuSkillsEnabled?: boolean;
   directories?: string[];
   commands?: CustomCommandOption[];
   prompts?: CustomPromptOption[];
@@ -1006,7 +1009,9 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
       canFuseQueuedMessages = false,
       fusingQueuedMessageId = null,
       files,
+      skills,
       customSkillDirectories,
+      slashMenuSkillsEnabled = false,
       directories,
       commands,
       prompts = [],
@@ -1813,50 +1818,61 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
 
     const skillCompletionProvider = useCallback(
       async (query: string, signal: AbortSignal): Promise<SkillItem[]> => {
-        if (!workspaceId || signal.aborted) {
-          return [];
-        }
-
-        const response = await getSkillsList(workspaceId, customSkillDirectories ?? []);
         if (signal.aborted) {
           throw new DOMException('Aborted', 'AbortError');
         }
 
-        const rawSkills = extractRawSkills(response);
+        let rawSkills: unknown[];
+        if (skills && skills.length > 0) {
+          rawSkills = skills;
+        } else {
+          if (!workspaceId) {
+            return [];
+          }
+          const response = await getSkillsList(workspaceId, customSkillDirectories ?? []);
+          if (signal.aborted) {
+            throw new DOMException('Aborted', 'AbortError');
+          }
+          rawSkills = extractRawSkills(response);
+        }
         const dedupedByScopeAndName = new Map<string, SkillItem>();
         const normalizedQuery = query.trim().toLowerCase();
 
         for (const item of rawSkills) {
-          if (!item || typeof item !== 'object' || item.enabled === false) {
+          if (!item || typeof item !== 'object') {
+            continue;
+          }
+          const itemRecord = item as Record<string, unknown>;
+          if (itemRecord.enabled === false) {
             continue;
           }
           const rawName =
-            typeof item.name === 'string'
-              ? item.name
-              : typeof item.skillName === 'string'
-                ? item.skillName
+            typeof itemRecord.name === 'string'
+              ? itemRecord.name
+              : typeof itemRecord.skillName === 'string'
+                ? itemRecord.skillName
                 : '';
           const name = normalizeSkillName(rawName);
           if (!name) {
             continue;
           }
           const source =
-            typeof item.source === 'string' && item.source.trim()
-              ? item.source.trim()
+            typeof itemRecord.source === 'string' && itemRecord.source.trim()
+              ? itemRecord.source.trim()
               : undefined;
-          const interfaceObject = asSkillPayloadRecord(item.interface);
+          const interfaceObject = asSkillPayloadRecord(itemRecord.interface);
           const description =
-            typeof item.description === 'string'
-              ? item.description.trim()
-              : typeof item.shortDescription === 'string'
-                ? item.shortDescription.trim()
+            typeof itemRecord.description === 'string'
+              ? itemRecord.description.trim()
+              : typeof itemRecord.shortDescription === 'string'
+                ? itemRecord.shortDescription.trim()
                 : typeof interfaceObject?.shortDescription === 'string'
                   ? interfaceObject.shortDescription.trim()
                   : undefined;
           const scope = resolveSkillScope(source);
           const skill: SkillItem = {
             name,
-            path: typeof item.path === 'string' ? item.path : '',
+            path: typeof itemRecord.path === 'string' ? itemRecord.path : '',
             description: description || undefined,
             source,
             scopeLabel: scope === 'global' ? t('chat.skillScopeGlobal') : t('chat.skillScopeProject'),
@@ -1892,7 +1908,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
             return a.name.localeCompare(b.name);
           });
       },
-      [customSkillDirectories, t, workspaceId],
+      [customSkillDirectories, skills, t, workspaceId],
     );
 
     const promptCompletionProvider = useCallback(
@@ -2064,6 +2080,7 @@ export const ChatInputBoxAdapter = memo(forwardRef<ChatInputBoxHandle, ChatInput
         sdkInstalled={true}
         fileCompletionProvider={fileCompletionProvider}
         commandCompletionProvider={commandCompletionProvider}
+        slashMenuSkillsEnabled={slashMenuSkillsEnabled}
         skillCompletionProvider={skillCompletionProvider}
         promptCompletionProvider={promptCompletionProvider}
         manualMemoryCompletionProvider={manualMemoryCompletionProvider}

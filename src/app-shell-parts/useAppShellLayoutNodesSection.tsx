@@ -1055,6 +1055,7 @@ export function useAppShellLayoutNodesSection(ctx: any) {
     onSelectAccessMode: handleSetAccessMode,
     skills,
     customSkillDirectories: appSettings.customSkillDirectories ?? [],
+    slashMenuSkillsEnabled: appSettings.slashMenuSkillsEnabled === true,
     prompts,
     commands,
     files,

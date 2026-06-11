@@ -983,6 +983,9 @@ const enPart1 = {
       customDirsTitle: "Custom Skills folders",
       customDirsDescription:
         "Add one local folder per line. Saved folders join the current workspace skills list.",
+      slashMenuSkillsTitle: "Show Skills in / command menu",
+      slashMenuSkillsDescription:
+        "When enabled, the slash menu includes Skills from the existing $ selector.",
       customDirsPlaceholder: "/Users/me/team-skills\n~/shared-skills",
       customDirsSave: "Save folders",
       customDirsSaved: "Saved",

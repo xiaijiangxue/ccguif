@@ -1061,6 +1061,9 @@ const zhPart1 = {
       customDirsTitle: "自定义 Skills 文件夹",
       customDirsDescription:
         "每行一个本机文件夹；保存后会加入当前工作区的 Skills 列表。",
+      slashMenuSkillsTitle: "在 / 命令菜单中显示 Skills",
+      slashMenuSkillsDescription:
+        "开启后，/ 下拉会包含现有 $ 选择器中的 Skills。",
       customDirsPlaceholder: "/Users/me/team-skills\n~/shared-skills",
       customDirsSave: "保存目录",
       customDirsSaved: "已保存",

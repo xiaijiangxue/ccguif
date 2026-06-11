@@ -191,6 +191,7 @@ const defaultSettings: AppSettings = {
   darkThemePresetId: "vscode-dark-modern",
   customThemePresetId: "vscode-dark-modern",
   customSkillDirectories: [],
+  slashMenuSkillsEnabled: false,
   canvasWidthMode: "narrow",
   layoutMode: "default",
   userMsgColor: "",
@@ -345,6 +346,7 @@ function normalizeAppSettings(
     customSkillDirectories: normalizeCustomSkillDirectories(
       settings.customSkillDirectories,
     ),
+    slashMenuSkillsEnabled: settings.slashMenuSkillsEnabled === true,
     canvasWidthMode: allowedCanvasWidthModes.has(settings.canvasWidthMode)
       ? settings.canvasWidthMode
       : "narrow",

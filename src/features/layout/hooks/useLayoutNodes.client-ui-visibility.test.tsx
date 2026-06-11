@@ -124,6 +124,7 @@ vi.mock("../../composer/components/Composer", () => ({
     sendLabel,
     onOpenDiffPath,
     showStatusPanelToggleOverride,
+    slashMenuSkillsEnabled,
   }: {
     draftText: string;
     onDraftChange: (next: string) => void;
@@ -131,10 +132,12 @@ vi.mock("../../composer/components/Composer", () => ({
     sendLabel: string;
     onOpenDiffPath?: (path: string) => void;
     showStatusPanelToggleOverride?: boolean;
+    slashMenuSkillsEnabled?: boolean;
   }) => (
     <form
       data-testid="composer"
       data-show-status-panel-toggle-override={String(showStatusPanelToggleOverride)}
+      data-slash-menu-skills-enabled={String(slashMenuSkillsEnabled === true)}
     >
       <textarea
         aria-label="composer input"
@@ -754,6 +757,18 @@ describe("useLayoutNodes client UI visibility", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "settings" }));
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it("forwards the slash menu Skills toggle into Composer", async () => {
+    const { result } = await renderUseLayoutNodes(
+      createLayoutOptions({
+        slashMenuSkillsEnabled: true,
+      }),
+    );
+
+    render(<>{result.current.composerNode}</>);
+
+    expect(screen.getByTestId("composer").dataset.slashMenuSkillsEnabled).toBe("true");
   });
 
   it("forwards restored history metadata into the runtime conversation state", async () => {

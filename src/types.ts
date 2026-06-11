@@ -795,6 +795,7 @@ export type AppSettings = {
   darkThemePresetId?: DarkThemePresetId;
   customThemePresetId?: ThemePresetId;
   customSkillDirectories?: string[];
+  slashMenuSkillsEnabled?: boolean;
   canvasWidthMode: CanvasWidthMode;
   layoutMode?: LayoutMode;
   userMsgColor: string;

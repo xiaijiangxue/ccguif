@@ -212,6 +212,7 @@ type ComposerProps = {
   ) => void;
   skills: { name: string; path: string; description?: string; source?: string }[];
   customSkillDirectories?: string[];
+  slashMenuSkillsEnabled?: boolean;
   prompts: CustomPromptOption[];
   commands?: CustomCommandOption[];
   files: string[];
@@ -501,6 +502,7 @@ export const Composer = memo(function Composer({
   onSelectAccessMode,
   skills,
   customSkillDirectories,
+  slashMenuSkillsEnabled = false,
   prompts,
   commands = [],
   files,
@@ -1095,6 +1097,7 @@ export const Composer = memo(function Composer({
     workspacePath: activeWorkspacePath,
     onManualMemorySelect: handleSelectManualMemory,
     onNoteCardSelect: handleSelectNoteCard,
+    onSkillSelect: handleSelectSkill,
     textareaRef,
     setText: setComposerText,
     setSelectionStart,
@@ -2449,7 +2452,9 @@ export const Composer = memo(function Composer({
               fusingQueuedMessageId={fusingQueuedMessageId}
               suggestionsOpen={suggestionsOpen}
               files={files}
+              skills={skills}
               customSkillDirectories={customSkillDirectories}
+              slashMenuSkillsEnabled={slashMenuSkillsEnabled}
               directories={directories}
               commands={commands}
               prompts={prompts}

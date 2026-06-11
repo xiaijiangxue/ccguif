@@ -58,6 +58,7 @@ type UseComposerAutocompleteStateArgs = {
   workspacePath?: string | null;
   onManualMemorySelect?: (memory: ManualMemorySuggestion) => void;
   onNoteCardSelect?: (noteCard: NoteCardSuggestion) => void;
+  onSkillSelect?: (skillName: string) => void;
   textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   setText: (next: string) => void;
   setSelectionStart: (next: number | null) => void;
@@ -197,6 +198,7 @@ export function useComposerAutocompleteState({
   workspacePath = null,
   onManualMemorySelect,
   onNoteCardSelect,
+  onSkillSelect,
   textareaRef,
   setText,
   setSelectionStart,
@@ -394,6 +396,7 @@ export function useComposerAutocompleteState({
         label: skill.name,
         description: skill.description,
         insertText: skill.name,
+        kind: "skill",
       })),
     [skills],
   );
@@ -683,6 +686,29 @@ export function useComposerAutocompleteState({
         });
         return;
       }
+      if (activeTrigger === "/" && item.kind === "skill") {
+        const skillName = item.label.trim();
+        if (!skillName) {
+          return;
+        }
+        const before = text.slice(0, triggerIndex);
+        const after = text.slice(autocompleteRange.end);
+        const nextText = `${before}${after}`;
+        setText(nextText);
+        closeAutocomplete();
+        onSkillSelect?.(skillName);
+        requestAnimationFrame(() => {
+          const textarea = textareaRef.current;
+          if (!textarea) {
+            return;
+          }
+          const nextCursor = before.length;
+          textarea.focus();
+          textarea.setSelectionRange(nextCursor, nextCursor);
+          setSelectionStart(nextCursor);
+        });
+        return;
+      }
       const before =
         activeTrigger === "@"
           ? text.slice(0, triggerIndex)
@@ -724,6 +750,7 @@ export function useComposerAutocompleteState({
       closeAutocomplete,
       onManualMemorySelect,
       onNoteCardSelect,
+      onSkillSelect,
       selectionStart,
       setSelectionStart,
       setText,

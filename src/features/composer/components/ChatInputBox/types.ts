@@ -716,6 +716,8 @@ export interface ChatInputBoxProps {
   commandCompletionProvider?: (query: string, signal: AbortSignal) => Promise<CommandItem[]>;
   /** Optional skill completion provider override (for $ skill insertion) */
   skillCompletionProvider?: (query: string, signal: AbortSignal) => Promise<SkillItem[]>;
+  /** Whether / completion should include skill results from the skill provider */
+  slashMenuSkillsEnabled?: boolean;
   /** Optional prompt completion provider override (for ! prompt insertion) */
   promptCompletionProvider?: (query: string, signal: AbortSignal) => Promise<PromptItem[]>;
   /** Optional manual memory completion provider override (for @@ memory linking) */

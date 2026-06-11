@@ -287,6 +287,43 @@ describe('ChatInputBoxAdapter toggle bridge', () => {
     ]);
   });
 
+  it('uses Composer-provided skills for completion without refetching skills/list', async () => {
+    renderAdapter({
+      workspaceId: 'workspace-1',
+      skills: [
+        {
+          name: 'review-code',
+          path: '/repo/.codex/skills/review-code/SKILL.md',
+          description: 'Review current code changes',
+          source: 'project-codex',
+        },
+      ],
+    });
+
+    await waitFor(() => expect(mockState.latestProps).toBeTruthy());
+
+    const latest = mockState.latestProps as {
+      skillCompletionProvider?: (
+        query: string,
+        signal: AbortSignal,
+      ) => Promise<Array<{ name: string; path: string; description?: string }>>;
+    };
+
+    const results = await latest.skillCompletionProvider?.(
+      'review',
+      new AbortController().signal,
+    );
+
+    expect(results).toEqual([
+      expect.objectContaining({
+        name: 'review-code',
+        path: '/repo/.codex/skills/review-code/SKILL.md',
+        description: 'Review current code changes',
+      }),
+    ]);
+    expect(mockState.getSkillsList).not.toHaveBeenCalled();
+  });
+
   it('skips malformed lazy workspace children without dropping valid matches', async () => {
     mockState.getWorkspaceDirectoryChildren.mockResolvedValue({
       directories: ['src/components', 'src/components/', '', 99],

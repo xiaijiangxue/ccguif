@@ -103,4 +103,36 @@ describe("SkillsSection", () => {
     expect(screen.getAllByText("team-a").length).toBeGreaterThan(0);
     expect(screen.getAllByText("team-b").length).toBeGreaterThan(0);
   });
+
+  it("persists slash menu Skills toggle from the Skills section", async () => {
+    const onUpdateAppSettings = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <SkillsSection
+        activeWorkspace={activeWorkspace}
+        embedded
+        appSettings={
+          {
+            customSkillDirectories: [],
+            slashMenuSkillsEnabled: false,
+          } as unknown as AppSettings
+        }
+        onUpdateAppSettings={onUpdateAppSettings}
+      />,
+    );
+
+    fireEvent.click(
+      screen.getByRole("switch", {
+        name: "Show Skills in / command menu",
+      }),
+    );
+
+    await waitFor(() => {
+      expect(onUpdateAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          slashMenuSkillsEnabled: true,
+        }),
+      );
+    });
+  });
 });

@@ -1022,6 +1022,8 @@ pub(crate) struct AppSettings {
         rename = "customSkillDirectories"
     )]
     pub(crate) custom_skill_directories: Vec<String>,
+    #[serde(default, rename = "slashMenuSkillsEnabled")]
+    pub(crate) slash_menu_skills_enabled: bool,
     #[serde(default = "default_user_msg_color", rename = "userMsgColor")]
     pub(crate) user_msg_color: String,
     #[serde(
@@ -1713,6 +1715,7 @@ impl Default for AppSettings {
             dark_theme_preset_id: default_dark_theme_preset_id(),
             custom_theme_preset_id: default_custom_theme_preset_id(),
             custom_skill_directories: default_custom_skill_directories(),
+            slash_menu_skills_enabled: false,
             user_msg_color: default_user_msg_color(),
             usage_show_remaining: default_usage_show_remaining(),
             show_message_anchors: default_show_message_anchors(),
@@ -1850,6 +1853,7 @@ mod tests {
         assert_eq!(settings.web_service_port, 3080);
         assert!(settings.web_service_token.is_none());
         assert!(settings.custom_skill_directories.is_empty());
+        assert!(!settings.slash_menu_skills_enabled);
         assert!(!settings.system_proxy_enabled);
         assert!(!settings.opencode_enabled);
         assert_eq!(

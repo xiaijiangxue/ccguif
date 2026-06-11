@@ -12,7 +12,6 @@ import type {
   Attachment,
   ChatInputBoxHandle,
   ChatInputBoxProps,
-  CommandItem,
   FileItem,
   ManualMemoryItem,
   NoteCardItem,
@@ -84,6 +83,10 @@ import { perfTimer } from '../../utils/debug.js';
 import { DEBOUNCE_TIMING } from '../../constants/performance.js';
 import { requestPromptCreation } from '../../../prompts/promptEvents';
 import { recordPromptUsage } from '../../../prompts/promptUsage';
+import {
+  resolveSlashCompletionItems,
+  type SlashCompletionItem,
+} from './utils/slashCompletionItems.js';
 import './styles.css';
 
 const INCREMENTAL_UNDO_REDO_ENABLED = true;
@@ -146,10 +149,14 @@ function noteCardToDropdownItem(noteCard: NoteCardItem) {
 function skillToDropdownItem(skill: SkillItem) {
   const label = (skill.name || '').trim();
   const source = (skill.source || '').trim();
+  const descriptionParts = [
+    skill.description?.trim(),
+    skill.scopeLabel?.trim(),
+  ].filter(Boolean);
   return {
     id: `skill:${source || 'project'}:${label}`,
     label,
-    description: undefined,
+    description: descriptionParts.join('\n') || undefined,
     icon: 'codicon-tools',
     type: 'command' as const,
     data: {
@@ -158,6 +165,21 @@ function skillToDropdownItem(skill: SkillItem) {
       scopeLabel: skill.scopeLabel,
     },
   };
+}
+
+function slashCompletionToDropdownItem(item: SlashCompletionItem) {
+  if (item.kind === 'skill') {
+    const skillItem = skillToDropdownItem(item.skill);
+    return {
+      ...skillItem,
+      type: 'command' as const,
+      data: {
+        ...skillItem.data,
+        slashCompletionKind: 'skill',
+      },
+    };
+  }
+  return commandToDropdownItem(item.command);
 }
 
 /**
@@ -265,6 +287,7 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       fusingQueueMessageId,
       fileCompletionProvider,
       commandCompletionProvider,
+      slashMenuSkillsEnabled = false,
       skillCompletionProvider,
       promptCompletionProvider,
       manualMemoryCompletionProvider,
@@ -509,15 +532,48 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
     });
 
     // Slash command completion hook
-    const commandCompletion = useCompletionDropdown<CommandItem>({
+    const commandCompletionProviderWithSkills = useCallback(
+      async (query: string, signal: AbortSignal): Promise<SlashCompletionItem[]> => {
+        return resolveSlashCompletionItems({
+          query,
+          signal,
+          commandProvider: commandCompletionProvider ?? slashCommandProvider,
+          skillProvider: skillCompletionProvider,
+          slashMenuSkillsEnabled,
+        });
+      },
+      [
+        commandCompletionProvider,
+        skillCompletionProvider,
+        slashMenuSkillsEnabled,
+      ],
+    );
+
+    const commandCompletion = useCompletionDropdown<SlashCompletionItem>({
       trigger: '/',
-      provider: commandCompletionProvider ?? slashCommandProvider,
-      toDropdownItem: commandToDropdownItem,
-      onSelect: (command, query) => {
+      provider: commandCompletionProviderWithSkills,
+      toDropdownItem: slashCompletionToDropdownItem,
+      onSelect: (item, query) => {
         if (!editableRef.current || !query) return;
 
         const text = getTextContent();
-        const replacement = `${command.label} `;
+        if (item.kind === 'skill') {
+          const skillName = (item.skill.name || '').trim();
+          if (!skillName) return;
+          const newText = commandCompletion.replaceText(text, '', query);
+          editableRef.current.innerText = newText;
+          setCursorOffset(editableRef.current, query.start);
+          stageNextCommitOptions({
+            source: 'programmatic',
+            forceNewTransaction: true,
+            inputType: 'completion:skill',
+          });
+          handleInput();
+          onSelectSkill?.(skillName);
+          return;
+        }
+
+        const replacement = `${item.command.label} `;
         const newText = commandCompletion.replaceText(text, replacement, query);
 
         // Update input box content

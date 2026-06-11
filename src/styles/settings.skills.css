@@ -118,6 +118,10 @@
   background: color-mix(in srgb, var(--surface-card) 72%, transparent);
 }
 
+.settings-skills-slash-menu-toggle {
+  grid-column: 1 / -1;
+}
+
 .settings-skills-custom-dirs-copy {
   display: flex;
   flex-direction: column;

@@ -52,6 +52,7 @@ describe("useAppSettings", () => {
       codeFontFamily: "  ",
       codeFontSize: 25,
       experimentalUnifiedExecEnabled: true,
+      slashMenuSkillsEnabled: "yes" as unknown as boolean,
       codexAutoCompactionEnabled: undefined,
       codexAutoCompactionThresholdPercent: 93,
     } as unknown as AppSettings);
@@ -80,6 +81,7 @@ describe("useAppSettings", () => {
     expect(result.current.settings.geminiEnabled).toBe(true);
     expect(result.current.settings.opencodeEnabled).toBe(false);
     expect(result.current.settings.claudeBin).toBeNull();
+    expect(result.current.settings.slashMenuSkillsEnabled).toBe(false);
     expect(result.current.settings.codexAutoCompactionEnabled).toBe(true);
     expect(result.current.settings.codexAutoCompactionThresholdPercent).toBe(
       92,
@@ -303,6 +305,35 @@ describe("useAppSettings", () => {
     expect(updateAppSettingsMock).toHaveBeenCalledWith(
       expect.objectContaining({
         customSkillDirectories: ["/team-skills"],
+      }),
+    );
+  });
+
+  it("preserves explicit slash menu Skills setting while loading and saving", async () => {
+    getAppSettingsMock.mockResolvedValue({
+      slashMenuSkillsEnabled: true,
+    } as AppSettings);
+    const { result } = renderHook(() => useAppSettings());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(result.current.settings.slashMenuSkillsEnabled).toBe(true);
+
+    updateAppSettingsMock.mockResolvedValue({
+      ...result.current.settings,
+      slashMenuSkillsEnabled: true,
+    });
+
+    await act(async () => {
+      await result.current.saveSettings({
+        ...result.current.settings,
+        slashMenuSkillsEnabled: true,
+      });
+    });
+
+    expect(updateAppSettingsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        slashMenuSkillsEnabled: true,
       }),
     );
   });
