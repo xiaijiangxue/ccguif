@@ -149,19 +149,15 @@ function noteCardToDropdownItem(noteCard: NoteCardItem) {
 function skillToDropdownItem(skill: SkillItem) {
   const label = (skill.name || '').trim();
   const source = (skill.source || '').trim();
-  const descriptionParts = [
-    skill.description?.trim(),
-    skill.scopeLabel?.trim(),
-  ].filter(Boolean);
   return {
     id: `skill:${source || 'project'}:${label}`,
     label,
-    description: descriptionParts.join('\n') || undefined,
     icon: 'codicon-tools',
     type: 'command' as const,
     data: {
       source: skill.source,
       path: skill.path,
+      description: skill.description,
       scopeLabel: skill.scopeLabel,
     },
   };

@@ -383,7 +383,6 @@ export function useComposerAutocompleteState({
       skills.map((skill) => ({
         id: `skill:${skill.name}`,
         label: skill.name,
-        description: skill.description,
         insertText: skill.name,
       })),
     [skills],
@@ -394,7 +393,6 @@ export function useComposerAutocompleteState({
       skills.map((skill) => ({
         id: `slash-skill:${skill.name}`,
         label: skill.name,
-        description: skill.description,
         insertText: skill.name,
         kind: "skill",
       })),
