@@ -1027,3 +1027,60 @@ Defaulted the composer input tool dock to expanded and updated ButtonArea tests 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 25: Slash menu skills toggle
+
+**Date**: 2026-06-12
+**Task**: Slash menu skills toggle
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+新增斜杠菜单 Skills 开关并提交相关实现
+
+### Main Changes
+
+Task goal: Add an opt-in setting that lets the slash command menu include available Skills while keeping the default slash menu behavior unchanged.
+
+Main changes:
+- Added OpenSpec change add-slash-menu-skills-toggle with proposal, design, task checklist, delta spec, and verification notes.
+- Added persisted slashMenuSkillsEnabled setting across Rust AppSettings, frontend AppSettings type, defaults/normalization, and settings UI.
+- Passed skills and the toggle into the composer flow, merged skill items into slash completions only when enabled, and routed slash-selected skills through the existing skill selection behavior.
+- Added focused Vitest/Rust-adjacent test coverage updates for settings normalization, Skills settings UI, layout node visibility, autocomplete state, adapter behavior, and slash skill selection.
+
+Affected modules:
+- src-tauri/src/types.rs
+- src/types.ts
+- src/features/settings/**
+- src/features/composer/**
+- src/features/layout/**
+- src/app-shell-parts/useAppShellLayoutNodesSection.tsx
+- src/i18n/locales/*.part1.ts
+- openspec/changes/add-slash-menu-skills-toggle/**
+
+Validation:
+- Not executed during this commit turn because the project instructions say not to run compilation, testing, or similar verification tasks unless explicitly requested.
+- Recommended commands are recorded in openspec/changes/add-slash-menu-skills-toggle/verification.md.
+
+Follow-ups:
+- Run the recorded targeted tests, typecheck, Rust settings test, and OpenSpec strict validation before merging.
+
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `29fee745` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
