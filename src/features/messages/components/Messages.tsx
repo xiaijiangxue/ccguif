@@ -243,6 +243,20 @@ function restoreHistoryExpansionScrollPosition(
   return true;
 }
 
+function scrollNodeIntoMessagesView(
+  container: HTMLDivElement,
+  node: HTMLElement,
+) {
+  const containerRect = container.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
+  const targetTop =
+    container.scrollTop + (nodeRect.top - containerRect.top) - container.clientHeight * 0.28;
+  container.scrollTo({
+    top: Math.max(0, targetTop),
+    behavior: "instant",
+  });
+}
+
 function findLatestAssistantTextLength(items: ConversationItem[]) {
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const item = items[index];
@@ -410,6 +424,7 @@ export const Messages = memo(function Messages({
     typeof performance === "undefined" ? 0 : performance.now();
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const userInputNodeRef = useRef<HTMLDivElement | null>(null);
   const pendingHistoryExpansionScrollSnapshotRef =
     useRef<HistoryExpansionScrollSnapshot | null>(null);
   const messageNodeByIdRef = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -422,7 +437,12 @@ export const Messages = memo(function Messages({
     threadId: string | null;
     messageId: string | null;
   }>({ threadId: null, messageId: null });
+  const latestUserInputRequestSeenRef = useRef<{
+    threadId: string | null;
+    requestId: string | number | null;
+  }>({ threadId: null, requestId: null });
   const suppressNextAutoFollowForUserAnchorRef = useRef<string | null>(null);
+  const suppressNextAutoFollowForUserInputRef = useRef<string | number | null>(null);
   const anchorUpdateRafRef = useRef<number | null>(null);
   const historyStickyUpdateRafRef = useRef<number | null>(null);
   const anchorOffsetsRefreshRafRef = useRef<number | null>(null);
@@ -2221,6 +2241,56 @@ export const Messages = memo(function Messages({
   );
 
   useEffect(() => {
+    const currentThreadId = threadId ?? null;
+    const currentRequestId = activeUserInputRequestId;
+    const previous = latestUserInputRequestSeenRef.current;
+
+    if (!currentThreadId || currentRequestId === null) {
+      latestUserInputRequestSeenRef.current = {
+        threadId: currentThreadId,
+        requestId: currentRequestId,
+      };
+      return undefined;
+    }
+    if (
+      previous.threadId === currentThreadId &&
+      Object.is(previous.requestId, currentRequestId)
+    ) {
+      return undefined;
+    }
+
+    const scrollToUserInput = () => {
+      const node = userInputNodeRef.current;
+      const container = containerRef.current;
+      if (!node || !container) {
+        return false;
+      }
+      autoScrollRef.current = false;
+      latestUserInputRequestSeenRef.current = {
+        threadId: currentThreadId,
+        requestId: currentRequestId,
+      };
+      suppressNextAutoFollowForUserInputRef.current = currentRequestId;
+      scrollNodeIntoMessagesView(container, node);
+      return true;
+    };
+
+    if (scrollToUserInput()) {
+      return undefined;
+    }
+
+    let raf = 0;
+    raf = window.requestAnimationFrame(() => {
+      scrollToUserInput();
+    });
+    return () => {
+      if (raf) {
+        window.cancelAnimationFrame(raf);
+      }
+    };
+  }, [activeUserInputRequestId, threadId]);
+
+  useEffect(() => {
     if (!bottomRef.current) {
       return undefined;
     }
@@ -2232,6 +2302,13 @@ export const Messages = memo(function Messages({
       suppressNextAutoFollowForUserAnchorRef.current === latestRenderedUserMessageId
     ) {
       suppressNextAutoFollowForUserAnchorRef.current = null;
+      return undefined;
+    }
+    if (
+      activeUserInputRequestId !== null &&
+      Object.is(suppressNextAutoFollowForUserInputRef.current, activeUserInputRequestId)
+    ) {
+      suppressNextAutoFollowForUserInputRef.current = null;
       return undefined;
     }
     const container = containerRef.current;
@@ -2263,6 +2340,7 @@ export const Messages = memo(function Messages({
     isNearBottom,
     latestRenderedUserMessageId,
     liveAutoFollowEnabled,
+    activeUserInputRequestId,
   ]);
 
   const groupedEntries = useMemo(
@@ -2347,7 +2425,7 @@ export const Messages = memo(function Messages({
   const userInputNode =
     shouldRenderUserInputNode && legacyOnUserInputSubmit
       ? (
-        <div className="messages-inline-user-input-slot">
+        <div ref={userInputNodeRef} className="messages-inline-user-input-slot">
           <RequestUserInputMessage
             requests={userInputRequests}
             activeThreadId={threadId ?? null}
@@ -2369,15 +2447,8 @@ export const Messages = memo(function Messages({
     if (!node || !container) {
       return;
     }
-    const containerRect = container.getBoundingClientRect();
-    const nodeRect = node.getBoundingClientRect();
-    const targetTop =
-      container.scrollTop + (nodeRect.top - containerRect.top) - container.clientHeight * 0.28;
     autoScrollRef.current = false;
-    container.scrollTo({
-      top: Math.max(0, targetTop),
-      behavior: "instant",
-    });
+    scrollNodeIntoMessagesView(container, node);
     setActiveAnchorId((previous) => (previous === messageId ? previous : messageId));
   }, []);
 

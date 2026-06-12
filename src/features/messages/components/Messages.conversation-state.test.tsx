@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationItem, RequestUserInputRequest } from "../../../types";
 import { Messages } from "./Messages";
@@ -143,6 +143,136 @@ describe("Messages conversationState routing", () => {
     );
 
     expect(screen.getByText("Should render on claude")).toBeTruthy();
+  });
+
+  it("scrolls to a newly visible user-input request card", async () => {
+    const request: RequestUserInputRequest = {
+      workspace_id: "ws-state",
+      request_id: "req-scroll-1",
+      params: {
+        thread_id: "thread-scroll-input",
+        turn_id: "turn-scroll-1",
+        item_id: "tool-scroll-anchor",
+        questions: [
+          {
+            id: "q-scroll",
+            header: "Confirm",
+            question: "Should scroll into view",
+            options: [{ label: "Yes", description: "Continue." }],
+          },
+        ],
+      },
+    };
+    const items: ConversationItem[] = [
+      {
+        id: "user-scroll-1",
+        kind: "message",
+        role: "user",
+        text: "Start",
+      },
+      {
+        id: "tool-scroll-anchor",
+        kind: "tool",
+        toolType: "bash",
+        title: "Bash",
+        detail: "{\"command\":\"pwd\"}",
+        status: "completed",
+        output: "/tmp/project\n",
+      },
+      {
+        id: "assistant-scroll-after",
+        kind: "message",
+        role: "assistant",
+        text: "Later output after the input request.",
+      },
+    ];
+
+    const { container, rerender } = render(
+      <Messages
+        items={items}
+        threadId="thread-scroll-input"
+        workspaceId="ws-state"
+        isThinking={false}
+        userInputRequests={[]}
+        onUserInputSubmit={vi.fn()}
+        activeEngine="codex"
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    const scroller = container.querySelector(".messages") as HTMLDivElement | null;
+    expect(scroller).toBeTruthy();
+    if (!scroller) {
+      throw new Error("Expected messages scroller");
+    }
+    let currentScrollTop = 180;
+    Object.defineProperty(scroller, "scrollTop", {
+      configurable: true,
+      get: () => currentScrollTop,
+      set: (value: number) => {
+        currentScrollTop = value;
+      },
+    });
+    Object.defineProperty(scroller, "clientHeight", {
+      configurable: true,
+      value: 720,
+    });
+    Object.defineProperty(scroller, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ top: 120 }),
+    });
+    const scrollToSpy = vi.spyOn(scroller, "scrollTo");
+
+    rerender(
+      <Messages
+        items={items}
+        threadId="thread-scroll-input"
+        workspaceId="ws-state"
+        isThinking={false}
+        userInputRequests={[request]}
+        onUserInputSubmit={vi.fn()}
+        activeEngine="codex"
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Should scroll into view")).toBeTruthy();
+    });
+
+    const inputSlot = container.querySelector(".messages-inline-user-input-slot");
+    expect(inputSlot).toBeTruthy();
+    if (!inputSlot) {
+      throw new Error("Expected user input slot");
+    }
+    Object.defineProperty(inputSlot, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ top: 520 }),
+    });
+    scrollToSpy.mockClear();
+
+    rerender(
+      <Messages
+        items={items}
+        threadId="thread-scroll-input"
+        workspaceId="ws-state"
+        isThinking={false}
+        userInputRequests={[{ ...request, request_id: "req-scroll-2" }]}
+        onUserInputSubmit={vi.fn()}
+        activeEngine="codex"
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    await waitFor(() => {
+      expect(scrollToSpy).toHaveBeenCalledWith({
+        top: Math.max(0, 180 + (520 - 120) - 720 * 0.28),
+        behavior: "instant",
+      });
+    });
   });
 
   it("uses conversationState items when rendering grouped edit tools", () => {
