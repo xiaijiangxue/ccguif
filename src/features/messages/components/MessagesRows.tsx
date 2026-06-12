@@ -122,6 +122,7 @@ type MessageRowProps = {
     itemId: string;
     visibleText: string;
   }) => void;
+  onMessageLayoutChanged?: (itemId: string) => void;
   suppressMemorySummaryCard?: boolean;
   suppressNoteCardSummaryCard?: boolean;
 };
@@ -327,6 +328,7 @@ function areMessageRowPropsEqual(
     previous.onOpenFileLinkMenu === next.onOpenFileLinkMenu &&
     previous.streamMitigationProfile === next.streamMitigationProfile &&
     previous.onAssistantVisibleTextRender === next.onAssistantVisibleTextRender &&
+    previous.onMessageLayoutChanged === next.onMessageLayoutChanged &&
     previous.suppressMemorySummaryCard === next.suppressMemorySummaryCard &&
     previous.suppressNoteCardSummaryCard === next.suppressNoteCardSummaryCard
   );
@@ -874,6 +876,7 @@ export const MessageRow = memo(function MessageRow({
   onOpenFileLinkMenu,
   streamMitigationProfile = null,
   onAssistantVisibleTextRender,
+  onMessageLayoutChanged,
   suppressMemorySummaryCard = false,
   suppressNoteCardSummaryCard = false,
 }: MessageRowProps) {
@@ -1321,6 +1324,12 @@ export const MessageRow = memo(function MessageRow({
     ),
     [agentTaskNotification, item],
   );
+  const handleMessageLayoutChanged = useCallback(() => {
+    if (item.role !== "user") {
+      return;
+    }
+    onMessageLayoutChanged?.(item.id);
+  }, [item.id, item.role, onMessageLayoutChanged]);
 
   const bubbleNode = (
     <div className={`bubble message-bubble${agentTaskNotification ? " message-bubble-agent-task" : ""}`}>
@@ -1388,6 +1397,7 @@ export const MessageRow = memo(function MessageRow({
           images={imageItems}
           onOpen={setLightboxIndex}
           hasText={hasText}
+          onImageLoad={handleMessageLayoutChanged}
         />
       )}
       {deferredImageItems.length > 0 ? (
@@ -1405,7 +1415,12 @@ export const MessageRow = memo(function MessageRow({
                   <div
                     className="message-deferred-image-preview"
                   >
-                    <img src={state.src} alt={`Deferred Claude image ${index + 1}`} loading="lazy" />
+                    <img
+                      src={state.src}
+                      alt={`Deferred Claude image ${index + 1}`}
+                      loading="lazy"
+                      onLoad={handleMessageLayoutChanged}
+                    />
                   </div>
                 ) : (
                   <>

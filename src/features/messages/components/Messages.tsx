@@ -110,6 +110,7 @@ const MESSAGE_JUMP_EVENT_NAME = "ccgui:jump-to-message";
 const ASSISTANT_FINALIZING_LIVE_WINDOW_MS = 320;
 const CODEX_FINALIZING_LIVE_WINDOW_MS = 6_000;
 const MESSAGES_SCROLLING_CLASS_RESET_MS = 140;
+const LATEST_USER_ANCHOR_REALIGN_WINDOW_MS = 8_000;
 
 type MessageActionTargets = {
   targetByAssistantId: Map<string, string>;
@@ -437,6 +438,11 @@ export const Messages = memo(function Messages({
     threadId: string | null;
     messageId: string | null;
   }>({ threadId: null, messageId: null });
+  const latestUserAnchorRealignRef = useRef<{
+    threadId: string | null;
+    messageId: string | null;
+    expiresAt: number;
+  }>({ threadId: null, messageId: null, expiresAt: 0 });
   const latestUserInputRequestSeenRef = useRef<{
     threadId: string | null;
     requestId: string | number | null;
@@ -2452,6 +2458,26 @@ export const Messages = memo(function Messages({
     setActiveAnchorId((previous) => (previous === messageId ? previous : messageId));
   }, []);
 
+  const handleMessageLayoutChanged = useCallback(
+    (messageId: string) => {
+      const currentThreadId = threadId ?? null;
+      const current = latestUserAnchorRealignRef.current;
+      if (
+        !currentThreadId ||
+        current.threadId !== currentThreadId ||
+        current.messageId !== messageId ||
+        Date.now() > current.expiresAt
+      ) {
+        return;
+      }
+      if (!messageNodeByIdRef.current.get(messageId)) {
+        return;
+      }
+      scrollToAnchor(messageId);
+    },
+    [scrollToAnchor, threadId],
+  );
+
   const handleAnchorRowScrollerReady = useCallback(
     (scroller: ((messageId: string) => boolean) | null) => {
       anchorRowScrollerRef.current = scroller;
@@ -2482,10 +2508,20 @@ export const Messages = memo(function Messages({
 
     if (!currentThreadId || !currentMessageId) {
       latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
+      latestUserAnchorRealignRef.current = {
+        threadId: currentThreadId,
+        messageId: currentMessageId,
+        expiresAt: 0,
+      };
       return;
     }
     if (previous.threadId !== currentThreadId) {
       latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
+      latestUserAnchorRealignRef.current = {
+        threadId: currentThreadId,
+        messageId: currentMessageId,
+        expiresAt: 0,
+      };
       return;
     }
     if (previous.messageId === currentMessageId) {
@@ -2502,6 +2538,11 @@ export const Messages = memo(function Messages({
         if (messageNodeByIdRef.current.get(currentMessageId)) {
           latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
           suppressNextAutoFollowForUserAnchorRef.current = currentMessageId;
+          latestUserAnchorRealignRef.current = {
+            threadId: currentThreadId,
+            messageId: currentMessageId,
+            expiresAt: Date.now() + LATEST_USER_ANCHOR_REALIGN_WINDOW_MS,
+          };
           scrollToAnchor(currentMessageId);
         }
       });
@@ -2512,6 +2553,11 @@ export const Messages = memo(function Messages({
 
     latestUserAnchorSeenRef.current = { threadId: currentThreadId, messageId: currentMessageId };
     suppressNextAutoFollowForUserAnchorRef.current = currentMessageId;
+    latestUserAnchorRealignRef.current = {
+      threadId: currentThreadId,
+      messageId: currentMessageId,
+      expiresAt: Date.now() + LATEST_USER_ANCHOR_REALIGN_WINDOW_MS,
+    };
     scrollToAnchor(currentMessageId);
   }, [latestRenderedUserMessageId, scrollToAnchor, threadId]);
 
@@ -2662,6 +2708,7 @@ export const Messages = memo(function Messages({
           liveAutoExpandedExploreId={liveAutoExpandedExploreId}
           messageNodeByIdRef={messageNodeByIdRef}
           onMessageAnchorNodesChanged={handleMessageAnchorNodesChanged}
+          onMessageLayoutChanged={handleMessageLayoutChanged}
           onOpenDiffPath={onOpenDiffPath}
           onRecoverThreadRuntime={onRecoverThreadRuntime}
           onRecoverThreadRuntimeAndResend={onRecoverThreadRuntimeAndResend}

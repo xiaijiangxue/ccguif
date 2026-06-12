@@ -61,23 +61,27 @@ const ManagedMessageImage = memo(function ManagedMessageImage({
   src,
   alt,
   loading,
+  onLoad,
 }: {
   src: string;
   alt: string;
   loading?: "eager" | "lazy";
+  onLoad?: () => void;
 }) {
   const renderSrc = useTransientImageSrc(src);
-  return <img src={renderSrc} alt={alt} loading={loading} />;
+  return <img src={renderSrc} alt={alt} loading={loading} onLoad={onLoad} />;
 });
 
 export const MessageImageGrid = memo(function MessageImageGrid({
   images,
   onOpen,
   hasText,
+  onImageLoad,
 }: {
   images: MessageImage[];
   onOpen: (index: number) => void;
   hasText: boolean;
+  onImageLoad?: () => void;
 }) {
   return (
     <div
@@ -92,7 +96,12 @@ export const MessageImageGrid = memo(function MessageImageGrid({
           onClick={() => onOpen(index)}
           aria-label={`Open image ${index + 1}`}
         >
-          <ManagedMessageImage src={image.src} alt={image.label} loading="lazy" />
+          <ManagedMessageImage
+            src={image.src}
+            alt={image.label}
+            loading="lazy"
+            onLoad={onImageLoad}
+          />
         </button>
       ))}
     </div>

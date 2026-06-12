@@ -119,6 +119,7 @@ type MessagesTimelineProps = {
   liveAutoExpandedExploreId: string | null;
   messageNodeByIdRef: MutableRefObject<Map<string, HTMLDivElement>>;
   onMessageAnchorNodesChanged?: () => void;
+  onMessageLayoutChanged?: (itemId: string) => void;
   onOpenDiffPath?: (path: string) => void;
   onRecoverThreadRuntime?: (
     workspaceId: string,
@@ -226,6 +227,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   liveAutoExpandedExploreId,
   messageNodeByIdRef,
   onMessageAnchorNodesChanged,
+  onMessageLayoutChanged,
   onOpenDiffPath,
   onRecoverThreadRuntime,
   onRecoverThreadRuntimeAndResend,
@@ -637,6 +639,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               onOpenFileLinkMenu={showFileLinkMenu}
               streamMitigationProfile={streamMitigationProfile}
               onAssistantVisibleTextRender={onAssistantVisibleTextRender}
+              onMessageLayoutChanged={onMessageLayoutChanged}
               suppressMemorySummaryCard={suppressedUserMemoryContextMessageIds.has(renderItem.id)}
               suppressNoteCardSummaryCard={suppressedUserNoteCardContextMessageIds.has(renderItem.id)}
             />

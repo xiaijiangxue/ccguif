@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationItem, RequestUserInputRequest } from "../../../types";
 import { Messages } from "./Messages";
@@ -266,6 +266,105 @@ describe("Messages conversationState routing", () => {
         selectedOpenAppId=""
       />,
     );
+
+    await waitFor(() => {
+      expect(scrollToSpy).toHaveBeenCalledWith({
+        top: Math.max(0, 180 + (520 - 120) - 720 * 0.28),
+        behavior: "instant",
+      });
+    });
+  });
+
+  it("realigns the latest user message after attached images load", async () => {
+    const initialItems: ConversationItem[] = [
+      {
+        id: "user-image-prev",
+        kind: "message",
+        role: "user",
+        text: "Previous user message",
+      },
+    ];
+    const imageItems: ConversationItem[] = [
+      ...initialItems,
+      {
+        id: "user-image-current",
+        kind: "message",
+        role: "user",
+        text: "Please inspect this screenshot",
+        images: ["https://example.test/screenshot.png"],
+      },
+    ];
+
+    const { container, rerender } = render(
+      <Messages
+        items={initialItems}
+        threadId="thread-image-scroll"
+        workspaceId="ws-image-scroll"
+        isThinking={false}
+        activeEngine="codex"
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    const scroller = container.querySelector(".messages") as HTMLDivElement | null;
+    expect(scroller).toBeTruthy();
+    if (!scroller) {
+      throw new Error("Expected messages scroller");
+    }
+    let currentScrollTop = 180;
+    Object.defineProperty(scroller, "scrollTop", {
+      configurable: true,
+      get: () => currentScrollTop,
+      set: (value: number) => {
+        currentScrollTop = value;
+      },
+    });
+    Object.defineProperty(scroller, "clientHeight", {
+      configurable: true,
+      value: 720,
+    });
+    Object.defineProperty(scroller, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ top: 120 }),
+    });
+    const scrollToSpy = vi.spyOn(scroller, "scrollTo");
+
+    rerender(
+      <Messages
+        items={imageItems}
+        threadId="thread-image-scroll"
+        workspaceId="ws-image-scroll"
+        isThinking={false}
+        activeEngine="codex"
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    await waitFor(() => {
+      expect(scrollToSpy).toHaveBeenCalled();
+    });
+
+    const currentUserNode = container.querySelector(
+      '[data-message-anchor-id="user-image-current"]',
+    );
+    expect(currentUserNode).toBeTruthy();
+    if (!currentUserNode) {
+      throw new Error("Expected current user message node");
+    }
+    Object.defineProperty(currentUserNode, "getBoundingClientRect", {
+      configurable: true,
+      value: () => ({ top: 520 }),
+    });
+    scrollToSpy.mockClear();
+
+    const image = container.querySelector(".message-image-thumb img");
+    expect(image).toBeTruthy();
+    if (!image) {
+      throw new Error("Expected rendered message image");
+    }
+    fireEvent.load(image);
 
     await waitFor(() => {
       expect(scrollToSpy).toHaveBeenCalledWith({
