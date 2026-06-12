@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Attachment } from '../types.js';
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -65,7 +65,13 @@ export function useSubmitHandler({
   addToast,
   t,
 }: UseSubmitHandlerOptions) {
+  const submitFramePendingRef = useRef(false);
+
   return useCallback(() => {
+    if (submitFramePendingRef.current) {
+      return;
+    }
+
     // Force fresh DOM read to avoid stale cache (e.g., after paste)
     invalidateCache();
     const content = getTextContent();
@@ -90,6 +96,8 @@ export function useSubmitHandler({
     }
 
     if (!cleanContent && attachments.length === 0) return;
+
+    submitFramePendingRef.current = true;
 
     // Close completions
     fileCompletion.close();
@@ -116,7 +124,11 @@ export function useSubmitHandler({
     // Call onSubmit even when loading - let parent handle queueing
     // Use requestAnimationFrame for reliable deferred execution instead of arbitrary timeout
     requestAnimationFrame(() => {
-      onSubmit?.(content, attachmentsToSend);
+      try {
+        onSubmit?.(content, attachmentsToSend);
+      } finally {
+        submitFramePendingRef.current = false;
+      }
     });
   }, [
     getTextContent,
