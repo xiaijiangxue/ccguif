@@ -403,6 +403,7 @@ impl ClaudeSession {
         Some(EngineEvent::RequestUserInput {
             workspace_id: self.workspace_id.clone(),
             request_id: Value::String(request_id),
+            tool_id: tool_id.to_string(),
             questions: Value::Array(questions),
         })
     }

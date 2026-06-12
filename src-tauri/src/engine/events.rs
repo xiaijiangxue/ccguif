@@ -118,6 +118,7 @@ pub enum EngineEvent {
     RequestUserInput {
         workspace_id: String,
         request_id: Value,
+        tool_id: String,
         questions: Value,
     },
 
@@ -707,14 +708,15 @@ pub fn engine_event_to_app_server_event_with_turn_context(
         }
         EngineEvent::RequestUserInput {
             request_id,
+            tool_id,
             questions,
             ..
         } => json!({
             "method": "item/tool/requestUserInput",
             "params": {
                 "threadId": thread_id,
-                "turnId": item_id,
-                "itemId": item_id,
+                "turnId": turn_id_context.unwrap_or(item_id),
+                "itemId": tool_id,
                 "questions": questions,
             },
             "id": request_id,
@@ -1106,6 +1108,44 @@ mod tests {
             Value::String("thread-1".to_string())
         );
         assert_eq!(mapped.message["params"]["argv"], json!(["git", "status"]));
+    }
+
+    #[test]
+    fn request_user_input_maps_item_id_to_originating_tool_id() {
+        let event = EngineEvent::RequestUserInput {
+            workspace_id: "ws-input".to_string(),
+            request_id: json!("ask-1"),
+            tool_id: "tool-ask-1".to_string(),
+            questions: json!([
+                {
+                    "id": "q-0",
+                    "header": "Confirm",
+                    "question": "Continue?"
+                }
+            ]),
+        };
+
+        let mapped = engine_event_to_app_server_event_with_turn_context(
+            &event,
+            "thread-1",
+            "assistant-item-1",
+            Some("turn-1"),
+        )
+        .expect("mapped event");
+
+        assert_eq!(mapped.workspace_id, "ws-input");
+        assert_eq!(
+            mapped.message["method"],
+            Value::String("item/tool/requestUserInput".to_string())
+        );
+        assert_eq!(mapped.message["id"], json!("ask-1"));
+        assert_eq!(mapped.message["params"]["threadId"], json!("thread-1"));
+        assert_eq!(mapped.message["params"]["turnId"], json!("turn-1"));
+        assert_eq!(mapped.message["params"]["itemId"], json!("tool-ask-1"));
+        assert_eq!(
+            mapped.message["params"]["questions"][0]["question"],
+            json!("Continue?")
+        );
     }
 
     #[test]

@@ -185,7 +185,14 @@ async fn ask_user_question_registers_and_clears_pending_request() {
         .expect("request user input event");
 
     let request_id = match event {
-        EngineEvent::RequestUserInput { request_id, .. } => request_id,
+        EngineEvent::RequestUserInput {
+            request_id,
+            tool_id,
+            ..
+        } => {
+            assert_eq!(tool_id, "tool-ask-1");
+            request_id
+        }
         other => panic!("unexpected event: {:?}", other),
     };
 
