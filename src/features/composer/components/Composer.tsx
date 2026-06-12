@@ -143,6 +143,63 @@ function finitePositive(value: number | null | undefined): number | null {
   return normalizedValue !== null && normalizedValue > 0 ? normalizedValue : null;
 }
 
+function finitePercent(value: number | null | undefined): number | null {
+  const normalizedValue = finiteNonNegative(value);
+  return normalizedValue !== null ? Math.min(normalizedValue, 100) : null;
+}
+
+function parseModelContextWindowHint(value: string | null | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const match = value.match(/\[(\d+(?:\.\d+)?)([kKmM])\]/);
+  if (!match) {
+    return null;
+  }
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+  const scale = match[2].toLowerCase() === "m" ? 1_000_000 : 1_000;
+  return amount * scale;
+}
+
+function isOfficialClaudeFamilyModel(value: string | null | undefined): boolean {
+  if (!value) {
+    return false;
+  }
+  const normalized = value.trim().toLowerCase();
+  return (
+    normalized.startsWith("claude-") ||
+    normalized === "sonnet" ||
+    normalized === "opus" ||
+    normalized === "haiku" ||
+    normalized.includes("claude sonnet") ||
+    normalized.includes("claude opus") ||
+    normalized.includes("claude haiku")
+  );
+}
+
+function resolveClaudeEstimatedContextWindow(
+  selectedModelOption: { id: string; displayName: string; model: string } | null,
+  selectedModelId: string | null,
+): number | null {
+  const candidates = [
+    selectedModelOption?.displayName,
+    selectedModelOption?.model,
+    selectedModelOption?.id,
+    selectedModelId,
+  ];
+  for (const candidate of candidates) {
+    const parsed = parseModelContextWindowHint(candidate);
+    if (parsed !== null) {
+      return parsed;
+    }
+  }
+  const officialCandidate = candidates.find((candidate) => isOfficialClaudeFamilyModel(candidate));
+  return officialCandidate ? 200_000 : null;
+}
+
 function resolveClaudeWindowUsedTokens(contextUsage: ThreadTokenUsage): number | null {
   const explicitContextUsedTokens = finiteNonNegative(contextUsage.contextUsedTokens);
   if (explicitContextUsedTokens !== null) {
@@ -1743,20 +1800,30 @@ export const Composer = memo(function Composer({
     textareaRef,
   ]);
 
+  const selectedModelOption = useMemo(
+    () => models.find((model) => model.id === selectedModelId),
+    [models, selectedModelId],
+  );
+
   const claudeContextUsage = useMemo<ClaudeContextUsageViewModel | null>(() => {
     if (!contextUsage || selectedEngine !== "claude") {
       return null;
     }
     const usedTokens = resolveClaudeWindowUsedTokens(contextUsage);
-    const contextWindow = finitePositive(contextUsage.modelContextWindow) ?? 1_000_000;
+    const contextWindow = finitePositive(contextUsage.modelContextWindow)
+      ?? resolveClaudeEstimatedContextWindow(selectedModelOption, selectedModelId);
     const totalTokens = finiteNonNegative(contextUsage.total.totalTokens);
     const inputTokens = finiteNonNegative(contextUsage.total.inputTokens);
     const cachedInputTokens = finiteNonNegative(contextUsage.total.cachedInputTokens);
     const outputTokens = finiteNonNegative(contextUsage.total.outputTokens);
-    const usedPercent = usedTokens !== null && contextWindow > 0
-      ? (usedTokens / contextWindow) * 100
-      : null;
-    const remainingPercent = usedPercent !== null ? Math.max(100 - usedPercent, 0) : null;
+    const reportedUsedPercent = finitePercent(contextUsage.contextUsedPercent);
+    const reportedRemainingPercent = finitePercent(contextUsage.contextRemainingPercent);
+    const usedPercent = reportedUsedPercent
+      ?? (usedTokens !== null && contextWindow !== null
+        ? Math.min((usedTokens / contextWindow) * 100, 100)
+        : null);
+    const remainingPercent = reportedRemainingPercent
+      ?? (usedPercent !== null ? Math.max(100 - usedPercent, 0) : null);
 
     return {
       usedTokens,
@@ -1774,7 +1841,7 @@ export const Composer = memo(function Composer({
       toolUsages: contextUsage.contextToolUsages ?? null,
       toolUsagesTruncated: contextUsage.contextToolUsagesTruncated ?? null,
     };
-  }, [contextUsage, selectedEngine]);
+  }, [contextUsage, selectedEngine, selectedModelId, selectedModelOption]);
 
   const legacyContextUsage = useMemo(() => {
     if (!contextUsage) {
@@ -1874,10 +1941,6 @@ export const Composer = memo(function Composer({
   const selectedEngineInfo = useMemo(
     () => engines?.find((engine) => engine.type === selectedEngine),
     [engines, selectedEngine],
-  );
-  const selectedModelOption = useMemo(
-    () => models.find((model) => model.id === selectedModelId),
-    [models, selectedModelId],
   );
   const selectedPermissionMode = accessModeToPermissionMode(accessMode);
   const activeUserInputRequest = useMemo(

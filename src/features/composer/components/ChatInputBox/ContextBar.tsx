@@ -249,10 +249,12 @@ export const ContextBar: React.FC<ContextBarProps> = memo(({
       ? (usedContextTokenCount / contextWindowTokenCount) * 100
       : null;
     const usagePercentFromSnapshot = Number.isFinite(dualContextUsage.percent)
-      ? Math.max(dualContextUsage.percent, 0)
+      ? Math.min(Math.max(dualContextUsage.percent, 0), 100)
       : 0;
     const realUsagePercent = usagePercentFromTokens ?? usagePercentFromSnapshot;
-    const usagePercentForDisplay = Math.round(dualContextUsage.hasUsage ? realUsagePercent : 0);
+    const usagePercentForDisplay = Math.round(
+      dualContextUsage.hasUsage ? Math.min(Math.max(realUsagePercent, 0), 100) : 0,
+    );
     const usagePercentForRing = dualContextUsage.hasUsage
       ? Math.min(realUsagePercent, 100)
       : 0;

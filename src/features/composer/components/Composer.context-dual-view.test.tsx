@@ -112,6 +112,8 @@ function ComposerHarness({
   selectedEngine = "claude",
   contextUsage = null,
   contextDualViewEnabled = false,
+  models = [],
+  selectedModelId = null,
   isProcessing = false,
   isContextCompacting = false,
   codexCompactionLifecycleState = "idle",
@@ -124,6 +126,8 @@ function ComposerHarness({
   selectedEngine?: EngineType;
   contextUsage?: ThreadTokenUsage | null;
   contextDualViewEnabled?: boolean;
+  models?: Array<{ id: string; displayName: string; model: string }>;
+  selectedModelId?: string | null;
   isProcessing?: boolean;
   isContextCompacting?: boolean;
   codexCompactionLifecycleState?: "idle" | "compacting" | "completed";
@@ -148,8 +152,8 @@ function ComposerHarness({
       selectedCollaborationModeId={null}
       onSelectCollaborationMode={() => {}}
       selectedEngine={selectedEngine}
-      models={[]}
-      selectedModelId={null}
+      models={models}
+      selectedModelId={selectedModelId}
       onSelectModel={() => {}}
       reasoningOptions={[]}
       selectedEffort={null}
@@ -381,6 +385,77 @@ describe("Composer dual context usage model", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("keeps Claude usage window unset when modelContextWindow is missing", async () => {
+    render(
+      <ComposerHarness
+        selectedEngine="claude"
+        contextUsage={{
+          total: {
+            totalTokens: 180_000,
+            inputTokens: 120_000,
+            cachedInputTokens: 30_000,
+            outputTokens: 30_000,
+            reasoningOutputTokens: 0,
+          },
+          last: {
+            totalTokens: 60_000,
+            inputTokens: 40_000,
+            cachedInputTokens: 10_000,
+            outputTokens: 10_000,
+            reasoningOutputTokens: 0,
+          },
+          modelContextWindow: null,
+          contextUsageSource: "message_usage",
+        }}
+      />,
+    );
+
+    const adapter = screen.getByTestId("chat-input-box-adapter");
+    expect(adapter.getAttribute("data-claude-total")).toBe("");
+    expect(adapter.getAttribute("data-claude-used")).toBe("50000");
+    expect(adapter.getAttribute("data-claude-used-percent")).toBe("");
+    expect(adapter.getAttribute("data-claude-remaining-percent")).toBe("");
+  });
+
+  it("estimates Claude percent from the selected model when runtime window is missing", async () => {
+    render(
+      <ComposerHarness
+        selectedEngine="claude"
+        models={[
+          {
+            id: "claude-sonnet-4-6",
+            displayName: "Claude Sonnet 4.6",
+            model: "claude-sonnet-4-6",
+          },
+        ]}
+        selectedModelId="claude-sonnet-4-6"
+        contextUsage={{
+          total: {
+            totalTokens: 180_000,
+            inputTokens: 120_000,
+            cachedInputTokens: 30_000,
+            outputTokens: 30_000,
+            reasoningOutputTokens: 0,
+          },
+          last: {
+            totalTokens: 60_000,
+            inputTokens: 40_000,
+            cachedInputTokens: 10_000,
+            outputTokens: 10_000,
+            reasoningOutputTokens: 0,
+          },
+          modelContextWindow: null,
+          contextUsageSource: "message_usage",
+        }}
+      />,
+    );
+
+    const adapter = screen.getByTestId("chat-input-box-adapter");
+    expect(adapter.getAttribute("data-claude-total")).toBe("200000");
+    expect(adapter.getAttribute("data-claude-used")).toBe("50000");
+    expect(adapter.getAttribute("data-claude-used-percent")).toBe("25");
   });
 
   it("does not fallback dual usage to cumulative totals when last snapshot is empty", () => {

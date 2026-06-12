@@ -41,7 +41,7 @@ export const TokenIndicator = ({
       : `${rounded.toFixed(1)}%`;
   };
 
-  const formattedPercentage = formatPercent(resolvedPercentage);
+  const formattedPercentage = formatPercent(resolvedPercentage === null ? null : clampedPercentage);
 
   const formatTokens = (value?: number | null) => {
     if (typeof value !== 'number' || !isFinite(value)) return undefined;
@@ -63,8 +63,16 @@ export const TokenIndicator = ({
   const outputText = formatTokens(claudeContextUsage?.outputTokens);
   const claudeUsedText = formatTokens(claudeContextUsage?.usedTokens);
   const claudeMaxText = formatTokens(claudeContextUsage?.contextWindow);
-  const claudeUsedPercent = formatPercent(claudeContextUsage?.usedPercent ?? resolvedPercentage);
-  const claudeRemainingPercent = formatPercent(claudeContextUsage?.remainingPercent ?? null);
+  const claudeUsedPercent = formatPercent(
+    claudeContextUsage?.usedPercent !== null && claudeContextUsage?.usedPercent !== undefined
+      ? Math.min(Math.max(claudeContextUsage.usedPercent, 0), 100)
+      : (resolvedPercentage === null ? null : clampedPercentage),
+  );
+  const claudeRemainingPercent = formatPercent(
+    claudeContextUsage?.remainingPercent !== null && claudeContextUsage?.remainingPercent !== undefined
+      ? Math.min(Math.max(claudeContextUsage.remainingPercent, 0), 100)
+      : null,
+  );
   const claudeFreshness = claudeContextUsage?.freshness ?? 'pending';
   const claudeFreshnessLabel = t(`chat.claudeContextFreshness.${claudeFreshness}`, {
     defaultValue: t('chat.claudeContextFreshness.unknown'),

@@ -198,7 +198,7 @@ describe("ContextBar live canvas controls visibility", () => {
       .toContain("150%");
   });
 
-  it("shows the real Codex context usage percent while filling the ring at 100 percent", () => {
+  it("clamps Codex context usage percent while filling the ring at 100 percent", () => {
     const { container } = render(
       <ContextBar
         currentProvider="codex"
@@ -215,8 +215,9 @@ describe("ContextBar live canvas controls visibility", () => {
       />,
     );
 
-    expect(screen.getAllByText("130%").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("100%").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("0%")).toBeTruthy();
+    expect(screen.queryByText("130%")).toBeNull();
 
     const ring = container.querySelector(".context-dual-usage-ring") as HTMLElement | null;
     expect(ring?.style.getPropertyValue("--dual-usage-percent")).toBe("100%");
@@ -316,6 +317,31 @@ describe("ContextBar live canvas controls visibility", () => {
     expect(screen.queryByText("mcp__one: 3k · mcp__two: 2k · mcp__three: 1k · ...")).toBeNull();
     expect(screen.queryByLabelText("chat.contextDualViewAutoCompactionEnabled")).toBeNull();
     expect(screen.getByText("chat.claudeContextFreshness.live")).toBeTruthy();
+  });
+
+  it("clamps Claude usage percent at 100 in the ring and label", () => {
+    render(
+      <ContextBar
+        currentProvider="claude"
+        claudeContextUsage={{
+          usedTokens: 260_000,
+          contextWindow: 200_000,
+          totalTokens: 300_000,
+          inputTokens: 200_000,
+          cachedInputTokens: 60_000,
+          outputTokens: 40_000,
+          usedPercent: 130,
+          remainingPercent: -30,
+          freshness: "live",
+          source: "context_window",
+          hasUsage: true,
+        }}
+      />,
+    );
+
+    expect(screen.getAllByText("100%").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("130%")).toBeNull();
+    expect(screen.queryByText("-30%")).toBeNull();
   });
 
   it("labels Claude estimated window usage instead of waiting for CLI telemetry", () => {
