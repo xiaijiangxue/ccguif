@@ -2,6 +2,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
+import type { Attachment } from '../types.js';
 import { useSubmitHandler } from './useSubmitHandler';
 
 function createCompletion() {
@@ -17,7 +18,7 @@ function useSubmitHandlerHarness({
   getTextContent: () => string;
   onSubmit: (content: string) => void;
 }) {
-  const [, setInternalAttachments] = useState([]);
+  const [, setInternalAttachments] = useState<Attachment[]>([]);
   return useSubmitHandler({
     getTextContent,
     attachments: [],

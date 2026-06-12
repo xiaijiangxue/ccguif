@@ -1811,7 +1811,7 @@ export const Composer = memo(function Composer({
     }
     const usedTokens = resolveClaudeWindowUsedTokens(contextUsage);
     const contextWindow = finitePositive(contextUsage.modelContextWindow)
-      ?? resolveClaudeEstimatedContextWindow(selectedModelOption, selectedModelId);
+      ?? resolveClaudeEstimatedContextWindow(selectedModelOption ?? null, selectedModelId);
     const totalTokens = finiteNonNegative(contextUsage.total.totalTokens);
     const inputTokens = finiteNonNegative(contextUsage.total.inputTokens);
     const cachedInputTokens = finiteNonNegative(contextUsage.total.cachedInputTokens);
