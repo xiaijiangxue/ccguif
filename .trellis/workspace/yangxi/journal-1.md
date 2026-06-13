@@ -1117,3 +1117,36 @@ Complete MyBatis Java IDE navigation feature: JDTLS backend integration, MyBatis
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: feat(jdtls): JDTLS navigation priority and MyBatis integration
+
+**Date**: 2026-06-14
+**Task**: feat(jdtls): JDTLS navigation priority and MyBatis integration
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Implemented JDTLS backend commands (definition, references, didOpen/didChange, project detection, status), MyBatis mapper statement and Java method cross-navigation, navigation gutter markers, useJdtlsWarmup hook, jdtlsJavaPath setting, diagnostic panel integration, and full tauri service API surface. Includes brainstorm and plan docs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9086c382` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
