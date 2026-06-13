@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 28
+- **Total Sessions**: 29
 - **Last Active**: 2026-06-14
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1185 | Active |
+| `journal-1.md` | ~1218 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 29 | 2026-06-14 | feat(navigation): add go-to-implementation support via JDTLS | `5acfcda4` | `refactor/liquid-precision-ui` |
 | 28 | 2026-06-14 | fix(navigation): filter origin location from reference results | `acaf642f` | `refactor/liquid-precision-ui` |
 | 27 | 2026-06-14 | feat(jdtls): JDTLS navigation priority and MyBatis integration | `9086c382` | `refactor/liquid-precision-ui` |
 | 26 | 2026-06-13 | feat(mybatis): MyBatis Java IDE navigation support | `bd8d6c98` | `refactor/liquid-precision-ui` |

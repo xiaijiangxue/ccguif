@@ -1183,3 +1183,36 @@ Added filterOriginReferenceLocation utility to exclude the definition site from 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 29: feat(navigation): add go-to-implementation support via JDTLS
+
+**Date**: 2026-06-14
+**Task**: feat(navigation): add go-to-implementation support via JDTLS
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added go-to-implementation navigation: JDTLS textDocument/implementation query, FileViewPanel button, implementationCandidates panel in navigation panel, extracted LocationListItem component, and en/zh i18n keys.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5acfcda4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
