@@ -1150,3 +1150,36 @@ Implemented JDTLS backend commands (definition, references, didOpen/didChange, p
 ### Next Steps
 
 - None - task complete
+
+
+## Session 28: fix(navigation): filter origin location from reference results
+
+**Date**: 2026-06-14
+**Task**: fix(navigation): filter origin location from reference results
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added filterOriginReferenceLocation utility to exclude the definition site from reference results. Extracts endLine/endCharacter from LSP responses for accurate position range checking. Applied in useFileNavigation before caching. Added test verifying origin exclusion.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `acaf642f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
