@@ -15,6 +15,7 @@ import ArrowRight from "lucide-react/dist/esm/icons/arrow-right";
 import Columns2 from "lucide-react/dist/esm/icons/columns-2";
 import Pencil from "lucide-react/dist/esm/icons/pencil";
 import Eye from "lucide-react/dist/esm/icons/eye";
+import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import Code from "lucide-react/dist/esm/icons/code";
 import FileSearch from "lucide-react/dist/esm/icons/file-search";
 import ExternalLink from "lucide-react/dist/esm/icons/external-link";
@@ -1098,14 +1099,18 @@ export function FileViewPanel({
   const {
     isDefinitionLoading,
     isReferencesLoading,
+    isImplementationLoading,
     navigationError,
     definitionCandidates,
     setDefinitionCandidates,
+    implementationCandidates,
+    setImplementationCandidates,
     referenceResults,
     setReferenceResults,
     navigateToLocation,
     runDefinitionFromCursor,
     runReferencesFromCursor,
+    runImplementationFromCursor,
     editorNavigationKeymapExt,
     ctrlClickDefinitionExt,
     openFindPanelInEditor,
@@ -2020,6 +2025,20 @@ export function FileViewPanel({
               <button
                 type="button"
                 className="ghost fvp-action-btn"
+                onClick={runImplementationFromCursor}
+                aria-busy={isImplementationLoading}
+                title={t("files.gotoImplementation")}
+              >
+                <GitBranch size={14} aria-hidden />
+                <span>
+                  {isImplementationLoading
+                    ? t("files.navigating")
+                    : t("files.gotoImplementation")}
+                </span>
+              </button>
+              <button
+                type="button"
+                className="ghost fvp-action-btn"
                 onClick={handleEnterPreview}
               >
                 <Eye size={14} aria-hidden />
@@ -2450,6 +2469,8 @@ export function FileViewPanel({
         navigationError={navigationError}
         definitionCandidates={definitionCandidates}
         onCloseDefinitionCandidates={() => setDefinitionCandidates([])}
+        implementationCandidates={implementationCandidates}
+        onCloseImplementationCandidates={() => setImplementationCandidates([])}
         referenceResults={referenceResults}
         onCloseReferenceResults={() => setReferenceResults(null)}
         onNavigateToLocation={navigateToLocation}

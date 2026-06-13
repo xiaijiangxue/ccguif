@@ -14,6 +14,7 @@ import {
   getCodeIntelReferences,
   getJdtlsDefinition,
   getJdtlsDidOpen,
+  getJdtlsImplementation,
   getJdtlsReferences,
 } from "../../../services/tauri";
 import {
@@ -102,14 +103,17 @@ export function useFileNavigation({
 }: UseFileNavigationArgs) {
   const [isDefinitionLoading, setIsDefinitionLoading] = useState(false);
   const [isReferencesLoading, setIsReferencesLoading] = useState(false);
+  const [isImplementationLoading, setIsImplementationLoading] = useState(false);
   const [navigationError, setNavigationError] = useState<string | null>(null);
   const [definitionCandidates, setDefinitionCandidates] = useState<LspLocationLike[]>([]);
+  const [implementationCandidates, setImplementationCandidates] = useState<LspLocationLike[]>([]);
   const [referenceResults, setReferenceResults] = useState<LspLocationLike[] | null>(null);
   const lspRequestIdRef = useRef(0);
   const definitionCacheRef = useRef<Map<string, LocationCacheEntry>>(new Map());
   const referencesCacheRef = useRef<Map<string, LocationCacheEntry>>(new Map());
   const recentDefinitionTriggerRef = useRef<RecentTrigger | null>(null);
   const recentReferencesTriggerRef = useRef<RecentTrigger | null>(null);
+  const recentImplementationTriggerRef = useRef<RecentTrigger | null>(null);
   const appliedNavigationRequestRef = useRef(0);
   const navigationFocusTimerRef = useRef<number | null>(null);
   const currentFileUri = useMemo(() => toFileUri(absolutePath), [absolutePath]);
@@ -217,6 +221,22 @@ export function useFileNavigation({
       t,
       workspaceId,
     ],
+  );
+
+  const resolveImplementationLocations = useCallback(
+    async (position: { line: number; character: number }): Promise<LspLocationLike[]> => {
+      if (!shouldTryJdtls) {
+        return [];
+      }
+      await syncCurrentJavaDocument();
+      const response = await getJdtlsImplementation(workspaceId, {
+        filePath,
+        line: position.line,
+        character: position.character,
+      });
+      return normalizeJdtlsLocations(response);
+    },
+    [filePath, shouldTryJdtls, syncCurrentJavaDocument, workspaceId],
   );
 
   const clearNavigationFocusTimer = useCallback(() => {
@@ -492,6 +512,76 @@ export function useFileNavigation({
     void findReferencesAtOffset(view.state.selection.main.head);
   }, [cmRef, findReferencesAtOffset]);
 
+  const findImplementationAtOffset = useCallback(
+    async (offset: number) => {
+      const editorView = cmRef.current?.view;
+      if (!editorView) {
+        return;
+      }
+      if (!shouldTryJdtls) {
+        setNavigationError(t("files.navigationNoImplementation"));
+        return;
+      }
+      const position = offsetToLspPosition(editorView.state.doc, offset);
+      const queryKey = makeLocationQueryKey(filePath, position.line, position.character);
+      const now = Date.now();
+      const recentTrigger = recentImplementationTriggerRef.current;
+      if (
+        recentTrigger &&
+        recentTrigger.key === queryKey &&
+        now - recentTrigger.at < CODE_INTEL_REPEAT_DEBOUNCE_MS
+      ) {
+        return;
+      }
+      recentImplementationTriggerRef.current = { key: queryKey, at: now };
+      const requestId = lspRequestIdRef.current + 1;
+      lspRequestIdRef.current = requestId;
+      setNavigationError(null);
+      setImplementationCandidates([]);
+      setIsImplementationLoading(true);
+      try {
+        const locations = await withTimeout(
+          resolveImplementationLocations(position),
+          NAVIGATION_REQUEST_TIMEOUT_MS,
+          t("files.navigationTimeout"),
+        );
+        if (requestId !== lspRequestIdRef.current) {
+          return;
+        }
+        if (locations.length === 0) {
+          setNavigationError(t("files.navigationNoImplementation"));
+          return;
+        }
+        if (locations.length === 1) {
+          const onlyLocation = locations[0];
+          if (onlyLocation) {
+            navigateToLocation(onlyLocation);
+          }
+          return;
+        }
+        setImplementationCandidates(locations);
+      } catch (error) {
+        if (requestId !== lspRequestIdRef.current) {
+          return;
+        }
+        setNavigationError(errorMessageFromUnknown(error, t("files.navigationError")));
+      } finally {
+        if (requestId === lspRequestIdRef.current) {
+          setIsImplementationLoading(false);
+        }
+      }
+    },
+    [cmRef, filePath, navigateToLocation, resolveImplementationLocations, shouldTryJdtls, t],
+  );
+
+  const runImplementationFromCursor = useCallback(() => {
+    const view = cmRef.current?.view;
+    if (!view) {
+      return;
+    }
+    void findImplementationAtOffset(view.state.selection.main.head);
+  }, [cmRef, findImplementationAtOffset]);
+
   const editorNavigationKeymapExt = useMemo(
     () =>
       keymap.of([
@@ -521,8 +611,15 @@ export function useFileNavigation({
             return true;
           },
         },
+        {
+          key: "Alt-Shift-b",
+          run: () => {
+            runImplementationFromCursor();
+            return true;
+          },
+        },
       ]),
-    [runDefinitionFromCursor, runReferencesFromCursor],
+    [runDefinitionFromCursor, runReferencesFromCursor, runImplementationFromCursor],
   );
 
   const ctrlClickDefinitionExt = useMemo(
@@ -551,10 +648,13 @@ export function useFileNavigation({
     lspRequestIdRef.current += 1;
     recentDefinitionTriggerRef.current = null;
     recentReferencesTriggerRef.current = null;
+    recentImplementationTriggerRef.current = null;
     setIsDefinitionLoading(false);
     setIsReferencesLoading(false);
+    setIsImplementationLoading(false);
     setNavigationError(null);
     setDefinitionCandidates([]);
+    setImplementationCandidates([]);
     setReferenceResults(null);
   }, [filePath]);
 
@@ -623,14 +723,18 @@ export function useFileNavigation({
   return {
     isDefinitionLoading,
     isReferencesLoading,
+    isImplementationLoading,
     navigationError,
     definitionCandidates,
     setDefinitionCandidates,
+    implementationCandidates,
+    setImplementationCandidates,
     referenceResults,
     setReferenceResults,
     navigateToLocation,
     runDefinitionFromCursor,
     runReferencesFromCursor,
+    runImplementationFromCursor,
     editorNavigationKeymapExt,
     ctrlClickDefinitionExt,
     openFindPanelInEditor,
