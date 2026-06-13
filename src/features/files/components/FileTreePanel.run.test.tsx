@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import type { OpenAppTarget } from "../../../types";
+import { FileTreeStoreProvider } from "../stores/fileTreeStoreContext";
 
 const revealItemInDirMock = vi.fn(async () => undefined);
 const emitToMock = vi.fn(async () => undefined);
@@ -96,10 +98,23 @@ vi.mock("./FilePreviewPopover", () => ({
 }));
 
 let FileTreePanel: typeof import("./FileTreePanel").FileTreePanel;
+type FileTreePanelElement = ReactElement<{ workspaceId: string }>;
 
 beforeAll(async () => {
   ({ FileTreePanel } = await import("./FileTreePanel"));
 });
+
+function renderFileTreePanel(element: FileTreePanelElement) {
+  return render(wrapFileTreePanel(element));
+}
+
+function wrapFileTreePanel(element: FileTreePanelElement) {
+  return (
+    <FileTreeStoreProvider workspaceId={element.props.workspaceId}>
+      {element}
+    </FileTreeStoreProvider>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -118,7 +133,7 @@ afterEach(() => {
 
 describe("FileTreePanel run action isolation", () => {
   it("renders a single workspace root node and keeps it expanded by default", () => {
-    const { container } = render(
+    const { container } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -143,7 +158,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("restores child expansion state after collapsing and re-expanding workspace root", () => {
-    const { container } = render(
+    const { container } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -175,7 +190,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("places workspace root on its own row", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -209,7 +224,7 @@ describe("FileTreePanel run action isolation", () => {
       value: { writeText: writeTextMock },
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -236,7 +251,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("opens file preview read flow when onOpenFile handler is not provided", async () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -264,7 +279,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("applies git color class when git status path is absolute", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -297,7 +312,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("marks visible folders as gitignored only when the whole folder is ignored", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -346,7 +361,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("applies git color class for repo-relative status when git root is a workspace subdirectory", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/JinSen"
@@ -385,7 +400,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("does not apply subrepo repo-relative status to workspace root file with same name", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/JinSen"
@@ -423,7 +438,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("applies folder git status from deep git path even when file node is not listed", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -455,7 +470,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("does not render folder label as deleted when only nested files are deleted", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/JinSen"
@@ -489,7 +504,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("keeps sticky-top and scroll-list containers separated in DOM structure", () => {
-    const { container } = render(
+    const { container } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -517,7 +532,7 @@ describe("FileTreePanel run action isolation", () => {
 
   it("uses a virtualized row container for large visible file trees", () => {
     const largeFiles = Array.from({ length: 320 }, (_, index) => `src/file-${index}.ts`);
-    const { container } = render(
+    const { container } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-virtual-tree"
         workspacePath="/tmp/workspace"
@@ -546,7 +561,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("renders empty directories from workspace directory snapshot", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -571,7 +586,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("renders single-child empty directory chains in a.b.c style", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -595,7 +610,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("does not render empty state for a directories-only snapshot", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -621,7 +636,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("renders the root loading indicator while the first workspace snapshot is pending", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -649,7 +664,7 @@ describe("FileTreePanel run action isolation", () => {
   it("does not render run icon button when handler is absent", () => {
     const openTargets: OpenAppTarget[] = [];
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -673,7 +688,7 @@ describe("FileTreePanel run action isolation", () => {
 
   it("uses single click for selection and double click for file open", () => {
     const onOpenFile = vi.fn();
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -700,7 +715,7 @@ describe("FileTreePanel run action isolation", () => {
 
   it("keeps single click on folder as selection and uses double click to toggle children", () => {
     const onOpenFile = vi.fn();
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -754,7 +769,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -807,7 +822,7 @@ describe("FileTreePanel run action isolation", () => {
       };
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -860,7 +875,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -918,7 +933,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1001,7 +1016,7 @@ describe("FileTreePanel run action isolation", () => {
       };
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1075,7 +1090,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    const { rerender } = render(
+    const { rerender } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1103,7 +1118,7 @@ describe("FileTreePanel run action isolation", () => {
     fireEvent.doubleClick(screen.getByRole("button", { name: /worktrees/ }));
     expect(await screen.findByRole("button", { name: /agent-old/ })).toBeTruthy();
 
-    rerender(
+    rerender(wrapFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1125,7 +1140,7 @@ describe("FileTreePanel run action isolation", () => {
         gitStatusFiles={[]}
         gitignoredFiles={new Set<string>()}
       />,
-    );
+    ));
 
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: /agent-old/ })).toBeNull();
@@ -1167,7 +1182,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1244,7 +1259,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1288,7 +1303,7 @@ describe("FileTreePanel run action isolation", () => {
   it("shows root action buttons and trashes selected node from root row", async () => {
     const onRefreshFiles = vi.fn();
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1334,7 +1349,7 @@ describe("FileTreePanel run action isolation", () => {
   it("removes a trashed folder subtree from the visible tree before parent refresh settles", async () => {
     const onRefreshFiles = vi.fn();
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1373,7 +1388,7 @@ describe("FileTreePanel run action isolation", () => {
   it("creates new folder from root action", async () => {
     const onRefreshFiles = vi.fn();
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1408,7 +1423,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("creates new folder under selected folder from root action", async () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1442,7 +1457,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("creates new file under selected file parent from root action", async () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1487,7 +1502,7 @@ describe("FileTreePanel run action isolation", () => {
         gitignored_directories: [] as string[],
       });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1551,7 +1566,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1634,7 +1649,7 @@ describe("FileTreePanel run action isolation", () => {
       return null;
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1700,7 +1715,7 @@ describe("FileTreePanel run action isolation", () => {
       };
     });
 
-    const { container } = render(
+    const { container } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1773,7 +1788,7 @@ describe("FileTreePanel run action isolation", () => {
       };
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1812,7 +1827,7 @@ describe("FileTreePanel run action isolation", () => {
   it("shows load error state instead of empty state when root file list fails", () => {
     const onRefreshFiles = vi.fn();
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1844,7 +1859,7 @@ describe("FileTreePanel run action isolation", () => {
   it("mentions file using Windows-style absolute path when workspace path uses backslashes", () => {
     const onInsertText = vi.fn();
 
-    const { container } = render(
+    const { container } = renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath={"C:\\workspace\\demo"}
@@ -1873,7 +1888,7 @@ describe("FileTreePanel run action isolation", () => {
   });
 
   it("builds multi-path drag payload from selected nodes", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1946,7 +1961,7 @@ describe("FileTreePanel run action isolation", () => {
       value: "Win32",
     });
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -1999,7 +2014,7 @@ describe("FileTreePanel run action isolation", () => {
       ({ left: 0, top: 0, right: 400, bottom: 200 } as DOMRect);
     document.body.appendChild(chatInput);
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -2045,7 +2060,7 @@ describe("FileTreePanel run action isolation", () => {
       ({ left: 520, top: 40, right: 980, bottom: 260 } as DOMRect);
     document.body.appendChild(activeChatInput);
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"
@@ -2084,7 +2099,7 @@ describe("FileTreePanel run action isolation", () => {
     chatInput.className = "chat-input-box";
     document.body.appendChild(chatInput);
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspacePath="/tmp/workspace"

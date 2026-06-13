@@ -9,6 +9,7 @@ import {
   buildDetachedSpecHubSession,
   openOrFocusDetachedSpecHub,
 } from "../../spec/detachedSpecHub";
+import { FileTreeStoreProvider } from "../stores/fileTreeStoreContext";
 import { FileTreePanel } from "./FileTreePanel";
 import { FileViewPanel } from "./FileViewPanel";
 import type { EditorNavigationTarget } from "../../app/hooks/useGitPanelController";
@@ -195,33 +196,36 @@ export function FileExplorerWorkspace({
       } as CSSProperties}
     >
       <div className="detached-file-explorer-sidebar">
-        <FileTreePanel
-          workspaceId={workspaceId}
-          workspaceName={workspaceName}
-          workspacePath={workspacePath}
-          gitRoot={gitRoot}
-          files={files}
-          directories={directories}
-          directoryMetadata={directoryMetadata}
-          isLoading={isLoading}
-          loadError={loadError}
-          filePanelMode="files"
-          onFilePanelModeChange={() => undefined}
-          onOpenFile={handleOpenWorkspaceFile}
-          openTargets={openTargets}
-          openAppIconById={openAppIconById}
-          selectedOpenAppId={selectedOpenAppId}
-          onSelectOpenAppId={onSelectOpenAppId}
-          gitStatusFiles={gitStatusFiles}
-          gitignoredFiles={gitignoredFiles}
-          gitignoredDirectories={gitignoredDirectories}
-          onRefreshFiles={onRefreshFiles}
-          onOpenSpecHub={handleOpenSpecHub}
-          isSpecHubActive={false}
-          showSpecHubAction
-          showDetachedExplorerAction={false}
-          crossWindowDragTargetLabel="main"
-        />
+        <FileTreeStoreProvider workspaceId={workspaceId}>
+          <FileTreePanel
+            workspaceId={workspaceId}
+            workspaceName={workspaceName}
+            workspacePath={workspacePath}
+            gitRoot={gitRoot}
+            files={files}
+            directories={directories}
+            directoryMetadata={directoryMetadata}
+            isLoading={isLoading}
+            loadError={loadError}
+            filePanelMode="files"
+            onFilePanelModeChange={() => undefined}
+            onOpenFile={handleOpenWorkspaceFile}
+            openTargets={openTargets}
+            openAppIconById={openAppIconById}
+            selectedOpenAppId={selectedOpenAppId}
+            onSelectOpenAppId={onSelectOpenAppId}
+            gitStatusFiles={gitStatusFiles}
+            gitignoredFiles={gitignoredFiles}
+            gitignoredDirectories={gitignoredDirectories}
+            onRefreshFiles={onRefreshFiles}
+            onOpenSpecHub={handleOpenSpecHub}
+            isSpecHubActive={false}
+            showSpecHubAction
+            showDetachedExplorerAction={false}
+            crossWindowDragTargetLabel="main"
+            activeEditorFilePath={activeFilePath}
+          />
+        </FileTreeStoreProvider>
       </div>
       <div
         className="detached-file-explorer-resizer"

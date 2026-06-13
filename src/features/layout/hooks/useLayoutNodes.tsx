@@ -17,6 +17,7 @@ import {
 import { GitDiffViewer } from "../../git/components/GitDiffViewer";
 import { buildCanonicalGitChanges } from "../../git/utils/gitChangeModel";
 import { FileTreePanel } from "../../files/components/FileTreePanel";
+import { FileTreeStoreProvider } from "../../files/stores/fileTreeStoreContext";
 import {
   clampRendererContextMenuPosition,
   RendererContextMenu,
@@ -2320,34 +2321,37 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
   let gitDiffPanelNode: ReactNode;
   if (options.filePanelMode === "files" && options.activeWorkspace) {
     gitDiffPanelNode = (
-      <FileTreePanel
-        workspaceId={options.activeWorkspace.id}
-        workspaceName={options.activeWorkspace.name}
-        workspacePath={options.activeWorkspace.path}
-        gitRoot={options.gitRoot}
-        files={options.files}
-        directories={options.directories}
-        directoryMetadata={options.directoryMetadata}
-        isLoading={options.fileTreeLoading}
-        loadError={options.fileTreeLoadError}
-        filePanelMode={options.filePanelMode}
-        onFilePanelModeChange={options.onFilePanelModeChange}
-        onInsertText={options.onInsertComposerText}
-        onOpenFile={options.onOpenFile}
-        openTargets={options.openAppTargets}
-        openAppIconById={options.openAppIconById}
-        selectedOpenAppId={options.selectedOpenAppId}
-        onSelectOpenAppId={options.onSelectOpenAppId}
-        onToggleRuntimeConsole={options.onToggleRuntimeConsole}
-        isRuntimeConsoleVisible={options.runtimeConsoleVisible}
-        onOpenSpecHub={options.onOpenSpecHub}
-        isSpecHubActive={options.activeTab === "spec"}
-        onOpenDetachedExplorer={options.onOpenDetachedFileExplorer}
-        gitStatusFiles={options.gitStatus.files}
-        gitignoredFiles={options.gitignoredFiles}
-        gitignoredDirectories={options.gitignoredDirectories}
-        onRefreshFiles={options.onRefreshFiles}
-      />
+      <FileTreeStoreProvider workspaceId={options.activeWorkspace.id}>
+        <FileTreePanel
+          workspaceId={options.activeWorkspace.id}
+          workspaceName={options.activeWorkspace.name}
+          workspacePath={options.activeWorkspace.path}
+          gitRoot={options.gitRoot}
+          files={options.files}
+          directories={options.directories}
+          directoryMetadata={options.directoryMetadata}
+          isLoading={options.fileTreeLoading}
+          loadError={options.fileTreeLoadError}
+          filePanelMode={options.filePanelMode}
+          onFilePanelModeChange={options.onFilePanelModeChange}
+          onInsertText={options.onInsertComposerText}
+          onOpenFile={options.onOpenFile}
+          openTargets={options.openAppTargets}
+          openAppIconById={options.openAppIconById}
+          selectedOpenAppId={options.selectedOpenAppId}
+          onSelectOpenAppId={options.onSelectOpenAppId}
+          onToggleRuntimeConsole={options.onToggleRuntimeConsole}
+          isRuntimeConsoleVisible={options.runtimeConsoleVisible}
+          onOpenSpecHub={options.onOpenSpecHub}
+          isSpecHubActive={options.activeTab === "spec"}
+          onOpenDetachedExplorer={options.onOpenDetachedFileExplorer}
+          gitStatusFiles={options.gitStatus.files}
+          gitignoredFiles={options.gitignoredFiles}
+          gitignoredDirectories={options.gitignoredDirectories}
+          onRefreshFiles={options.onRefreshFiles}
+          activeEditorFilePath={options.editorFilePath}
+        />
+      </FileTreeStoreProvider>
     );
   } else if (options.filePanelMode === "search") {
     gitDiffPanelNode = (

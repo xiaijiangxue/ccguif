@@ -747,6 +747,15 @@
   );
 }
 
+.file-tree-row.is-editor-active:not(.is-selected) {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--border-accent) 12%, transparent) 0%,
+    color-mix(in srgb, var(--border-accent) 7%, transparent) 100%
+  );
+  box-shadow: inset 2px 0 0 var(--border-accent);
+}
+
 .file-tree-row.is-folder {
   font-weight: 600;
 }

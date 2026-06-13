@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import type { ReactElement } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   DETACHED_FILE_TREE_DRAG_BRIDGE_EVENT,
   DETACHED_FILE_TREE_DRAG_SNAPSHOT_STORAGE_KEY,
 } from "../detachedFileTreeDragBridge";
+import { FileTreeStoreProvider } from "../stores/fileTreeStoreContext";
 
 const invokeMock = vi.fn(async (..._args: any[]) => null);
 const emitToMock = vi.fn(async () => undefined);
@@ -67,10 +69,23 @@ vi.mock("./FilePreviewPopover", () => ({
 }));
 
 let FileTreePanel: typeof import("./FileTreePanel").FileTreePanel;
+type FileTreePanelElement = ReactElement<{ workspaceId: string }>;
 
 beforeAll(async () => {
   ({ FileTreePanel } = await import("./FileTreePanel"));
 });
+
+function renderFileTreePanel(element: FileTreePanelElement) {
+  return render(wrapFileTreePanel(element));
+}
+
+function wrapFileTreePanel(element: FileTreePanelElement) {
+  return (
+    <FileTreeStoreProvider workspaceId={element.props.workspaceId}>
+      {element}
+    </FileTreeStoreProvider>
+  );
+}
 
 afterEach(() => {
   cleanup();
@@ -83,7 +98,7 @@ describe("FileTreePanel detached explorer action", () => {
   it("keeps the embedded panel available while exposing the detached explorer control", () => {
     const onOpenDetachedExplorer = vi.fn();
 
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspaceName="workspace"
@@ -112,7 +127,7 @@ describe("FileTreePanel detached explorer action", () => {
   });
 
   it("broadcasts detached tree drag paths to the main window", () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspaceName="workspace"
@@ -153,7 +168,7 @@ describe("FileTreePanel detached explorer action", () => {
   });
 
   it("rebroadcasts detached drag payload during drag movement", async () => {
-    render(
+    renderFileTreePanel(
       <FileTreePanel
         workspaceId="workspace-1"
         workspaceName="workspace"
