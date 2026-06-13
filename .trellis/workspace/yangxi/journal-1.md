@@ -1216,3 +1216,36 @@ Added go-to-implementation navigation: JDTLS textDocument/implementation query, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 30: refactor(file-tree): decompose monolithic FileTreePanel into focused modules
+
+**Date**: 2026-06-14
+**Task**: refactor(file-tree): decompose monolithic FileTreePanel into focused modules
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Major refactor: decomposed ~3000-line FileTreePanel into FileTreeContainer, FileTreeRow, 5 extracted hooks (useLazyFileTree, useTreeClipboard, useTreeDrag, useTreeDialogs, useFilePreview), Zustand-based fileTreeStore, and treeModel utility. Added comprehensive tests. Reduced FileTreePanel to ~600 lines.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a86bb70d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
