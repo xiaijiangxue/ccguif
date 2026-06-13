@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 25
-- **Last Active**: 2026-06-12
+- **Total Sessions**: 26
+- **Last Active**: 2026-06-13
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1086 | Active |
+| `journal-1.md` | ~1119 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 26 | 2026-06-13 | feat(mybatis): MyBatis Java IDE navigation support | `bd8d6c98` | `refactor/liquid-precision-ui` |
 | 25 | 2026-06-12 | Slash menu skills toggle | `29fee745` | `refactor/liquid-precision-ui` |
 | 24 | 2026-06-10 | Default expanded composer tool dock | `cdd6f34a` | `refactor/liquid-precision-ui` |
 | 23 | 2026-06-08 | Auto-select first search match in FileViewPanel | `fafe9b0d` | `refactor/liquid-precision-ui` |

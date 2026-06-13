@@ -1084,3 +1084,36 @@ Follow-ups:
 ### Next Steps
 
 - None - task complete
+
+
+## Session 26: feat(mybatis): MyBatis Java IDE navigation support
+
+**Date**: 2026-06-13
+**Task**: feat(mybatis): MyBatis Java IDE navigation support
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Complete MyBatis Java IDE navigation feature: JDTLS backend integration, MyBatis index, frontend components/hooks/utils, settings UI, and documentation (brainstorm + plan).
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bd8d6c98` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
