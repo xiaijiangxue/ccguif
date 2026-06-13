@@ -9,6 +9,8 @@ export type LspLocationLike = {
   path?: string | null;
   line: number;
   character: number;
+  endLine?: number | null;
+  endCharacter?: number | null;
 };
 
 export type NavigationSource = "semantic" | "fallback";
@@ -206,11 +208,17 @@ export function extractLocations(payload: unknown): LspLocationLike[] {
       const line = toNumber(directStart.line);
       const character = toNumber(directStart.character);
       if (line !== null && character !== null) {
+        const directEnd =
+          directRange?.end && typeof directRange.end === "object"
+            ? (directRange.end as Record<string, unknown>)
+            : null;
         locations.push({
           uri: directUri,
           path: directPath,
           line,
           character,
+          endLine: directEnd ? toNumber(directEnd.line) : null,
+          endCharacter: directEnd ? toNumber(directEnd.character) : null,
         });
         continue;
       }
@@ -235,11 +243,17 @@ export function extractLocations(payload: unknown): LspLocationLike[] {
       const line = toNumber(fallbackStart.line);
       const character = toNumber(fallbackStart.character);
       if (line !== null && character !== null) {
+        const fallbackEnd =
+          fallbackTarget?.end && typeof fallbackTarget.end === "object"
+            ? (fallbackTarget.end as Record<string, unknown>)
+            : null;
         locations.push({
           uri: targetUri,
           path: targetPath,
           line,
           character,
+          endLine: fallbackEnd ? toNumber(fallbackEnd.line) : null,
+          endCharacter: fallbackEnd ? toNumber(fallbackEnd.character) : null,
         });
       }
     }
@@ -250,4 +264,38 @@ export function extractLocations(payload: unknown): LspLocationLike[] {
 
 export function normalizeJdtlsLocations(payload: unknown): LspLocationLike[] {
   return extractLocations(Array.isArray(payload) ? payload : payload ? [payload] : []);
+}
+
+function positionFallsWithinLocation(
+  location: LspLocationLike,
+  position: { line: number; character: number },
+) {
+  if (position.line < location.line) {
+    return false;
+  }
+  const endLine = location.endLine ?? location.line;
+  const endCharacter = location.endCharacter ?? location.character;
+  if (position.line > endLine) {
+    return false;
+  }
+  if (position.line === location.line && position.character < location.character) {
+    return false;
+  }
+  if (position.line === endLine && position.character > endCharacter) {
+    return false;
+  }
+  return true;
+}
+
+export function filterOriginReferenceLocation(
+  locations: LspLocationLike[],
+  origin: { uri: string; line: number; character: number },
+  caseInsensitive: boolean,
+) {
+  return locations.filter((location) => {
+    if (!areFileUrisEquivalent(location.uri, origin.uri, caseInsensitive)) {
+      return true;
+    }
+    return !positionFallsWithinLocation(location, origin);
+  });
 }

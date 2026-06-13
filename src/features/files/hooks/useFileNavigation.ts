@@ -28,6 +28,7 @@ import {
   createLocationCacheEntry,
   errorMessageFromUnknown,
   extractLocations,
+  filterOriginReferenceLocation,
   makeLocationQueryKey,
   NAVIGATION_REQUEST_TIMEOUT_MS,
   normalizeJdtlsLocations,
@@ -444,8 +445,16 @@ export function useFileNavigation({
         if (requestId !== lspRequestIdRef.current) {
           return;
         }
-        referencesCacheRef.current.set(queryKey, createLocationCacheEntry(locations, source));
-        setReferenceResults(locations);
+        const referenceLocations = filterOriginReferenceLocation(
+          locations,
+          { uri: currentFileUri, line: position.line, character: position.character },
+          caseInsensitivePathCompare,
+        );
+        referencesCacheRef.current.set(
+          queryKey,
+          createLocationCacheEntry(referenceLocations, source),
+        );
+        setReferenceResults(referenceLocations);
       } catch (error) {
         if (requestId !== lspRequestIdRef.current) {
           return;
@@ -457,7 +466,14 @@ export function useFileNavigation({
         }
       }
     },
-    [cmRef, filePath, resolveReferenceLocations, t],
+    [
+      caseInsensitivePathCompare,
+      cmRef,
+      currentFileUri,
+      filePath,
+      resolveReferenceLocations,
+      t,
+    ],
   );
 
   const runDefinitionFromCursor = useCallback(() => {

@@ -290,6 +290,44 @@ describe("FileViewPanel navigation", () => {
     });
   });
 
+  it("filters the origin location from reference results", async () => {
+    vi.mocked(readWorkspaceFile).mockResolvedValue({
+      content: "class Main {}\nclass Other { Main field; }",
+      truncated: false,
+    });
+    vi.mocked(getCodeIntelReferences).mockResolvedValue({
+      result: [
+        buildLocation("src/Main.java", 0, 6),
+        buildLocation("src/Main.java", 1, 14),
+        buildLocation("src/Foo.java", 5, 4),
+      ],
+    } as any);
+
+    render(
+      <FileViewPanel
+        workspaceId="ws-reference-origin"
+        workspacePath="/repo"
+        filePath="src/Main.java"
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={vi.fn()}
+        onNavigateToLocation={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByTestId("mock-codemirror");
+    fireEvent.click(screen.getByTitle(/findReferences/i));
+
+    await waitFor(() => {
+      expect(getCodeIntelReferences).toHaveBeenCalled();
+      expect(screen.queryByText("L1:C7")).toBeNull();
+      expect(screen.getByText("L2:C15")).toBeTruthy();
+      expect(screen.getByText("src/Foo.java")).toBeTruthy();
+    });
+  });
+
   it("renders maximize toggle and triggers callback", async () => {
     vi.mocked(readWorkspaceFile).mockResolvedValue({
       content: "class Main {}",
