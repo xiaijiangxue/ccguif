@@ -851,6 +851,7 @@ export type AppSettings = {
   browserAgentEnabled: boolean;
   browserAgentPreferBuiltIn: boolean;
   browserAgentAllowExternalProviderFallback: boolean;
+  jdtlsJavaPath: string | null;
   streamingEnabled?: boolean;
   autoOpenFileEnabled?: boolean;
   diffExpandedByDefault?: boolean;

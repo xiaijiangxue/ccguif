@@ -9,7 +9,13 @@ import {
 import { EditorView, keymap } from "@codemirror/view";
 import { closeSearchPanel, openSearchPanel, searchPanelOpen } from "@codemirror/search";
 import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
-import { getCodeIntelDefinition, getCodeIntelReferences } from "../../../services/tauri";
+import {
+  getCodeIntelDefinition,
+  getCodeIntelReferences,
+  getJdtlsDefinition,
+  getJdtlsDidOpen,
+  getJdtlsReferences,
+} from "../../../services/tauri";
 import {
   isAbsoluteFsPath,
   normalizeFsPath,
@@ -18,26 +24,47 @@ import {
 import { lspPositionToEditorLocation, offsetToLspPosition } from "../utils/lspPosition";
 import {
   areFileUrisEquivalent,
-  CODE_INTEL_CACHE_TTL_MS,
   CODE_INTEL_REPEAT_DEBOUNCE_MS,
+  createLocationCacheEntry,
   errorMessageFromUnknown,
   extractLocations,
   makeLocationQueryKey,
   NAVIGATION_REQUEST_TIMEOUT_MS,
+  normalizeJdtlsLocations,
   readFreshCache,
   relativePathFromFileUri,
   toFileUri,
   type LocationCacheEntry,
   type LspLocationLike,
+  type NavigationSource,
   type RecentTrigger,
   withTimeout,
 } from "../utils/fileViewNavigationUtils";
+import type { JdtlsProviderState } from "./useJdtlsState";
+
+export function isJavaFile(path: string) {
+  return path.toLowerCase().endsWith(".java");
+}
+
+export function isXmlMapperFile(path: string) {
+  const lower = path.toLowerCase();
+  return lower.endsWith(".xml") && lower.includes("mapper");
+}
+
+export function isMapperInterface(path: string, content?: string | null) {
+  if (!isJavaFile(path) || !content) {
+    return false;
+  }
+  return /@\s*Mapper\b/.test(content) || /\bextends\s+BaseMapper\s*</.test(content);
+}
 
 type UseFileNavigationArgs = {
   workspaceId: string;
   workspacePath: string;
   filePath: string;
   absolutePath: string;
+  fileContent: string | null;
+  jdtlsStatus: JdtlsProviderState["status"];
   caseInsensitivePathCompare: boolean;
   isSameWorkspacePath: (leftPath: string, rightPath: string) => boolean;
   navigationTarget: {
@@ -61,6 +88,8 @@ export function useFileNavigation({
   workspacePath,
   filePath,
   absolutePath,
+  fileContent,
+  jdtlsStatus,
   caseInsensitivePathCompare,
   isSameWorkspacePath,
   navigationTarget,
@@ -83,6 +112,111 @@ export function useFileNavigation({
   const appliedNavigationRequestRef = useRef(0);
   const navigationFocusTimerRef = useRef<number | null>(null);
   const currentFileUri = useMemo(() => toFileUri(absolutePath), [absolutePath]);
+
+  const shouldTryJdtls = isJavaFile(filePath) && jdtlsStatus !== "unavailable" && jdtlsStatus !== "unknown";
+
+  const syncCurrentJavaDocument = useCallback(async () => {
+    if (!shouldTryJdtls || fileContent === null) {
+      return;
+    }
+    await getJdtlsDidOpen(workspaceId, { filePath, content: fileContent });
+  }, [fileContent, filePath, shouldTryJdtls, workspaceId]);
+
+  const getFallbackDefinitionLocations = useCallback(
+    async (position: { line: number; character: number }) => {
+      const response = await getCodeIntelDefinition(workspaceId, {
+        filePath,
+        line: position.line,
+        character: position.character,
+      });
+      return extractLocations(response.result);
+    },
+    [filePath, workspaceId],
+  );
+
+  const getFallbackReferenceLocations = useCallback(
+    async (position: { line: number; character: number }) => {
+      const response = await getCodeIntelReferences(workspaceId, {
+        filePath,
+        line: position.line,
+        character: position.character,
+      });
+      return extractLocations(response.result);
+    },
+    [filePath, workspaceId],
+  );
+
+  const resolveDefinitionLocations = useCallback(
+    async (position: { line: number; character: number }): Promise<{ locations: LspLocationLike[]; source: NavigationSource }> => {
+      if (shouldTryJdtls) {
+        try {
+          await syncCurrentJavaDocument();
+          const response = await getJdtlsDefinition(workspaceId, {
+            filePath,
+            line: position.line,
+            character: position.character,
+          });
+          const locations = normalizeJdtlsLocations(response);
+          if (locations.length > 0) {
+            return { locations, source: "semantic" };
+          }
+        } catch (error) {
+          if (jdtlsStatus === "ready") {
+            setNavigationError(errorMessageFromUnknown(error, t("files.navigationError")));
+          }
+        }
+      }
+      return {
+        locations: await getFallbackDefinitionLocations(position),
+        source: "fallback",
+      };
+    },
+    [
+      filePath,
+      getFallbackDefinitionLocations,
+      jdtlsStatus,
+      shouldTryJdtls,
+      syncCurrentJavaDocument,
+      t,
+      workspaceId,
+    ],
+  );
+
+  const resolveReferenceLocations = useCallback(
+    async (position: { line: number; character: number }): Promise<{ locations: LspLocationLike[]; source: NavigationSource }> => {
+      if (shouldTryJdtls) {
+        try {
+          await syncCurrentJavaDocument();
+          const response = await getJdtlsReferences(workspaceId, {
+            filePath,
+            line: position.line,
+            character: position.character,
+          });
+          const locations = normalizeJdtlsLocations(response);
+          if (locations.length > 0) {
+            return { locations, source: "semantic" };
+          }
+        } catch (error) {
+          if (jdtlsStatus === "ready") {
+            setNavigationError(errorMessageFromUnknown(error, t("files.navigationError")));
+          }
+        }
+      }
+      return {
+        locations: await getFallbackReferenceLocations(position),
+        source: "fallback",
+      };
+    },
+    [
+      filePath,
+      getFallbackReferenceLocations,
+      jdtlsStatus,
+      shouldTryJdtls,
+      syncCurrentJavaDocument,
+      t,
+      workspaceId,
+    ],
+  );
 
   const clearNavigationFocusTimer = useCallback(() => {
     if (navigationFocusTimerRef.current !== null) {
@@ -212,8 +346,9 @@ export function useFileNavigation({
       lspRequestIdRef.current = requestId;
       setNavigationError(null);
       setDefinitionCandidates([]);
-      const cachedLocations = readFreshCache(definitionCacheRef.current, queryKey);
-      if (cachedLocations) {
+      const cachedEntry = readFreshCache(definitionCacheRef.current, queryKey);
+      if (cachedEntry) {
+        const cachedLocations = cachedEntry.value;
         setIsDefinitionLoading(false);
         if (cachedLocations.length === 0) {
           setNavigationError(t("files.navigationNoDefinition"));
@@ -231,23 +366,15 @@ export function useFileNavigation({
       }
       setIsDefinitionLoading(true);
       try {
-        const response = await withTimeout(
-          getCodeIntelDefinition(workspaceId, {
-            filePath,
-            line: position.line,
-            character: position.character,
-          }),
+        const { locations, source } = await withTimeout(
+          resolveDefinitionLocations(position),
           NAVIGATION_REQUEST_TIMEOUT_MS,
           t("files.navigationTimeout"),
         );
         if (requestId !== lspRequestIdRef.current) {
           return;
         }
-        const locations = extractLocations(response.result);
-        definitionCacheRef.current.set(queryKey, {
-          expiresAt: Date.now() + CODE_INTEL_CACHE_TTL_MS,
-          value: locations,
-        });
+        definitionCacheRef.current.set(queryKey, createLocationCacheEntry(locations, source));
         if (locations.length === 0) {
           setNavigationError(t("files.navigationNoDefinition"));
           return;
@@ -271,7 +398,7 @@ export function useFileNavigation({
         }
       }
     },
-    [cmRef, filePath, navigateToLocation, t, workspaceId],
+    [cmRef, filePath, navigateToLocation, resolveDefinitionLocations, t],
   );
 
   const findReferencesAtOffset = useCallback(
@@ -301,31 +428,23 @@ export function useFileNavigation({
       lspRequestIdRef.current = requestId;
       setNavigationError(null);
       setReferenceResults(null);
-      const cachedLocations = readFreshCache(referencesCacheRef.current, queryKey);
-      if (cachedLocations) {
+      const cachedEntry = readFreshCache(referencesCacheRef.current, queryKey);
+      if (cachedEntry) {
         setIsReferencesLoading(false);
-        setReferenceResults(cachedLocations);
+        setReferenceResults(cachedEntry.value);
         return;
       }
       setIsReferencesLoading(true);
       try {
-        const response = await withTimeout(
-          getCodeIntelReferences(workspaceId, {
-            filePath,
-            line: position.line,
-            character: position.character,
-          }),
+        const { locations, source } = await withTimeout(
+          resolveReferenceLocations(position),
           NAVIGATION_REQUEST_TIMEOUT_MS,
           t("files.navigationTimeout"),
         );
         if (requestId !== lspRequestIdRef.current) {
           return;
         }
-        const locations = extractLocations(response.result);
-        referencesCacheRef.current.set(queryKey, {
-          expiresAt: Date.now() + CODE_INTEL_CACHE_TTL_MS,
-          value: locations,
-        });
+        referencesCacheRef.current.set(queryKey, createLocationCacheEntry(locations, source));
         setReferenceResults(locations);
       } catch (error) {
         if (requestId !== lspRequestIdRef.current) {
@@ -338,7 +457,7 @@ export function useFileNavigation({
         }
       }
     },
-    [cmRef, filePath, t, workspaceId],
+    [cmRef, filePath, resolveReferenceLocations, t],
   );
 
   const runDefinitionFromCursor = useCallback(() => {

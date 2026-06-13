@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildLocation,
   buildWindowsLocation,
@@ -14,6 +14,9 @@ import {
   getCodeIntelDefinition,
   getCodeIntelReferences,
   getGitFileFullDiff,
+  getJdtlsDefinition,
+  getJdtlsDidOpen,
+  getJdtlsStatus,
   readLocalImageDataUrl,
   readExternalAbsoluteFile,
   readExternalSpecFile,
@@ -66,6 +69,10 @@ describe("editor annotation widget ordering", () => {
 });
 
 describe("FileViewPanel navigation", () => {
+  beforeEach(() => {
+    mockJdtlsStatus("unavailable");
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -73,7 +80,19 @@ describe("FileViewPanel navigation", () => {
     mockOpenNewDetachedFileExplorerWindow.mockClear();
   });
 
+  function mockJdtlsStatus(status: "ready" | "unavailable" | "stopped" = "unavailable") {
+    vi.mocked(getJdtlsStatus).mockResolvedValue({
+      status,
+      javaVersion: null,
+      jdtlsPath: null,
+      error: null,
+      uptimeSeconds: null,
+      openFilesCount: 0,
+    });
+  }
+
   it("navigates directly when definition has a single target", async () => {
+    mockJdtlsStatus("unavailable");
     vi.mocked(readWorkspaceFile).mockResolvedValue({
       content: "class Main {}",
       truncated: false,
@@ -105,6 +124,46 @@ describe("FileViewPanel navigation", () => {
       expect(onNavigateToLocation).toHaveBeenCalledWith("src/Foo.java", {
         line: 10,
         column: 3,
+      });
+    });
+  });
+
+  it("uses JDTLS definition before regex when semantic navigation is available", async () => {
+    mockJdtlsStatus("ready");
+    vi.mocked(readWorkspaceFile).mockResolvedValue({
+      content: "class Main {}",
+      truncated: false,
+    });
+    vi.mocked(getJdtlsDefinition).mockResolvedValue(buildLocation("src/Semantic.java", 4, 1));
+    const onNavigateToLocation = vi.fn();
+
+    render(
+      <FileViewPanel
+        workspaceId="ws-jdtls-ready"
+        workspacePath="/repo"
+        filePath="src/Main.java"
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={vi.fn()}
+        onNavigateToLocation={onNavigateToLocation}
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByTestId("mock-codemirror");
+    fireEvent.click(screen.getByTitle(/gotoDefinition/i));
+
+    await waitFor(() => {
+      expect(getJdtlsDidOpen).toHaveBeenCalledWith("ws-jdtls-ready", {
+        filePath: "src/Main.java",
+        content: "class Main {}",
+      });
+      expect(getJdtlsDefinition).toHaveBeenCalled();
+      expect(getCodeIntelDefinition).not.toHaveBeenCalled();
+      expect(onNavigateToLocation).toHaveBeenCalledWith("src/Semantic.java", {
+        line: 5,
+        column: 2,
       });
     });
   });

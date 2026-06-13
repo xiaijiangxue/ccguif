@@ -36,6 +36,10 @@ pub(crate) struct AppState {
     pub(crate) runtime_manager: Arc<crate::runtime::RuntimeManager>,
     /// Multi-engine manager
     pub(crate) engine_manager: EngineManager,
+    /// JDTLS process manager for Java semantic navigation.
+    pub(crate) jdtls_manager: Arc<Mutex<crate::jdtls::JdtlsManager>>,
+    /// MyBatis mapper XML / Java method index.
+    pub(crate) mybatis_index: Arc<Mutex<crate::mybatis_index::MybatisIndex>>,
 }
 
 impl AppState {
@@ -139,6 +143,10 @@ impl AppState {
             detached_external_change_runtime: Mutex::new(DetachedExternalChangeRuntime::default()),
             runtime_manager,
             engine_manager,
+            jdtls_manager: Arc::new(Mutex::new(crate::jdtls::JdtlsManager::new(
+                data_dir.join("jdtls"),
+            ))),
+            mybatis_index: Arc::new(Mutex::new(crate::mybatis_index::MybatisIndex::new())),
         }
     }
 }

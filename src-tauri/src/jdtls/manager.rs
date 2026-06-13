@@ -102,6 +102,10 @@ impl JdtlsManager {
         self.open_files.insert(uri, 1);
     }
 
+    pub fn is_file_open(&self, uri: &str) -> bool {
+        self.open_files.contains_key(uri)
+    }
+
     pub fn untrack_open_file(&mut self, uri: &str) {
         self.open_files.remove(uri);
     }
@@ -305,7 +309,7 @@ impl JdtlsManager {
                     }),
                 },
             },
-            initialization_options: None,
+            initialization_options: Some(self.initialization_options()),
         })
         .map_err(|e| {
             self.status = "unavailable".into();
@@ -411,6 +415,38 @@ impl JdtlsManager {
         self.status = "stopped".into();
         self.error = None;
         Ok(())
+    }
+
+    fn initialization_options(&self) -> serde_json::Value {
+        let mut settings = serde_json::json!({
+            "java": {
+                "configuration": {
+                    "updateBuildConfiguration": "automatic"
+                },
+                "maven": {
+                    "downloadSources": true
+                }
+            },
+            "extendedClientCapabilities": {
+                "classFileContentsSupport": true
+            }
+        });
+
+        if let Some(runtime_home) = self
+            .configured_java_path
+            .as_ref()
+            .and_then(|path| java_runtime_home(path))
+        {
+            settings["java"]["configuration"]["runtimes"] = serde_json::json!([
+                {
+                    "name": "JavaSE-17",
+                    "path": runtime_home.display().to_string(),
+                    "default": true
+                }
+            ]);
+        }
+
+        settings
     }
 
     /// Find a suitable JDK 17+ binary for JDTLS.
@@ -550,6 +586,15 @@ fn compute_project_hash(root: &Path) -> String {
     hasher.update(root.to_string_lossy().as_bytes());
     let result = hasher.finalize();
     result[..8].iter().map(|b| format!("{b:02x}")).collect()
+}
+
+fn java_runtime_home(java_path: &Path) -> Option<PathBuf> {
+    let file_name = java_path.file_name()?.to_string_lossy();
+    if file_name == "java" || file_name == "java.exe" {
+        java_path.parent()?.parent().map(Path::to_path_buf)
+    } else {
+        Some(java_path.to_path_buf())
+    }
 }
 
 /// Download and extract JDTLS to the target directory.
@@ -823,6 +868,18 @@ mod tests {
         let h1 = compute_project_hash(&PathBuf::from("/tmp/project-a"));
         let h2 = compute_project_hash(&PathBuf::from("/tmp/project-b"));
         assert_ne!(h1, h2);
+    }
+
+    #[test]
+    fn java_runtime_home_uses_jdk_root_for_java_binary() {
+        let home = java_runtime_home(&PathBuf::from("/opt/jdk-17/bin/java"));
+        assert_eq!(home, Some(PathBuf::from("/opt/jdk-17")));
+    }
+
+    #[test]
+    fn java_runtime_home_keeps_configured_directory() {
+        let home = java_runtime_home(&PathBuf::from("/opt/jdk-17"));
+        assert_eq!(home, Some(PathBuf::from("/opt/jdk-17")));
     }
 
     #[test]

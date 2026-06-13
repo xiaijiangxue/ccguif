@@ -4,7 +4,7 @@ import { getJdtlsStatus, type JdtlsStatus } from "../../../services/tauri";
 const POLL_INTERVAL_MS = 5_000;
 
 export type JdtlsProviderState = {
-  status: "starting" | "indexing" | "ready" | "unavailable" | "stopped" | "unknown";
+  status: "starting" | "downloading" | "indexing" | "ready" | "unavailable" | "stopped" | "unknown";
   javaVersion: string | null;
   error: string | null;
   uptimeSeconds: number | null;

@@ -589,6 +589,7 @@ dependencies = [
  "objc2-av-foundation",
  "objc2-foundation",
  "portable-pty",
+ "quick-xml 0.38.4",
  "regex",
  "reqwest",
  "rusqlite",

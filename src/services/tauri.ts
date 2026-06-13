@@ -1274,6 +1274,202 @@ export async function updateAppSettings(settings: AppSettings): Promise<AppSetti
   return invoke<AppSettings>("update_app_settings", { settings });
 }
 
+export type JdtlsStatus = {
+  status: "starting" | "downloading" | "indexing" | "ready" | "unavailable" | "stopped";
+  javaVersion: string | null;
+  jdtlsPath: string | null;
+  error: string | null;
+  uptimeSeconds: number | null;
+  openFilesCount: number;
+};
+
+export type JavaProjectDetection = {
+  isJavaProject: boolean;
+  buildSystem: "maven" | "gradle" | null;
+};
+
+export type MapperStatement = {
+  namespace: string;
+  id: string;
+  statementType: string;
+  filePath: string;
+  line: number;
+  column: number;
+  sqlContent: string;
+};
+
+export type JavaMapperMethod = {
+  namespace: string;
+  methodName: string;
+  filePath: string;
+  line: number;
+  column: number;
+};
+
+export type ValidationIssue = {
+  message: string;
+  filePath: string;
+  line?: number | null;
+  issueType: string;
+};
+
+export type ValidationResult = {
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+};
+
+export type MybatisStatus = {
+  statementCount: number;
+  fileCount: number;
+  parseErrors: number;
+  annotationCount: number;
+};
+
+export async function getJdtlsDefinition(
+  workspaceId: string,
+  input: { filePath: string; line: number; character: number },
+) {
+  return invoke<LspLocation[] | LspLocation | null>("jdtls_definition", {
+    workspaceId,
+    filePath: input.filePath,
+    line: input.line,
+    character: input.character,
+  });
+}
+
+export async function getJdtlsReferences(
+  workspaceId: string,
+  input: { filePath: string; line: number; character: number },
+) {
+  return invoke<LspLocation[] | LspLocation | null>("jdtls_references", {
+    workspaceId,
+    filePath: input.filePath,
+    line: input.line,
+    character: input.character,
+  });
+}
+
+export async function getJdtlsImplementation(
+  workspaceId: string,
+  input: { filePath: string; line: number; character: number },
+) {
+  return invoke<unknown>("jdtls_implementation", {
+    workspaceId,
+    filePath: input.filePath,
+    line: input.line,
+    character: input.character,
+  });
+}
+
+export async function getJdtlsDiagnostics(workspaceId: string, filePath: string) {
+  return invoke<unknown>("jdtls_diagnostics", { workspaceId, filePath });
+}
+
+export async function getJdtlsDidOpen(
+  workspaceId: string,
+  input: { filePath: string; content: string },
+) {
+  return invoke<void>("jdtls_did_open", {
+    workspaceId,
+    filePath: input.filePath,
+    content: input.content,
+  });
+}
+
+export async function getJdtlsDidChange(
+  workspaceId: string,
+  input: { filePath: string; content: string },
+) {
+  return invoke<void>("jdtls_did_change", {
+    workspaceId,
+    filePath: input.filePath,
+    content: input.content,
+  });
+}
+
+export async function getJdtlsDidClose(workspaceId: string, filePath: string) {
+  return invoke<void>("jdtls_did_close", { workspaceId, filePath });
+}
+
+export async function getJdtlsStatus(): Promise<JdtlsStatus> {
+  return invoke<JdtlsStatus>("jdtls_get_status");
+}
+
+export async function detectJavaProject(workspacePath: string): Promise<JavaProjectDetection> {
+  return invoke<JavaProjectDetection>("detect_java_project", { workspacePath });
+}
+
+export async function getMybatisReindex(workspaceId: string, workspacePath: string) {
+  return invoke<MybatisStatus>("mybatis_reindex", { workspaceId, workspacePath });
+}
+
+export async function getMybatisFindStatement(
+  workspaceId: string,
+  input: { namespace: string; id: string },
+) {
+  return invoke<MapperStatement[]>("mybatis_find_statement", {
+    workspaceId,
+    namespace: input.namespace,
+    id: input.id,
+  });
+}
+
+export async function getMybatisFindMapperMethod(workspaceId: string, namespace: string) {
+  return invoke<MapperStatement[]>("mybatis_find_mapper_method", { workspaceId, namespace });
+}
+
+export async function getMybatisFindReferences(workspaceId: string, id: string) {
+  return invoke<MapperStatement[]>("mybatis_find_references", { workspaceId, id });
+}
+
+export async function getMybatisSqlPreview(
+  workspaceId: string,
+  input: { namespace: string; id: string },
+) {
+  return invoke<{ sql: string | null; error?: string }>("mybatis_get_sql_preview", {
+    workspaceId,
+    namespace: input.namespace,
+    id: input.id,
+  });
+}
+
+export async function getMybatisAnnotationSql(
+  workspaceId: string,
+  input: { className: string; methodName: string },
+) {
+  return invoke<{ sql: string | null; error?: string }>("mybatis_get_annotation_sql", {
+    workspaceId,
+    className: input.className,
+    methodName: input.methodName,
+  });
+}
+
+export async function getMybatisValidate(workspaceId: string): Promise<ValidationResult> {
+  return invoke<ValidationResult>("mybatis_validate", { workspaceId });
+}
+
+export async function getMybatisStatus(workspaceId: string): Promise<MybatisStatus> {
+  return invoke<MybatisStatus>("mybatis_get_status", { workspaceId });
+}
+
+export async function getMybatisFindJavaInterface(workspaceId: string, namespace: string) {
+  return invoke<{ filePath: string | null }>("mybatis_find_java_interface", {
+    workspaceId,
+    namespace,
+  });
+}
+
+export async function getMybatisFindJavaMethod(
+  workspaceId: string,
+  input: { namespace: string; methodName: string },
+) {
+  return invoke<JavaMapperMethod | null>("mybatis_find_java_method", {
+    workspaceId,
+    namespace: input.namespace,
+    methodName: input.methodName,
+  });
+}
+
 const EMAIL_SEND_ERROR_PREFIX = "EMAIL_SEND_ERROR:";
 
 function normalizeEmailSendError(error: unknown): EmailSendError {

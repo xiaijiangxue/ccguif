@@ -223,6 +223,7 @@ const baseSettings: AppSettings = {
   browserAgentEnabled: true,
   browserAgentPreferBuiltIn: true,
   browserAgentAllowExternalProviderFallback: true,
+  jdtlsJavaPath: null,
   backendMode: "local",
   remoteBackendHost: "127.0.0.1:4732",
   remoteBackendToken: null,

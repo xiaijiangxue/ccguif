@@ -11,9 +11,12 @@ export type LspLocationLike = {
   character: number;
 };
 
+export type NavigationSource = "semantic" | "fallback";
+
 export type LocationCacheEntry = {
   expiresAt: number;
   value: LspLocationLike[];
+  source: NavigationSource;
 };
 
 export type RecentTrigger = {
@@ -149,6 +152,17 @@ export function withTimeout<T>(
   });
 }
 
+export function createLocationCacheEntry(
+  value: LspLocationLike[],
+  source: NavigationSource = "fallback",
+): LocationCacheEntry {
+  return {
+    expiresAt: Date.now() + CODE_INTEL_CACHE_TTL_MS,
+    value,
+    source,
+  };
+}
+
 export function readFreshCache(cache: Map<string, LocationCacheEntry>, key: string) {
   const cached = cache.get(key);
   if (!cached) {
@@ -158,7 +172,10 @@ export function readFreshCache(cache: Map<string, LocationCacheEntry>, key: stri
     cache.delete(key);
     return null;
   }
-  return cached.value;
+  return {
+    ...cached,
+    source: cached.source ?? "fallback",
+  };
 }
 
 export function extractLocations(payload: unknown): LspLocationLike[] {
@@ -229,4 +246,8 @@ export function extractLocations(payload: unknown): LspLocationLike[] {
   }
 
   return locations;
+}
+
+export function normalizeJdtlsLocations(payload: unknown): LspLocationLike[] {
+  return extractLocations(Array.isArray(payload) ? payload : payload ? [payload] : []);
 }

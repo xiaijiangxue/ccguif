@@ -51,6 +51,9 @@ import {
   getOpenCodeProviderHealth,
   getCodeIntelDefinition,
   getCodeIntelReferences,
+  detectJavaProject,
+  getJdtlsDefinition,
+  getJdtlsReferences,
   getOpenCodeLspDefinition,
   getOpenCodeLspReferences,
   getOpenCodeStatusSnapshot,
@@ -2205,6 +2208,53 @@ describe("tauri invoke wrappers", () => {
         character: 3,
       }),
     ).rejects.toThrow("references unavailable");
+  });
+
+  it("maps JDTLS definition params", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce([]);
+
+    await getJdtlsDefinition("ws-jdtls-1", {
+      filePath: "src/Main.java",
+      line: 10,
+      character: 4,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("jdtls_definition", {
+      workspaceId: "ws-jdtls-1",
+      filePath: "src/Main.java",
+      line: 10,
+      character: 4,
+    });
+  });
+
+  it("maps JDTLS references params", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce([]);
+
+    await getJdtlsReferences("ws-jdtls-2", {
+      filePath: "src/Main.java",
+      line: 11,
+      character: 8,
+    });
+
+    expect(invokeMock).toHaveBeenCalledWith("jdtls_references", {
+      workspaceId: "ws-jdtls-2",
+      filePath: "src/Main.java",
+      line: 11,
+      character: 8,
+    });
+  });
+
+  it("maps Java project detection params", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({ isJavaProject: true, buildSystem: "maven" });
+
+    await detectJavaProject("/repo");
+
+    expect(invokeMock).toHaveBeenCalledWith("detect_java_project", {
+      workspacePath: "/repo",
+    });
   });
 
   it("maps opencode lsp references params", async () => {

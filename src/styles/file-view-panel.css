@@ -583,6 +583,47 @@
   background: color-mix(in srgb, #6bb3f0 88%, var(--text-strong));
 }
 
+.cm-navigation-gutter {
+  min-width: 18px;
+}
+
+.cm-nav-gutter-marker {
+  width: 16px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  opacity: 0.72;
+}
+
+.cm-nav-gutter-marker:hover {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.cm-nav-icon {
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.cm-nav-icon-mybatis-leaf::before {
+  content: "M";
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.cm-nav-icon-java-class::before {
+  content: "J";
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .fvp-line-number {
   display: inline-flex;
   align-items: center;

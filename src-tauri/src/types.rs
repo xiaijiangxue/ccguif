@@ -1248,6 +1248,9 @@ pub(crate) struct AppSettings {
     /// Default engine type: "claude", "codex", or "opencode". If not set, auto-detect.
     #[serde(default, rename = "defaultEngine")]
     pub(crate) default_engine: Option<String>,
+    /// Custom Java executable path for JDTLS. If not set, auto-detect.
+    #[serde(default, rename = "jdtlsJavaPath")]
+    pub(crate) jdtls_java_path: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -1779,6 +1782,7 @@ impl Default for AppSettings {
             browser_agent_prefer_built_in: default_browser_agent_prefer_built_in(),
             browser_agent_allow_external_provider_fallback:
                 default_browser_agent_allow_external_provider_fallback(),
+            jdtls_java_path: None,
         }
     }
 }

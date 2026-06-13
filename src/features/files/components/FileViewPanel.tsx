@@ -50,6 +50,9 @@ import {
 } from "@codemirror/state";
 import {
   getGitFileFullDiff,
+  getMybatisFindJavaMethod,
+  getMybatisFindStatement,
+  getMybatisReindex,
   readLocalImageDataUrl,
 } from "../../../services/tauri";
 import { pushErrorToast } from "../../../services/toasts";
@@ -80,6 +83,7 @@ import {
   resolveFileReadTarget,
   resolveGitRootWorkspacePrefix,
   resolveGitStatusPathCandidates,
+  resolveWorkspaceRelativePath,
   resolveWorkspacePathCandidates,
 } from "../../../utils/workspacePaths";
 import { reduceExternalChangeSyncState } from "../externalChangeStateMachine";
@@ -92,11 +96,26 @@ import {
   resolveFileViewSurface,
 } from "../utils/fileViewSurface";
 import { FileViewBody } from "./FileViewBody";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { FileViewNavigationPanel } from "./FileViewNavigationPanel";
+import { ProviderStatusBadge } from "./ProviderStatusBadge";
 import { useFileDocumentState } from "../hooks/useFileDocumentState";
 import { useFileExternalSync } from "../hooks/useFileExternalSync";
-import { useFileNavigation } from "../hooks/useFileNavigation";
+import { useDiagnostics } from "../hooks/useDiagnostics";
+import {
+  isJavaFile,
+  isXmlMapperFile,
+  useFileNavigation,
+} from "../hooks/useFileNavigation";
+import { useJdtlsState } from "../hooks/useJdtlsState";
+import { useJdtlsWarmup } from "../hooks/useJdtlsWarmup";
+import { useMybatisIndexState } from "../hooks/useMybatisIndexState";
 import { useFilePreviewPayload } from "../hooks/useFilePreviewPayload";
+import {
+  type GutterNavigationEntry,
+  mybatisNavigationGutter,
+} from "../utils/gutterExtensions";
+import { diagnosticExtension, setDiagnosticMarkers } from "../utils/diagnosticExtensions";
 import {
   isThemeMutationAttribute,
   readDocumentThemeAppearance,
@@ -168,6 +187,16 @@ type FileViewPanelProps = {
   onSaveSuccess?: () => void;
   onDirtyChange?: (isDirty: boolean) => void;
 };
+
+function extractJavaMethodName(lineText: string) {
+  const match = lineText.match(/\b(?:[\w<>\[\], ?]+\s+)+([A-Za-z_$][\w$]*)\s*\(/);
+  return match?.[1] ?? null;
+}
+
+function extractXmlStatementId(lineText: string) {
+  const match = lineText.match(/\bid\s*=\s*["']([^"']+)["']/);
+  return match?.[1] ?? null;
+}
 
 const EDITOR_LINE_RANGE_SYNC_DELAY_MS = 90;
 
@@ -974,6 +1003,10 @@ export function FileViewPanel({
       normalizeComparablePath(rightPath, caseInsensitivePathCompare),
     [caseInsensitivePathCompare],
   );
+  const fileIsJava = isJavaFile(filePath);
+  const fileIsMapperXml = isXmlMapperFile(filePath);
+  const jdtlsState = useJdtlsState();
+  const mybatisState = useMybatisIndexState(workspaceId);
   const {
     content,
     setContent,
@@ -995,6 +1028,13 @@ export function FileViewPanel({
     fileReadTarget,
     skipTextRead,
     externalAbsoluteReadOnlyMessage: t("files.externalAbsoluteReadOnly"),
+  });
+  useJdtlsWarmup({
+    workspaceId,
+    workspacePath,
+    filePath,
+    fileContent: content,
+    isJavaFile: fileIsJava,
   });
   const {
     externalChangeConflict,
@@ -1075,6 +1115,8 @@ export function FileViewPanel({
     workspacePath,
     filePath,
     absolutePath,
+    fileContent: content,
+    jdtlsStatus: jdtlsState.status,
     caseInsensitivePathCompare,
     isSameWorkspacePath,
     navigationTarget,
@@ -1084,6 +1126,114 @@ export function FileViewPanel({
     setMode,
     cmRef,
   });
+  const {
+    diagnostics: fileDiagnostics,
+    isLoading: diagnosticsLoading,
+    error: diagnosticsError,
+  } = useDiagnostics({
+    workspaceId,
+    filePath,
+    fileContent: content,
+    isJavaFile: fileIsJava,
+    isMapperFile: fileIsMapperXml,
+  });
+
+  const reindexTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (reindexTriggeredRef.current || (!fileIsJava && !fileIsMapperXml)) {
+      return;
+    }
+    reindexTriggeredRef.current = true;
+    void getMybatisReindex(workspaceId, workspacePath).catch(() => {});
+  }, [fileIsJava, fileIsMapperXml, workspaceId, workspacePath]);
+
+  const openNavigationTarget = useCallback(
+    (targetPath: string, location: { line: number; column: number }) => {
+      const relativePath = resolveWorkspaceRelativePath(workspacePath, targetPath);
+      onNavigateToLocation?.(relativePath, location);
+    },
+    [onNavigateToLocation, workspacePath],
+  );
+
+  const navigateJavaMethodToXmlStatement = useCallback(
+    (lineText: string) => {
+      const methodName = extractJavaMethodName(lineText);
+      const packageName = content.match(/^package\s+([\w.]+)\s*;/m)?.[1];
+      const className = filePath.match(/([^/\\]+)\.java$/)?.[1];
+      if (!methodName || !packageName || !className) {
+        return;
+      }
+      const namespace = `${packageName}.${className}`;
+      void getMybatisFindStatement(workspaceId, { namespace, id: methodName })
+        .then((statements) => {
+          const statement = statements[0];
+          if (statement) {
+            openNavigationTarget(statement.filePath, {
+              line: statement.line,
+              column: statement.column,
+            });
+          }
+        })
+        .catch(() => {});
+    },
+    [content, filePath, openNavigationTarget, workspaceId],
+  );
+
+  const navigateXmlStatementToJavaMethod = useCallback(
+    (lineText: string) => {
+      const statementId = extractXmlStatementId(lineText);
+      const namespace = content.match(/\bnamespace\s*=\s*["']([^"']+)["']/)?.[1];
+      if (!statementId || !namespace) {
+        return;
+      }
+      void getMybatisFindJavaMethod(workspaceId, {
+        namespace,
+        methodName: statementId,
+      })
+        .then((method) => {
+          if (method) {
+            openNavigationTarget(method.filePath, {
+              line: method.line,
+              column: method.column,
+            });
+          }
+        })
+        .catch(() => {});
+    },
+    [content, openNavigationTarget, workspaceId],
+  );
+
+  const mybatisNavigationEntries = useMemo<GutterNavigationEntry[]>(() => {
+    if (!fileIsJava && !fileIsMapperXml) {
+      return [];
+    }
+    return content.split(/\r?\n/).flatMap((lineText, index) => {
+      const line = index + 1;
+      if (fileIsJava && extractJavaMethodName(lineText)) {
+        return [{
+          line,
+          type: "mybatis-leaf" as const,
+          tooltip: "Go to MyBatis XML statement",
+          onClick: () => navigateJavaMethodToXmlStatement(lineText),
+        }];
+      }
+      if (fileIsMapperXml && /<\s*(select|insert|update|delete)\b/i.test(lineText)) {
+        return [{
+          line,
+          type: "java-class" as const,
+          tooltip: "Go to Java mapper method",
+          onClick: () => navigateXmlStatementToJavaMethod(lineText),
+        }];
+      }
+      return [];
+    });
+  }, [
+    content,
+    fileIsJava,
+    fileIsMapperXml,
+    navigateJavaMethodToXmlStatement,
+    navigateXmlStatementToJavaMethod,
+  ]);
   const hasExplicitHighlightMarkers = useMemo(
     () => hasGitLineMarkers(highlightMarkers),
     [highlightMarkers],
@@ -1327,6 +1477,24 @@ export function FileViewPanel({
     });
   }, [effectiveGitLineMarkers, mode, filePath, content]);
 
+  useEffect(() => {
+    const view = cmRef.current?.view;
+    if (!view || mode !== "edit") {
+      return;
+    }
+    view.dispatch({
+      effects: setDiagnosticMarkers.of(
+        fileDiagnostics
+          .filter((diagnostic) => diagnostic.line != null)
+          .map((diagnostic) => ({
+            line: diagnostic.line!,
+            severity: diagnostic.severity,
+            message: diagnostic.message,
+          })),
+      ),
+    });
+  }, [fileDiagnostics, mode, filePath, content]);
+
   // Use ref to always have latest handleSave for CodeMirror keymap
   const handleSaveRef = useRef(handleSave);
   handleSaveRef.current = handleSave;
@@ -1353,9 +1521,20 @@ export function FileViewPanel({
   const handleCodeMirrorCreate: NonNullable<ReactCodeMirrorProps["onCreateEditor"]> =
     useCallback((view) => {
       view.dispatch({
-        effects: setGitLineMarkersEffect.of(effectiveGitLineMarkers),
+        effects: [
+          setGitLineMarkersEffect.of(effectiveGitLineMarkers),
+          setDiagnosticMarkers.of(
+            fileDiagnostics
+              .filter((diagnostic) => diagnostic.line != null)
+              .map((diagnostic) => ({
+                line: diagnostic.line!,
+                severity: diagnostic.severity,
+                message: diagnostic.message,
+              })),
+          ),
+        ],
       });
-    }, [effectiveGitLineMarkers]);
+    }, [effectiveGitLineMarkers, fileDiagnostics]);
 
   // Keyboard shortcut: Cmd+S / Ctrl+S (works in any mode, including preview)
   useEffect(() => {
@@ -1571,6 +1750,8 @@ export function FileViewPanel({
       persistentSearchExtension,
       selectFirstSearchMatchOnQueryChange,
       annotationWidgetsExt,
+      diagnosticExtension(),
+      mybatisNavigationGutter(() => mybatisNavigationEntries),
       ...cmExtensions,
     ],
     [
@@ -1578,6 +1759,7 @@ export function FileViewPanel({
       cmExtensions,
       ctrlClickDefinitionExt,
       editorNavigationKeymapExt,
+      mybatisNavigationEntries,
       persistentSearchExtension,
       saveKeymapExt,
     ],
@@ -2262,16 +2444,57 @@ export function FileViewPanel({
   );
 
   const renderNavigationPanel = () => (
-    <FileViewNavigationPanel
-      workspacePath={workspacePath}
-      navigationError={navigationError}
-      definitionCandidates={definitionCandidates}
-      onCloseDefinitionCandidates={() => setDefinitionCandidates([])}
-      referenceResults={referenceResults}
-      onCloseReferenceResults={() => setReferenceResults(null)}
-      onNavigateToLocation={navigateToLocation}
-      t={t}
-    />
+    <>
+      <FileViewNavigationPanel
+        workspacePath={workspacePath}
+        navigationError={navigationError}
+        definitionCandidates={definitionCandidates}
+        onCloseDefinitionCandidates={() => setDefinitionCandidates([])}
+        referenceResults={referenceResults}
+        onCloseReferenceResults={() => setReferenceResults(null)}
+        onNavigateToLocation={navigateToLocation}
+        t={t}
+      />
+      {(fileIsJava || fileIsMapperXml) &&
+      (fileDiagnostics.length > 0 || diagnosticsLoading || diagnosticsError) ? (
+        <DiagnosticsPanel
+          diagnostics={fileDiagnostics}
+          isLoading={diagnosticsLoading}
+          error={diagnosticsError}
+          onNavigate={(path, line, column) => {
+            if (line != null) {
+              openNavigationTarget(path, { line, column: column ?? 0 });
+            }
+          }}
+        />
+      ) : null}
+      {fileIsJava || fileIsMapperXml ? (
+        <div style={{ padding: "4px 8px", display: "flex", gap: 12, fontSize: 11 }}>
+          {fileIsJava ? (
+            <ProviderStatusBadge
+              label="JDTLS"
+              status={
+                jdtlsState.status === "ready"
+                  ? "ready"
+                  : jdtlsState.status === "starting" ||
+                      jdtlsState.status === "downloading" ||
+                      jdtlsState.status === "indexing"
+                    ? "indexing"
+                    : jdtlsState.status === "unavailable"
+                      ? "unavailable"
+                      : "unknown"
+              }
+              tooltip={jdtlsState.error ?? undefined}
+            />
+          ) : null}
+          <ProviderStatusBadge
+            label="MyBatis"
+            status={mybatisState.status === "ready" ? "ready" : mybatisState.status === "error" ? "error" : "unknown"}
+            tooltip={`MyBatis: ${mybatisState.statementCount} statements, ${mybatisState.annotationCount} annotations`}
+          />
+        </div>
+      ) : null}
+    </>
   );
 
   return (

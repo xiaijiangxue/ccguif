@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   areFileUrisEquivalent,
+  createLocationCacheEntry,
+  normalizeJdtlsLocations,
+  readFreshCache,
   relativePathFromFileUri,
   toFileUri,
 } from "./fileViewNavigationUtils";
@@ -28,5 +31,44 @@ describe("fileViewNavigationUtils", () => {
         true,
       ),
     ).toBe(true);
+  });
+
+  it("preserves navigation source metadata on fresh cache reads", () => {
+    const cache = new Map();
+    cache.set(
+      "definition",
+      createLocationCacheEntry(
+        [{ uri: "file:///repo/src/Foo.java", line: 1, character: 2 }],
+        "semantic",
+      ),
+    );
+
+    expect(readFreshCache(cache, "definition")?.source).toBe("semantic");
+  });
+
+  it("defaults cache source to fallback", () => {
+    const cache = new Map();
+    cache.set(
+      "definition",
+      createLocationCacheEntry([{ uri: "file:///repo/src/Foo.java", line: 1, character: 2 }]),
+    );
+
+    expect(readFreshCache(cache, "definition")?.source).toBe("fallback");
+  });
+
+  it("normalizes JDTLS single-location and array responses", () => {
+    const single = normalizeJdtlsLocations({
+      uri: "file:///repo/src/Foo.java",
+      range: { start: { line: 4, character: 8 }, end: { line: 4, character: 11 } },
+    });
+    const multiple = normalizeJdtlsLocations([
+      {
+        uri: "file:///repo/src/Bar.java",
+        range: { start: { line: 6, character: 2 }, end: { line: 6, character: 5 } },
+      },
+    ]);
+
+    expect(single).toEqual([{ uri: "file:///repo/src/Foo.java", path: null, line: 4, character: 8 }]);
+    expect(multiple).toEqual([{ uri: "file:///repo/src/Bar.java", path: null, line: 6, character: 2 }]);
   });
 });

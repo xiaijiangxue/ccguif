@@ -113,9 +113,11 @@ mod files;
 mod git;
 mod git_utils;
 mod input_history;
+mod jdtls;
 mod linux_startup_guard;
 mod local_usage;
 mod menu;
+mod mybatis_index;
 mod note_cards;
 mod project_map;
 mod project_memory;
@@ -389,6 +391,7 @@ pub fn run() {
                     crate::runtime::shutdown_managed_runtimes(&state).await;
                 }
                 crate::terminal::cleanup_all_terminal_sessions(&state).await;
+                crate::jdtls::JdtlsManager::cleanup(&state).await;
             });
         }
     });

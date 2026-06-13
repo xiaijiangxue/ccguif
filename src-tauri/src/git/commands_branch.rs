@@ -1259,6 +1259,12 @@ mod tests {
             ),
             runtime_manager: std::sync::Arc::new(crate::runtime::RuntimeManager::new(&data_dir)),
             engine_manager: crate::engine::EngineManager::new(),
+            jdtls_manager: std::sync::Arc::new(tokio::sync::Mutex::new(
+                crate::jdtls::JdtlsManager::new(data_dir.join("jdtls")),
+            )),
+            mybatis_index: std::sync::Arc::new(tokio::sync::Mutex::new(
+                crate::mybatis_index::MybatisIndex::new(),
+            )),
         }
     }
 

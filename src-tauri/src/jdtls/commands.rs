@@ -1,9 +1,17 @@
 use std::path::PathBuf;
 use tauri::State;
 use serde_json::{json, Value};
+use serde::Serialize;
 
 use crate::state::AppState;
 use super::types::JdtlsStatus;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct JavaProjectDetection {
+    pub is_java_project: bool,
+    pub build_system: Option<String>,
+}
 
 /// Resolve the absolute file URI and canonicalized workspace root.
 fn resolve_file_context(
@@ -202,12 +210,30 @@ pub async fn jdtls_did_open(
     let settings = state.app_settings.lock().await.clone();
     apply_java_path_from_settings(&mut manager, &settings).await;
     manager.ensure_started(&workspace_root, &file_path).await?;
-    manager.track_open_file(uri);
+    let method = if manager.is_file_open(&uri) {
+        "textDocument/didChange"
+    } else {
+        manager.track_open_file(uri);
+        "textDocument/didOpen"
+    };
+    let params = if method == "textDocument/didChange" {
+        json!({
+            "textDocument": {
+                "uri": params["textDocument"]["uri"].clone(),
+                "version": 2
+            },
+            "contentChanges": [
+                { "text": content }
+            ]
+        })
+    } else {
+        params
+    };
     manager
-        .send_notification("textDocument/didOpen", params)
+        .send_notification(method, params)
         .await
         .map_err(|err| {
-            log::warn!("[jdtls] textDocument/didOpen failed for {file_path}: {err}");
+            log::warn!("[jdtls] {method} failed for {file_path}: {err}");
             err
         })?;
     Ok(())
@@ -287,6 +313,15 @@ pub async fn jdtls_get_status(state: State<'_, AppState>) -> Result<JdtlsStatus,
     Ok(manager.get_status())
 }
 
+#[tauri::command]
+pub async fn detect_java_project(workspace_path: String) -> Result<JavaProjectDetection, String> {
+    let workspace_root = PathBuf::from(&workspace_path)
+        .canonicalize()
+        .map_err(|err| format!("failed to resolve workspace path {workspace_path}: {err}"))?;
+
+    Ok(detect_java_project_at(&workspace_root))
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 fn file_path_to_language_id(file_path: &str) -> &'static str {
@@ -298,5 +333,84 @@ fn file_path_to_language_id(file_path: &str) -> &'static str {
         "java" => "java",
         "kt" | "kts" => "kotlin",
         _ => "java",
+    }
+}
+
+fn detect_java_project_at(workspace_root: &std::path::Path) -> JavaProjectDetection {
+    let mut roots = vec![workspace_root.to_path_buf()];
+    if let Ok(entries) = std::fs::read_dir(workspace_root) {
+        for entry in entries.flatten() {
+            if entry.file_type().map(|file_type| file_type.is_dir()).unwrap_or(false) {
+                roots.push(entry.path());
+            }
+        }
+    }
+
+    for root in roots {
+        if root.join("pom.xml").is_file() {
+            return JavaProjectDetection {
+                is_java_project: true,
+                build_system: Some("maven".to_string()),
+            };
+        }
+        if root.join("build.gradle").is_file() || root.join("build.gradle.kts").is_file() {
+            return JavaProjectDetection {
+                is_java_project: true,
+                build_system: Some("gradle".to_string()),
+            };
+        }
+    }
+
+    JavaProjectDetection {
+        is_java_project: false,
+        build_system: None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_dir() -> PathBuf {
+        std::env::temp_dir().join(format!("jdtls-detect-test-{}", uuid::Uuid::new_v4()))
+    }
+
+    #[test]
+    fn detect_java_project_finds_root_pom() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("pom.xml"), "").unwrap();
+
+        let detection = detect_java_project_at(&dir);
+
+        assert!(detection.is_java_project);
+        assert_eq!(detection.build_system, Some("maven".to_string()));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn detect_java_project_finds_one_level_gradle_kts() {
+        let dir = temp_dir();
+        let app_dir = dir.join("app");
+        std::fs::create_dir_all(&app_dir).unwrap();
+        std::fs::write(app_dir.join("build.gradle.kts"), "").unwrap();
+
+        let detection = detect_java_project_at(&dir);
+
+        assert!(detection.is_java_project);
+        assert_eq!(detection.build_system, Some("gradle".to_string()));
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn detect_java_project_returns_false_without_build_files() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let detection = detect_java_project_at(&dir);
+
+        assert!(!detection.is_java_project);
+        assert_eq!(detection.build_system, None);
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

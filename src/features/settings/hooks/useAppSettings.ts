@@ -270,6 +270,7 @@ const defaultSettings: AppSettings = {
   browserAgentEnabled: true,
   browserAgentPreferBuiltIn: true,
   browserAgentAllowExternalProviderFallback: true,
+  jdtlsJavaPath: null,
 };
 
 const CODEX_WARM_TTL_DEFAULT_SECONDS = 7200;
@@ -394,6 +395,7 @@ function normalizeAppSettings(
     browserAgentPreferBuiltIn: settings.browserAgentPreferBuiltIn !== false,
     browserAgentAllowExternalProviderFallback:
       settings.browserAgentAllowExternalProviderFallback !== false,
+    jdtlsJavaPath: settings.jdtlsJavaPath?.trim() ? settings.jdtlsJavaPath.trim() : null,
     codeFontSize: clampCodeFontSize(settings.codeFontSize),
     notificationSoundId: ALLOWED_NOTIFICATION_SOUND_IDS.has(
       settings.notificationSoundId,

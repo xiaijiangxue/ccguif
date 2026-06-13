@@ -196,6 +196,34 @@ vi.mock("../../../services/tauri", () => ({
   getGitFileFullDiff: vi.fn(),
   getCodeIntelDefinition: vi.fn(),
   getCodeIntelReferences: vi.fn(),
+  getJdtlsDefinition: vi.fn(),
+  getJdtlsReferences: vi.fn(),
+  getJdtlsDiagnostics: vi.fn(async () => []),
+  getJdtlsDidOpen: vi.fn(async () => undefined),
+  getJdtlsDidChange: vi.fn(async () => undefined),
+  getJdtlsDidClose: vi.fn(async () => undefined),
+  getMybatisValidate: vi.fn(async () => ({
+    errors: [],
+    warnings: [],
+  })),
+  getJdtlsStatus: vi.fn(async () => ({
+    status: "unavailable",
+    javaVersion: null,
+    jdtlsPath: null,
+    error: null,
+    uptimeSeconds: null,
+    openFilesCount: 0,
+  })),
+  getMybatisReindex: vi.fn(async () => ({
+    statementCount: 0,
+    fileCount: 0,
+    parseErrors: 0,
+    annotationCount: 0,
+  })),
+  detectJavaProject: vi.fn(async () => ({
+    isJavaProject: false,
+    buildSystem: null,
+  })),
 }));
 
 vi.mock("../detachedFileExplorer", () => {
