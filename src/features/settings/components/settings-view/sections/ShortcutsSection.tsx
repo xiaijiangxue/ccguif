@@ -2,12 +2,14 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import type { KeyboardEvent } from "react";
 import type { LucideIcon } from "lucide-react";
 import Archive from "lucide-react/dist/esm/icons/archive";
+import ArrowUpDown from "lucide-react/dist/esm/icons/arrow-up-down";
 import Bug from "lucide-react/dist/esm/icons/bug";
 import BrainCircuit from "lucide-react/dist/esm/icons/brain-circuit";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left";
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import ChevronUp from "lucide-react/dist/esm/icons/chevron-up";
+import Code from "lucide-react/dist/esm/icons/code";
 import CopyPlus from "lucide-react/dist/esm/icons/copy-plus";
 import Cpu from "lucide-react/dist/esm/icons/cpu";
 import FolderOpen from "lucide-react/dist/esm/icons/folder-open";
@@ -78,6 +80,9 @@ const shortcutIconByActionId: Record<string, LucideIcon> = {
   "interrupt-active-run": OctagonX,
   "save-file": Save,
   "find-in-file": SearchCode,
+  "go-to-definition": Code,
+  "find-usages": Search,
+  "go-to-implementation": ArrowUpDown,
   "toggle-git-diff-list-view": FolderTree,
   "increase-ui-scale": ZoomIn,
   "decrease-ui-scale": ZoomOut,

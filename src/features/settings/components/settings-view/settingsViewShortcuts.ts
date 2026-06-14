@@ -33,7 +33,10 @@ export type ShortcutSettingKey =
   | "cycleAgentNextShortcut"
   | "cycleAgentPrevShortcut"
   | "cycleWorkspaceNextShortcut"
-  | "cycleWorkspacePrevShortcut";
+  | "cycleWorkspacePrevShortcut"
+  | "goToDefinitionShortcut"
+  | "findUsagesShortcut"
+  | "goToImplementationShortcut";
 
 export type ShortcutDraftKey =
   | "model"
@@ -70,7 +73,10 @@ export type ShortcutDraftKey =
   | "cycleAgentNext"
   | "cycleAgentPrev"
   | "cycleWorkspaceNext"
-  | "cycleWorkspacePrev";
+  | "cycleWorkspacePrev"
+  | "goToDefinition"
+  | "findUsages"
+  | "goToImplementation";
 
 export type ShortcutDrafts = Record<ShortcutDraftKey, string | null>;
 
@@ -424,6 +430,36 @@ export const shortcutActions: ShortcutActionMetadata[] = [
     triggerSurface: "editor",
   },
   {
+    id: "go-to-definition",
+    setting: "goToDefinitionShortcut",
+    draftKey: "goToDefinition",
+    category: "editor",
+    labelKey: "settings.goToDefinition",
+    defaultShortcut: "cmd+b",
+    scope: "editor",
+    triggerSurface: "editor",
+  },
+  {
+    id: "find-usages",
+    setting: "findUsagesShortcut",
+    draftKey: "findUsages",
+    category: "editor",
+    labelKey: "settings.findUsages",
+    defaultShortcut: "alt+f7",
+    scope: "editor",
+    triggerSurface: "editor",
+  },
+  {
+    id: "go-to-implementation",
+    setting: "goToImplementationShortcut",
+    draftKey: "goToImplementation",
+    category: "editor",
+    labelKey: "settings.goToImplementation",
+    defaultShortcut: "alt+cmd+b",
+    scope: "editor",
+    triggerSurface: "editor",
+  },
+  {
     id: "toggle-git-diff-list-view",
     setting: "toggleGitDiffListViewShortcut",
     draftKey: "gitDiffListView",
@@ -544,6 +580,9 @@ export const shortcutDraftKeyBySetting: Record<
   cycleAgentPrevShortcut: "cycleAgentPrev",
   cycleWorkspaceNextShortcut: "cycleWorkspaceNext",
   cycleWorkspacePrevShortcut: "cycleWorkspacePrev",
+  goToDefinitionShortcut: "goToDefinition",
+  findUsagesShortcut: "findUsages",
+  goToImplementationShortcut: "goToImplementation",
 };
 
 export function buildShortcutDrafts(

@@ -787,6 +787,9 @@ export type AppSettings = {
   cycleAgentPrevShortcut: string | null;
   cycleWorkspaceNextShortcut: string | null;
   cycleWorkspacePrevShortcut: string | null;
+  goToDefinitionShortcut: string | null;
+  findUsagesShortcut: string | null;
+  goToImplementationShortcut: string | null;
   lastComposerModelId: string | null;
   lastComposerReasoningEffort: string | null;
   uiScale: number;

@@ -1068,6 +1068,21 @@ pub(crate) struct AppSettings {
         rename = "cycleWorkspacePrevShortcut"
     )]
     pub(crate) cycle_workspace_prev_shortcut: Option<String>,
+    #[serde(
+        default = "default_go_to_definition_shortcut",
+        rename = "goToDefinitionShortcut"
+    )]
+    pub(crate) go_to_definition_shortcut: Option<String>,
+    #[serde(
+        default = "default_find_usages_shortcut",
+        rename = "findUsagesShortcut"
+    )]
+    pub(crate) find_usages_shortcut: Option<String>,
+    #[serde(
+        default = "default_go_to_implementation_shortcut",
+        rename = "goToImplementationShortcut"
+    )]
+    pub(crate) go_to_implementation_shortcut: Option<String>,
     #[serde(default, rename = "lastComposerModelId")]
     pub(crate) last_composer_model_id: Option<String>,
     #[serde(default, rename = "lastComposerReasoningEffort")]
@@ -1555,6 +1570,18 @@ fn default_cycle_workspace_prev_shortcut() -> Option<String> {
     Some("cmd+shift+up".to_string())
 }
 
+fn default_go_to_definition_shortcut() -> Option<String> {
+    Some("cmd+b".to_string())
+}
+
+fn default_find_usages_shortcut() -> Option<String> {
+    Some("alt+f7".to_string())
+}
+
+fn default_go_to_implementation_shortcut() -> Option<String> {
+    Some("alt+cmd+b".to_string())
+}
+
 fn default_notification_sounds_enabled() -> bool {
     true
 }
@@ -1863,6 +1890,9 @@ impl Default for AppSettings {
             cycle_agent_prev_shortcut: default_cycle_agent_prev_shortcut(),
             cycle_workspace_next_shortcut: default_cycle_workspace_next_shortcut(),
             cycle_workspace_prev_shortcut: default_cycle_workspace_prev_shortcut(),
+            go_to_definition_shortcut: default_go_to_definition_shortcut(),
+            find_usages_shortcut: default_find_usages_shortcut(),
+            go_to_implementation_shortcut: default_go_to_implementation_shortcut(),
             last_composer_model_id: None,
             last_composer_reasoning_effort: None,
             ui_scale: 1.0,
