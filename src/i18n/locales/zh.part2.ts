@@ -437,6 +437,7 @@ const zhPart2 = {
     mentionFile: "提及 {{name}}",
     mentionInChat: "在聊天中提及",
     refreshFiles: "刷新文件列表",
+    showFilterCategories: "显示已过滤的分类",
     retryLoadFiles: "重试加载",
     selectWorkspaceToSearch: "请先选择一个工作区后再搜索。",
     matchCase: "区分大小写",

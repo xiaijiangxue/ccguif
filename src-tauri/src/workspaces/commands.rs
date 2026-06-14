@@ -17,8 +17,7 @@ use super::external_changes::{
 use super::files::{
     copy_workspace_item_inner, create_workspace_directory_inner, duplicate_workspace_item_inner,
     list_external_absolute_directory_children_inner, list_external_spec_tree_inner,
-    list_workspace_directory_children_ignored_inner,
-    list_workspace_directory_children_inner, list_workspace_directory_children_visible_inner,
+    list_workspace_directory_children_cached,
     paste_external_workspace_items_inner, paste_workspace_item_inner,
     list_workspace_files_inner,
     read_external_absolute_file_inner, read_external_spec_file_inner, read_workspace_file_inner,
@@ -28,6 +27,7 @@ use super::files::{
     write_external_spec_file_inner, write_workspace_file_inner, ExternalSpecFileResponse,
     WorkspaceFileOperationResult, WorkspaceFileResponse, WorkspaceFilesResponse,
     WorkspacePreviewHandleResponse, WorkspaceTextSearchOptions, WorkspaceTextSearchResponse,
+    DirectoryChildScanScope,
 };
 use super::git::{
     git_branch_exists, git_find_remote_for_branch, git_get_origin_url, git_remote_branch_exists,
@@ -66,6 +66,38 @@ pub(crate) struct WorkspaceCommandResult {
     pub(crate) success: bool,
     pub(crate) stdout: String,
     pub(crate) stderr: String,
+}
+
+/// Clear the directory scan cache so that subsequent directory scans return
+/// fresh filesystem data.  Called after write mutations (create, write,
+/// rename, trash, copy, paste).
+fn invalidate_directory_cache(state: &AppState) {
+    if let Ok(mut cache) = state.directory_cache.lock() {
+        cache.clear();
+    }
+}
+
+/// Resolve a cached git2 Repository handle for the given workspace.
+/// Returns a cloned Arc<Mutex<Repository>> if cached, otherwise opens
+/// the repo, caches it, and returns the handle.
+fn resolve_workspace_repo_handle(
+    state: &AppState,
+    workspace_id: &str,
+    root: &std::path::Path,
+) -> Option<std::sync::Arc<std::sync::Mutex<git2::Repository>>> {
+    // Fast path: check if already cached.
+    {
+        let handles = state.workspace_repo_handles.lock().ok()?;
+        if let Some(handle) = handles.get(workspace_id) {
+            return Some(std::sync::Arc::clone(handle));
+        }
+    }
+    // Slow path: open and cache.
+    let repo = git2::Repository::open(root).ok()?;
+    let handle = std::sync::Arc::new(std::sync::Mutex::new(repo));
+    let mut handles = state.workspace_repo_handles.lock().ok()?;
+    handles.insert(workspace_id.to_string(), std::sync::Arc::clone(&handle));
+    Some(handle)
 }
 
 fn app_data_dir_for_state(state: &AppState) -> Result<PathBuf, String> {
@@ -666,6 +698,8 @@ pub(crate) async fn write_workspace_file(
         return Ok(());
     }
 
+    invalidate_directory_cache(&state);
+
     workspaces_core::write_workspace_file_core(
         &state.workspaces,
         &workspace_id,
@@ -686,6 +720,8 @@ pub(crate) async fn create_workspace_directory(
     if remote_backend::is_remote_mode(&*state).await {
         return Err("create_workspace_directory is not supported in remote mode yet.".to_string());
     }
+
+    invalidate_directory_cache(&state);
 
     workspaces_core::create_workspace_directory_core(
         &state.workspaces,
@@ -937,6 +973,8 @@ pub(crate) async fn trash_workspace_item(
         return Ok(());
     }
 
+    invalidate_directory_cache(&state);
+
     workspaces_core::trash_workspace_item_core(
         &state.workspaces,
         &workspace_id,
@@ -964,6 +1002,8 @@ pub(crate) async fn copy_workspace_item(
         return serde_json::from_value(response).map_err(|err| err.to_string());
     }
 
+    invalidate_directory_cache(&state);
+
     workspaces_core::copy_workspace_item_core(
         &state.workspaces,
         &workspace_id,
@@ -983,6 +1023,8 @@ pub(crate) async fn duplicate_workspace_item(
     if remote_backend::is_remote_mode(&*state).await {
         return Err("duplicate_workspace_item is not supported in remote mode yet.".to_string());
     }
+
+    invalidate_directory_cache(&state);
 
     workspaces_core::duplicate_workspace_item_core(
         &state.workspaces,
@@ -1005,6 +1047,8 @@ pub(crate) async fn paste_workspace_item(
         return Err("paste_workspace_item is not supported in remote mode yet.".to_string());
     }
 
+    invalidate_directory_cache(&state);
+
     workspaces_core::paste_workspace_item_core(
         &state.workspaces,
         &workspace_id,
@@ -1026,6 +1070,8 @@ pub(crate) async fn rename_workspace_item(
     if remote_backend::is_remote_mode(&*state).await {
         return Err("rename_workspace_item is not supported in remote mode yet.".to_string());
     }
+
+    invalidate_directory_cache(&state);
 
     workspaces_core::rename_workspace_item_core(
         &state.workspaces,
@@ -1618,6 +1664,11 @@ pub(crate) async fn remove_workspace(
         cleanup_engine_sessions_for_workspace(&state, &workspace_id).await;
     }
 
+    // Invalidate cached repo handle.
+    if let Ok(mut handles) = state.workspace_repo_handles.lock() {
+        handles.remove(&id);
+    }
+
     Ok(())
 }
 
@@ -2024,6 +2075,12 @@ pub(crate) async fn list_workspace_files(
         return serde_json::from_value(response).map_err(|err| err.to_string());
     }
 
+    // A full workspace file scan means the frontend is refreshing.
+    // Invalidate the directory cache so subsequent expands get fresh data.
+    if let Ok(mut cache) = state.directory_cache.lock() {
+        cache.clear();
+    }
+
     let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
     tokio::task::spawn_blocking(move || {
         list_workspace_files_inner(&root, MAX_WORKSPACE_FILE_ENTRIES)
@@ -2052,8 +2109,18 @@ pub(crate) async fn list_workspace_directory_children_visible(
     }
 
     let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
+    let cache = std::sync::Arc::clone(&state.directory_cache);
+    let cached_repo = resolve_workspace_repo_handle(&state, &workspace_id, &root);
     tokio::task::spawn_blocking(move || {
-        list_workspace_directory_children_visible_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
+        let repo_ref = cached_repo.as_ref().and_then(|h| h.lock().ok());
+        list_workspace_directory_children_cached(
+            &root,
+            &path,
+            MAX_WORKSPACE_DIRECTORY_CHILDREN,
+            DirectoryChildScanScope::VisibleOnly,
+            Some(&cache),
+            repo_ref.as_deref(),
+        )
     })
     .await
     .map_err(|err| format!("failed to join workspace directory scan task: {err}"))?
@@ -2079,11 +2146,21 @@ pub(crate) async fn list_workspace_directory_children_ignored(
     }
 
     let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
+    let cache = std::sync::Arc::clone(&state.directory_cache);
+    let cached_repo = resolve_workspace_repo_handle(&state, &workspace_id, &root);
     tokio::task::spawn_blocking(move || {
-        list_workspace_directory_children_ignored_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
+        let repo_ref = cached_repo.as_ref().and_then(|h| h.lock().ok());
+        list_workspace_directory_children_cached(
+            &root,
+            &path,
+            MAX_WORKSPACE_DIRECTORY_CHILDREN,
+            DirectoryChildScanScope::IgnoredOnly,
+            Some(&cache),
+            repo_ref.as_deref(),
+        )
     })
     .await
-    .map_err(|err| format!("failed to join deferred ignored directory scan task: {err}"))?
+    .map_err(|err| format!("failed to join workspace directory scan task: {err}"))?
 }
 
 #[tauri::command]
@@ -2106,7 +2183,21 @@ pub(crate) async fn list_workspace_directory_children(
     }
 
     let root = workspaces_core::resolve_workspace_root(&state.workspaces, &workspace_id).await?;
-    list_workspace_directory_children_inner(&root, &path, MAX_WORKSPACE_DIRECTORY_CHILDREN)
+    let cache = std::sync::Arc::clone(&state.directory_cache);
+    let cached_repo = resolve_workspace_repo_handle(&state, &workspace_id, &root);
+    tokio::task::spawn_blocking(move || {
+        let repo_ref = cached_repo.as_ref().and_then(|h| h.lock().ok());
+        list_workspace_directory_children_cached(
+            &root,
+            &path,
+            MAX_WORKSPACE_DIRECTORY_CHILDREN,
+            DirectoryChildScanScope::All,
+            Some(&cache),
+            repo_ref.as_deref(),
+        )
+    })
+    .await
+    .map_err(|err| format!("failed to join workspace directory scan task: {err}"))?
 }
 
 #[tauri::command]

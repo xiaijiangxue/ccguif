@@ -2321,7 +2321,10 @@ export function useLayoutNodes(options: LayoutNodesOptions): LayoutNodesResult {
   let gitDiffPanelNode: ReactNode;
   if (options.filePanelMode === "files" && options.activeWorkspace) {
     gitDiffPanelNode = (
-      <FileTreeStoreProvider workspaceId={options.activeWorkspace.id}>
+      <FileTreeStoreProvider
+        key={options.activeWorkspace.id}
+        workspaceId={options.activeWorkspace.id}
+      >
         <FileTreePanel
           workspaceId={options.activeWorkspace.id}
           workspaceName={options.activeWorkspace.name}

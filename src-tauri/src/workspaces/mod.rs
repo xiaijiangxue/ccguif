@@ -1,6 +1,6 @@
 mod commands;
 mod external_changes;
-mod files;
+pub(crate) mod files;
 mod git;
 mod macos;
 mod rewind_export;

@@ -196,7 +196,7 @@ export function FileExplorerWorkspace({
       } as CSSProperties}
     >
       <div className="detached-file-explorer-sidebar">
-        <FileTreeStoreProvider workspaceId={workspaceId}>
+        <FileTreeStoreProvider key={workspaceId} workspaceId={workspaceId}>
           <FileTreePanel
             workspaceId={workspaceId}
             workspaceName={workspaceName}

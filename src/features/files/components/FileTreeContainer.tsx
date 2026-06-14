@@ -15,7 +15,11 @@ export type FileTreeContainerProps = {
   retryLabel: string;
   onRetry?: () => void;
   renderRow: (row: VisibleFileTreeRow) => ReactNode;
-  onRowsReady?: (api: { scrollToIndex: (index: number) => void }) => void;
+  onRowsReady?: (api: {
+    scrollToIndex: (index: number) => void;
+    scrollOffset: number;
+    scrollDirection: "forward" | "backward";
+  }) => void;
 };
 
 export function FileTreeContainer({
@@ -52,6 +56,8 @@ export function FileTreeContainer({
   useEffect(() => {
     onRowsReady?.({
       scrollToIndex: (index) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
+      scrollOffset: rowVirtualizer.scrollOffset,
+      scrollDirection: rowVirtualizer.scrollDirection,
     });
   }, [onRowsReady, rowVirtualizer]);
 

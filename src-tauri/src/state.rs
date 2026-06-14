@@ -11,6 +11,7 @@ use crate::engine::{EngineConfig, EngineManager, EngineType};
 use crate::shared::proxy_core;
 use crate::storage::{read_settings, read_workspaces};
 use crate::types::{AppSettings, WorkspaceEntry};
+use crate::workspaces::files::{new_directory_cache, DirectoryCache};
 use crate::workspaces::DetachedExternalChangeRuntime;
 
 pub(crate) struct AppState {
@@ -40,6 +41,14 @@ pub(crate) struct AppState {
     pub(crate) jdtls_manager: Arc<Mutex<crate::jdtls::JdtlsManager>>,
     /// MyBatis mapper XML / Java method index.
     pub(crate) mybatis_index: Arc<Mutex<crate::mybatis_index::MybatisIndex>>,
+    /// Session-scoped directory scan cache (canonical path → cached children).
+    /// Avoids redundant filesystem scans when re-expanding previously loaded
+    /// directories.  Cleared on write mutations and full workspace rescans.
+    pub(crate) directory_cache: DirectoryCache,
+    /// Cached git2 Repository handles keyed by workspace ID.
+    /// Opened once per workspace session, invalidated on close or git re-init.
+    pub(crate) workspace_repo_handles:
+        std::sync::Mutex<HashMap<String, Arc<std::sync::Mutex<git2::Repository>>>>,
 }
 
 impl AppState {
@@ -147,6 +156,8 @@ impl AppState {
                 data_dir.join("jdtls"),
             ))),
             mybatis_index: Arc::new(Mutex::new(crate::mybatis_index::MybatisIndex::new())),
+            directory_cache: new_directory_cache(),
+            workspace_repo_handles: std::sync::Mutex::new(HashMap::new()),
         }
     }
 }

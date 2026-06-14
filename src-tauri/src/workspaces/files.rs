@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
@@ -14,6 +14,172 @@ use sha2::{Digest, Sha256};
 
 use crate::text_encoding::decode_text_bytes;
 use crate::utils::normalize_git_path;
+
+// ---------------------------------------------------------------------------
+// Session-scoped directory scan cache
+// ---------------------------------------------------------------------------
+
+/// Cached result of a directory children scan performed with `Scope::All`.
+/// Subsequent requests for the same directory can be served from this cache
+/// and filtered by the requested scope, avoiding a redundant filesystem scan.
+#[derive(Clone, Debug)]
+pub(crate) struct CachedDirectoryChildren {
+    pub(crate) files: Vec<String>,
+    pub(crate) directories: Vec<String>,
+    pub(crate) gitignored_files: Vec<String>,
+    pub(crate) gitignored_directories: Vec<String>,
+    pub(crate) scan_state: WorkspaceScanState,
+    pub(crate) limit_hit: bool,
+}
+
+/// Thread-safe directory scan cache. The key is the **canonical** directory
+/// path. When the workspace state (or `AppState`) is dropped the cache is
+/// dropped with it, so it is naturally session-scoped.
+pub(crate) type DirectoryCache =
+    Arc<Mutex<HashMap<PathBuf, CachedDirectoryChildren>>>;
+
+/// Create a new, empty directory cache.
+pub(crate) fn new_directory_cache() -> DirectoryCache {
+    Arc::new(Mutex::new(HashMap::new()))
+}
+
+impl CachedDirectoryChildren {
+    fn from_response(response: &WorkspaceFilesResponse) -> Self {
+        Self {
+            files: response.files.clone(),
+            directories: response.directories.clone(),
+            gitignored_files: response.gitignored_files.clone(),
+            gitignored_directories: response.gitignored_directories.clone(),
+            scan_state: response.scan_state,
+            limit_hit: response.limit_hit,
+        }
+    }
+
+    /// Convert the cached `Scope::All` data into a response filtered by the
+    /// requested scope.
+    fn to_response(
+        &self,
+        scope: DirectoryChildScanScope,
+        parent_path: &str,
+    ) -> WorkspaceFilesResponse {
+        let (files, directories, gitignored_files, gitignored_directories) = match scope {
+            DirectoryChildScanScope::All => (
+                self.files.clone(),
+                self.directories.clone(),
+                self.gitignored_files.clone(),
+                self.gitignored_directories.clone(),
+            ),
+            DirectoryChildScanScope::VisibleOnly => {
+                let ignored_file_set: HashSet<&str> =
+                    self.gitignored_files.iter().map(String::as_str).collect();
+                let ignored_dir_set: HashSet<&str> =
+                    self.gitignored_directories.iter().map(String::as_str).collect();
+                let files: Vec<String> = self
+                    .files
+                    .iter()
+                    .filter(|f| !ignored_file_set.contains(f.as_str()))
+                    .cloned()
+                    .collect();
+                let directories: Vec<String> = self
+                    .directories
+                    .iter()
+                    .filter(|d| !ignored_dir_set.contains(d.as_str()))
+                    .cloned()
+                    .collect();
+                (files, directories, Vec::new(), Vec::new())
+            }
+            DirectoryChildScanScope::IgnoredOnly => (
+                self.gitignored_files.clone(),
+                self.gitignored_directories.clone(),
+                self.gitignored_files.clone(),
+                self.gitignored_directories.clone(),
+            ),
+        };
+        let directory_entries =
+            build_directory_child_entries(parent_path, &files, &directories, self.scan_state);
+        workspace_files_response(
+            files,
+            directories,
+            gitignored_files,
+            gitignored_directories,
+            self.scan_state,
+            self.limit_hit,
+            directory_entries,
+        )
+    }
+}
+
+/// Cached variant of the directory-children scan.  Scope::All responses are
+/// cacheable because they contain both visible and ignored children. Scoped
+/// cache misses must stay scoped; otherwise expanding generated directories
+/// through the visible-only path still pays for a full ignored scan.
+pub(crate) fn list_workspace_directory_children_cached(
+    root: &PathBuf,
+    directory_path: &str,
+    max_entries: usize,
+    scope: DirectoryChildScanScope,
+    cache: Option<&DirectoryCache>,
+    cached_repo: Option<&Repository>,
+) -> Result<WorkspaceFilesResponse, String> {
+    let Some(cache) = cache else {
+        return list_workspace_directory_children_scoped_inner_with_scope(
+            root,
+            directory_path,
+            max_entries,
+            scope,
+            cached_repo,
+        );
+    };
+
+    // Normalise the path so we can build the cache key and response.
+    let normalized_path = normalize_workspace_relative_directory_path(directory_path)?;
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|err| format!("Failed to resolve workspace root: {err}"))?;
+    let candidate = canonical_root.join(normalized_relative_to_pathbuf(&normalized_path));
+    let canonical_path = candidate
+        .canonicalize()
+        .map_err(|err| format!("Failed to resolve directory path: {err}"))?;
+
+    // Check cache.
+    {
+        let cache_guard = cache.lock().map_err(|err| err.to_string())?;
+        if let Some(cached) = cache_guard.get(&canonical_path) {
+            return Ok(cached.to_response(scope, &normalized_path));
+        }
+    }
+
+    if scope != DirectoryChildScanScope::All {
+        return list_workspace_directory_children_scoped_inner_with_scope(
+            root,
+            directory_path,
+            max_entries,
+            scope,
+            cached_repo,
+        );
+    }
+
+    // Cache miss for Scope::All – scan the full result and store it when the
+    // response is complete.
+    let result = list_workspace_directory_children_scoped_inner_with_scope(
+        root,
+        directory_path,
+        max_entries,
+        DirectoryChildScanScope::All,
+        cached_repo,
+    )?;
+
+    // Store in cache only when the scan was not truncated.
+    if !result.limit_hit {
+        let mut cache_guard = cache.lock().map_err(|err| err.to_string())?;
+        cache_guard.insert(
+            canonical_path,
+            CachedDirectoryChildren::from_response(&result),
+        );
+    }
+
+    Ok(result)
+}
 
 fn should_always_skip(name: &str) -> bool {
     name == ".git"
@@ -434,7 +600,7 @@ fn build_directory_child_entries(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum DirectoryChildScanScope {
+pub(crate) enum DirectoryChildScanScope {
     All,
     VisibleOnly,
     IgnoredOnly,
@@ -511,11 +677,20 @@ const MAX_PREVIEW_CHARS: usize = 180;
 const WORKSPACE_SCAN_ENTRY_BUDGET: usize = 30_000;
 const WORKSPACE_SCAN_TIME_BUDGET: Duration = Duration::from_millis(1_200);
 const WORKSPACE_DIRECTORY_SCAN_BUDGET_MULTIPLIER: usize = 8;
+const SPECIAL_DIRECTORY_CHILD_LIMIT: usize = 300;
 const MAX_SEARCH_PAGE_MATCHES: usize = 500;
 
 fn workspace_scan_budget_reached(started_at: Instant, scanned_entries: usize) -> bool {
     scanned_entries >= WORKSPACE_SCAN_ENTRY_BUDGET
         || started_at.elapsed() >= WORKSPACE_SCAN_TIME_BUDGET
+}
+
+fn directory_child_entry_limit(directory_path: &str, max_entries: usize) -> usize {
+    if is_special_directory_path(directory_path) {
+        max_entries.min(SPECIAL_DIRECTORY_CHILD_LIMIT)
+    } else {
+        max_entries
+    }
 }
 
 fn compile_search_regex(
@@ -960,9 +1135,12 @@ pub(crate) fn list_workspace_files_inner(
     let mut limit_hit = false;
     let pruned_special_directories: Arc<Mutex<HashSet<String>>> =
         Arc::new(Mutex::new(HashSet::new()));
+    let pruned_gitignored_directories: Arc<Mutex<HashSet<String>>> =
+        Arc::new(Mutex::new(HashSet::new()));
 
     // Always open the repo so we can tag gitignored files for dimmed styling.
     let repo = Repository::open(root).ok();
+    let repo_for_filter = Arc::new(Mutex::new(repo));
 
     // Seed root-level entries first so the file tree always reflects the real workspace root
     // even when deep traversal later hits the max file cap.
@@ -1002,9 +1180,13 @@ pub(crate) fn list_workspace_files_inner(
                 Ok(file_type) => file_type,
                 Err(_) => continue,
             };
-            let is_ignored = repo
-                .as_ref()
-                .and_then(|r| r.status_should_ignore(rel_path).ok())
+            let is_ignored = repo_for_filter
+                .lock()
+                .ok()
+                .and_then(|repo| {
+                    repo.as_ref()
+                        .and_then(|r| r.status_should_ignore(rel_path).ok())
+                })
                 .unwrap_or(false);
             if file_type.is_dir() {
                 if should_always_skip(&name) {
@@ -1052,6 +1234,8 @@ pub(crate) fn list_workspace_files_inner(
 
     let root_for_filter = root.clone();
     let pruned_special_directories_for_filter = Arc::clone(&pruned_special_directories);
+    let pruned_gitignored_directories_for_filter = Arc::clone(&pruned_gitignored_directories);
+    let repo_for_filter_clone = Arc::clone(&repo_for_filter);
     let walker = WalkBuilder::new(root)
         .hidden(false)
         .follow_links(false)
@@ -1073,6 +1257,26 @@ pub(crate) fn list_workspace_files_inner(
                             special_dirs.insert(normalized);
                         }
                         return false;
+                    }
+                    // Prune gitignored directories — their children will be
+                    // lazy-loaded on demand instead of scanned eagerly.
+                    if !normalized.is_empty() {
+                        let is_ignored = repo_for_filter_clone
+                            .lock()
+                            .ok()
+                            .and_then(|repo| {
+                                repo.as_ref()
+                                    .and_then(|r| r.status_should_ignore(rel_path).ok())
+                            })
+                            .unwrap_or(false);
+                        if is_ignored {
+                            if let Ok(mut gitignored_dirs) =
+                                pruned_gitignored_directories_for_filter.lock()
+                            {
+                                gitignored_dirs.insert(normalized);
+                            }
+                            return false;
+                        }
                     }
                 }
                 return true;
@@ -1100,9 +1304,13 @@ pub(crate) fn list_workspace_files_inner(
             if normalized.is_empty() {
                 continue;
             }
-            let is_ignored = repo
-                .as_ref()
-                .and_then(|r| r.status_should_ignore(rel_path).ok())
+            let is_ignored = repo_for_filter
+                .lock()
+                .ok()
+                .and_then(|repo| {
+                    repo.as_ref()
+                        .and_then(|r| r.status_should_ignore(rel_path).ok())
+                })
                 .unwrap_or(false);
             if entry.file_type().is_some_and(|ft| ft.is_dir()) {
                 if directories.len() >= max_directories {
@@ -1130,13 +1338,26 @@ pub(crate) fn list_workspace_files_inner(
         for normalized in special_dirs.iter() {
             directories.push(normalized.clone());
             let relative_path = normalized_relative_to_pathbuf(normalized);
-            let is_ignored = repo
-                .as_ref()
-                .and_then(|r| r.status_should_ignore(&relative_path).ok())
+            let is_ignored = repo_for_filter
+                .lock()
+                .ok()
+                .and_then(|repo| {
+                    repo.as_ref()
+                        .and_then(|r| r.status_should_ignore(&relative_path).ok())
+                })
                 .unwrap_or(false);
             if is_ignored {
                 gitignored_directories.push(normalized.clone());
             }
+        }
+    }
+
+    // Re-add gitignored directories that were pruned from the walk so the UI
+    // knows they exist. Their children are loaded lazily on demand.
+    if let Ok(gitignored_dirs) = pruned_gitignored_directories.lock() {
+        for normalized in gitignored_dirs.iter() {
+            directories.push(normalized.clone());
+            gitignored_directories.push(normalized.clone());
         }
     }
 
@@ -1173,6 +1394,7 @@ fn list_workspace_directory_children_scoped_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::All,
+        None,
     )
 }
 
@@ -1181,8 +1403,10 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
     directory_path: &str,
     max_entries: usize,
     scope: DirectoryChildScanScope,
+    cached_repo: Option<&Repository>,
 ) -> Result<WorkspaceFilesResponse, String> {
     let normalized_path = normalize_workspace_relative_directory_path(directory_path)?;
+    let entry_limit = directory_child_entry_limit(&normalized_path, max_entries);
     let canonical_root = root
         .canonicalize()
         .map_err(|err| format!("Failed to resolve workspace root: {err}"))?;
@@ -1199,9 +1423,18 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
         return Err("Path is not a directory.".to_string());
     }
 
-    let include_gitignore_markers = !normalized_path.is_empty();
-    let repo = if include_gitignore_markers {
-        Repository::open(&canonical_root).ok()
+    // Enable gitignore detection at root level when scope is All so the
+    // frontend knows which directories are gitignored and can lazy-load them.
+    let include_gitignore_markers =
+        scope == DirectoryChildScanScope::All || !normalized_path.is_empty();
+    let owned_repo;
+    let repo_ref: Option<&Repository> = if include_gitignore_markers {
+        if cached_repo.is_some() {
+            cached_repo
+        } else {
+            owned_repo = Repository::open(&canonical_root).ok();
+            owned_repo.as_ref()
+        }
     } else {
         None
     };
@@ -1213,9 +1446,9 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
     let entries = std::fs::read_dir(&canonical_path)
         .map_err(|err| format!("Failed to read directory: {err}"))?;
     let scan_started_at = Instant::now();
-    let max_scanned_entries = max_entries
+    let max_scanned_entries = entry_limit
         .saturating_mul(WORKSPACE_DIRECTORY_SCAN_BUDGET_MULTIPLIER)
-        .max(max_entries);
+        .max(entry_limit);
     let mut sorted_entries = Vec::new();
     let mut limit_hit = false;
     for entry in entries {
@@ -1253,7 +1486,7 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
             Err(_) => continue,
         };
         let is_ignored = if include_gitignore_markers {
-            repo.as_ref()
+            repo_ref
                 .and_then(|r| r.status_should_ignore(rel_path).ok())
                 .unwrap_or(false)
         } else {
@@ -1281,7 +1514,7 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
             }
         }
 
-        if files.len() + directories.len() >= max_entries {
+        if files.len() + directories.len() >= entry_limit {
             limit_hit = true;
             break;
         }
@@ -1321,6 +1554,7 @@ pub(crate) fn list_workspace_directory_children_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::All,
+        None,
     )
 }
 
@@ -1334,6 +1568,7 @@ pub(crate) fn list_workspace_directory_children_visible_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::VisibleOnly,
+        None,
     )
 }
 
@@ -1347,6 +1582,7 @@ pub(crate) fn list_workspace_directory_children_ignored_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::IgnoredOnly,
+        None,
     )
 }
 

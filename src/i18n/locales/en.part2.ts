@@ -467,6 +467,7 @@ const enPart2 = {
     mentionFile: "Mention {{name}}",
     mentionInChat: "Mention in chat",
     refreshFiles: "Refresh file list",
+    showFilterCategories: "Show filtered categories",
     retryLoadFiles: "Retry loading",
     selectWorkspaceToSearch: "Select a workspace before searching.",
     matchCase: "Match Case",

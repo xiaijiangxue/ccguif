@@ -1,6 +1,6 @@
 use ignore::WalkBuilder;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
@@ -9,6 +9,27 @@ use std::time::{Duration, Instant};
 
 use crate::text_encoding::decode_text_bytes;
 use crate::utils::normalize_git_path;
+
+// ---------------------------------------------------------------------------
+// Session-scoped directory scan cache (daemon-local copy)
+// ---------------------------------------------------------------------------
+
+#[derive(Clone, Debug)]
+pub(crate) struct CachedDirectoryChildren {
+    pub(crate) files: Vec<String>,
+    pub(crate) directories: Vec<String>,
+    pub(crate) gitignored_files: Vec<String>,
+    pub(crate) gitignored_directories: Vec<String>,
+    pub(crate) scan_state: WorkspaceScanState,
+    pub(crate) limit_hit: bool,
+}
+
+pub(crate) type DirectoryCache =
+    Arc<StdMutex<HashMap<PathBuf, CachedDirectoryChildren>>>;
+
+pub(crate) fn new_directory_cache() -> DirectoryCache {
+    Arc::new(StdMutex::new(HashMap::new()))
+}
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct WorkspaceFileResponse {
@@ -746,6 +767,7 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
     directory_path: &str,
     max_entries: usize,
     scope: DirectoryChildScanScope,
+    cached_repo: Option<&git2::Repository>,
 ) -> Result<WorkspaceFilesResponse, String> {
     let normalized_path = normalize_workspace_relative_directory_path(directory_path)?;
     let canonical_root = root
@@ -765,8 +787,14 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
     }
 
     let include_gitignore_markers = !normalized_path.is_empty();
-    let repo = if include_gitignore_markers {
-        git2::Repository::open(&canonical_root).ok()
+    let owned_repo;
+    let repo: Option<&git2::Repository> = if include_gitignore_markers {
+        if cached_repo.is_some() {
+            cached_repo
+        } else {
+            owned_repo = git2::Repository::open(&canonical_root).ok();
+            owned_repo.as_ref()
+        }
     } else {
         None
     };
@@ -886,6 +914,7 @@ pub(crate) fn list_workspace_directory_children_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::All,
+        None,
     )
 }
 
@@ -899,6 +928,7 @@ pub(crate) fn list_workspace_directory_children_visible_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::VisibleOnly,
+        None,
     )
 }
 
@@ -912,6 +942,7 @@ pub(crate) fn list_workspace_directory_children_ignored_inner(
         directory_path,
         max_entries,
         DirectoryChildScanScope::IgnoredOnly,
+        None,
     )
 }
 

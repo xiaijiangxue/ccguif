@@ -1265,6 +1265,7 @@ mod tests {
             mybatis_index: std::sync::Arc::new(tokio::sync::Mutex::new(
                 crate::mybatis_index::MybatisIndex::new(),
             )),
+            directory_cache: crate::workspaces::files::new_directory_cache(),
         }
     }
 

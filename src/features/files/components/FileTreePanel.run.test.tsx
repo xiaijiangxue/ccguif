@@ -189,6 +189,110 @@ describe("FileTreePanel run action isolation", () => {
     expect(screen.getByText("index.ts")).toBeTruthy();
   });
 
+  it("remounts file tree state cleanly after switching workspaces", () => {
+    const { rerender } = renderFileTreePanel(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace-a"
+        files={["src/a.ts"]}
+        directories={["src"]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "›workspace-a" })).toBeTruthy();
+    expect(screen.getByText("workspace-a")).toBeTruthy();
+
+    rerender(wrapFileTreePanel(
+      <FileTreePanel
+        workspaceId="workspace-2"
+        workspacePath="/tmp/workspace-b"
+        files={["docs/b.ts"]}
+        directories={["docs"]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+      />,
+    ));
+
+    expect(screen.queryByText("workspace-a")).toBeNull();
+    expect(screen.getByRole("button", { name: "›workspace-b" })).toBeTruthy();
+    expect(screen.getByText("workspace-b")).toBeTruthy();
+  });
+
+  it("keeps an active editor parent folder collapsed after a tree refresh", async () => {
+    const { rerender } = renderFileTreePanel(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace"
+        files={["src/index.ts"]}
+        directories={["src"]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+        activeEditorFilePath="src/index.ts"
+      />,
+    );
+
+    expect(await screen.findByRole("button", { name: /index\.ts/ })).toBeTruthy();
+
+    fireEvent.doubleClick(screen.getByRole("button", { name: /src/ }));
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /index\.ts/ })).toBeNull();
+    });
+
+    rerender(wrapFileTreePanel(
+      <FileTreePanel
+        workspaceId="workspace-1"
+        workspacePath="/tmp/workspace"
+        files={["src/index.ts"]}
+        directories={["src", "docs"]}
+        isLoading={false}
+        filePanelMode="files"
+        onFilePanelModeChange={() => undefined}
+        onOpenFile={() => undefined}
+        onInsertText={() => undefined}
+        openTargets={[]}
+        openAppIconById={{}}
+        selectedOpenAppId=""
+        onSelectOpenAppId={() => undefined}
+        gitStatusFiles={[]}
+        gitignoredFiles={new Set<string>()}
+        activeEditorFilePath="src/index.ts"
+      />,
+    ));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: /index\.ts/ })).toBeNull();
+    });
+  });
+
   it("places workspace root on its own row", () => {
     renderFileTreePanel(
       <FileTreePanel

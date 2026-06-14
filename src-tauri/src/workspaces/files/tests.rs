@@ -723,6 +723,35 @@ fn list_workspace_directory_children_reports_partial_when_entry_cap_hits() {
 }
 
 #[test]
+fn list_workspace_directory_children_caps_special_directories() {
+    let root = std::env::temp_dir().join(format!("mossx-special-dir-cap-{}", Uuid::new_v4()));
+    std::fs::create_dir_all(root.join("target")).expect("create target dir");
+    for index in 0..305 {
+        std::fs::write(root.join(format!("target/file-{index:03}.txt")), "x")
+            .expect("write special child");
+    }
+
+    let response =
+        list_workspace_directory_children_inner(&root, "target", 2_000).expect("list children");
+    let parent_entry = response
+        .directory_entries
+        .iter()
+        .find(|entry| entry.path == "target")
+        .expect("target metadata");
+
+    assert_eq!(response.files.len() + response.directories.len(), 300);
+    assert_eq!(response.scan_state, WorkspaceScanState::Partial);
+    assert!(response.limit_hit);
+    assert_eq!(
+        parent_entry.child_state,
+        WorkspaceDirectoryChildState::Partial
+    );
+    assert!(parent_entry.has_more);
+
+    std::fs::remove_dir_all(&root).expect("cleanup root");
+}
+
+#[test]
 fn list_external_absolute_directory_children_returns_sorted_entries() {
     let root =
         std::env::temp_dir().join(format!("mossx-external-dir-children-{}", Uuid::new_v4()));

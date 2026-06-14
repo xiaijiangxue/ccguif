@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import {
   getWorkspaceDirectoryChildren,
-  getWorkspaceDirectoryChildrenIgnored,
   getWorkspaceDirectoryChildrenVisible,
   type WorkspaceDirectoryEntry,
   type WorkspaceFilesResponse,
@@ -10,7 +9,6 @@ import { useFileTreeStoreApi } from "../stores/fileTreeStoreContext";
 import {
   filterDeletedFileTreePathFromSet,
   filterUnknownExpandedFileTreePaths,
-  hasWorkspaceDirectoryEntries,
   isConfirmedEmptyDirectoryResponse,
   isSpecialDirectoryPath,
   shouldReloadLazyFileTreePath,
@@ -121,8 +119,6 @@ export function useLazyFileTree({
   const expandedFoldersRef = useRef<Set<string>>(new Set());
   const activeWorkspaceIdRef = useRef(workspaceId);
   const lazyLoadEpochRef = useRef(0);
-  const boundedIgnoredDirectoryQueueRef = useRef<string[]>([]);
-  const inFlightIgnoredDirectoryQueueRef = useRef<Set<string>>(new Set());
   const boundedPrefetchDirectoryQueueRef = useRef<string[]>([]);
   const inFlightPrefetchDirectoryQueueRef = useRef<Set<string>>(new Set());
   const previousRootSnapshotRef = useRef<RootSnapshot | null>(null);
@@ -130,8 +126,6 @@ export function useLazyFileTree({
   const resetLazyTreeState = useCallback(() => {
     loadedLazyDirectoriesRef.current = new Set();
     loadingLazyDirectoriesRef.current = new Set();
-    boundedIgnoredDirectoryQueueRef.current = [];
-    inFlightIgnoredDirectoryQueueRef.current = new Set();
     boundedPrefetchDirectoryQueueRef.current = [];
     inFlightPrefetchDirectoryQueueRef.current = new Set();
     lazyLoadEpochRef.current += 1;
@@ -151,14 +145,11 @@ export function useLazyFileTree({
     [clearLazyDirectoryLoading],
   );
 
-  const queueIgnoredDirectoryLoad = useCallback((path: string) => {
-    const pending = boundedIgnoredDirectoryQueueRef.current.filter((entry) => entry !== path);
-    pending.push(path);
-    boundedIgnoredDirectoryQueueRef.current = pending;
-  }, []);
-
   const queuePrefetchDirectoryLoad = useCallback((path: string) => {
     if (!path) {
+      return;
+    }
+    if (isSpecialDirectoryPath(path)) {
       return;
     }
     if (
@@ -171,58 +162,6 @@ export function useLazyFileTree({
     }
     boundedPrefetchDirectoryQueueRef.current = [...boundedPrefetchDirectoryQueueRef.current, path];
   }, []);
-
-  const flushIgnoredDirectoryLoadQueue = useCallback(async () => {
-    while (
-      inFlightIgnoredDirectoryQueueRef.current.size < 1 &&
-      boundedIgnoredDirectoryQueueRef.current.length > 0
-    ) {
-      const nextPath = boundedIgnoredDirectoryQueueRef.current.shift();
-      if (!nextPath) {
-        return;
-      }
-      const requestWorkspaceId = workspaceId;
-      const requestEpoch = lazyLoadEpochRef.current;
-      inFlightIgnoredDirectoryQueueRef.current = new Set(
-        inFlightIgnoredDirectoryQueueRef.current,
-      ).add(nextPath);
-      fileTreeStoreApi.getState().startIgnoredLoad(nextPath);
-      void getWorkspaceDirectoryChildrenIgnored(requestWorkspaceId, nextPath)
-        .then((response) => {
-          if (
-            activeWorkspaceIdRef.current !== requestWorkspaceId ||
-            lazyLoadEpochRef.current !== requestEpoch
-          ) {
-            return;
-          }
-          fileTreeStoreApi.getState().completeIgnoredLoad(nextPath, response, {
-            allowParentStateOverride: false,
-          });
-        })
-        .catch((error) => {
-          if (
-            activeWorkspaceIdRef.current !== requestWorkspaceId ||
-            lazyLoadEpochRef.current !== requestEpoch
-          ) {
-            return;
-          }
-          const message = error instanceof Error ? error.message : String(error);
-          fileTreeStoreApi.getState().failIgnoredLoad(nextPath, message);
-        })
-        .finally(() => {
-          if (
-            activeWorkspaceIdRef.current === requestWorkspaceId &&
-            lazyLoadEpochRef.current === requestEpoch
-          ) {
-            inFlightIgnoredDirectoryQueueRef.current = new Set(
-              inFlightIgnoredDirectoryQueueRef.current,
-            );
-            inFlightIgnoredDirectoryQueueRef.current.delete(nextPath);
-            void flushIgnoredDirectoryLoadQueue();
-          }
-        });
-    }
-  }, [fileTreeStoreApi, workspaceId]);
 
   const flushPrefetchDirectoryLoadQueue = useCallback(async () => {
     while (
@@ -247,7 +186,7 @@ export function useLazyFileTree({
       ).add(nextPath);
       loadingLazyDirectoriesRef.current = new Set(loadingLazyDirectoriesRef.current).add(nextPath);
       fileTreeStoreApi.getState().startVisibleLoad(nextPath);
-      void getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, nextPath)
+      void getWorkspaceDirectoryChildren(requestWorkspaceId, nextPath)
         .then((response) => {
           if (
             activeWorkspaceIdRef.current !== requestWorkspaceId ||
@@ -257,8 +196,6 @@ export function useLazyFileTree({
           }
           fileTreeStoreApi.getState().completeVisibleLoad(nextPath, response);
           finalizeLazyDirectoryLoad(nextPath);
-          queueIgnoredDirectoryLoad(nextPath);
-          void flushIgnoredDirectoryLoadQueue();
         })
         .catch(() => {
           if (
@@ -287,8 +224,6 @@ export function useLazyFileTree({
     clearLazyDirectoryLoading,
     fileTreeStoreApi,
     finalizeLazyDirectoryLoad,
-    flushIgnoredDirectoryLoadQueue,
-    queueIgnoredDirectoryLoad,
     workspaceId,
   ]);
 
@@ -306,9 +241,9 @@ export function useLazyFileTree({
       const requestEpoch = lazyLoadEpochRef.current;
       try {
         const isSpecialDirectory = isSpecialDirectoryPath(path);
-        const response = isSpecialDirectory
-          ? await getWorkspaceDirectoryChildren(requestWorkspaceId, path)
-          : await getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, path);
+        const response = await (isSpecialDirectory
+          ? getWorkspaceDirectoryChildrenVisible(requestWorkspaceId, path)
+          : getWorkspaceDirectoryChildren(requestWorkspaceId, path));
         if (
           activeWorkspaceIdRef.current !== requestWorkspaceId ||
           lazyLoadEpochRef.current !== requestEpoch
@@ -320,55 +255,13 @@ export function useLazyFileTree({
           allowParentStateOverride: !visibleResponseConfirmedEmpty,
           confirmedEmpty: visibleResponseConfirmedEmpty,
         });
-        getDirectChildDirectories(path, response).forEach((childPath) =>
-          queuePrefetchDirectoryLoad(childPath),
-        );
-        void flushPrefetchDirectoryLoadQueue();
-        if (isSpecialDirectory) {
-          finalizeLazyDirectoryLoad(path);
-          return;
-        }
-        let ignoredLoadSucceeded = true;
-        let ignoredResponseHasEntries = false;
-        try {
-          fileTreeStoreApi.getState().startIgnoredLoad(path);
-          const ignoredResponse = await getWorkspaceDirectoryChildrenIgnored(
-            requestWorkspaceId,
-            path,
+        if (!isSpecialDirectory) {
+          getDirectChildDirectories(path, response).forEach((childPath) =>
+            queuePrefetchDirectoryLoad(childPath),
           );
-          if (
-            activeWorkspaceIdRef.current !== requestWorkspaceId ||
-            lazyLoadEpochRef.current !== requestEpoch
-          ) {
-            return;
-          }
-          ignoredResponseHasEntries = hasWorkspaceDirectoryEntries(ignoredResponse);
-          fileTreeStoreApi.getState().completeIgnoredLoad(path, ignoredResponse, {
-            allowParentStateOverride: visibleResponseConfirmedEmpty,
-          });
-        } catch (error) {
-          ignoredLoadSucceeded = false;
-          if (
-            activeWorkspaceIdRef.current !== requestWorkspaceId ||
-            lazyLoadEpochRef.current !== requestEpoch
-          ) {
-            return;
-          }
-          const message = error instanceof Error ? error.message : String(error);
-          fileTreeStoreApi.getState().failIgnoredLoad(path, message);
+          void flushPrefetchDirectoryLoadQueue();
         }
-        if (
-          visibleResponseConfirmedEmpty &&
-          ignoredLoadSucceeded &&
-          !ignoredResponseHasEntries
-        ) {
-          fileTreeStoreApi.getState().mergeDirectoryResponse(path, response, "visible");
-        }
-        if (ignoredLoadSucceeded || !visibleResponseConfirmedEmpty) {
-          finalizeLazyDirectoryLoad(path);
-        } else {
-          clearLazyDirectoryLoading(path);
-        }
+        finalizeLazyDirectoryLoad(path);
       } catch (error) {
         if (
           activeWorkspaceIdRef.current !== requestWorkspaceId ||
@@ -460,7 +353,7 @@ export function useLazyFileTree({
     const expandedLazyFolders = Array.from(previouslyLoadedLazyFolders).filter(
       (path) =>
         path &&
-        expandedFolders.has(path) &&
+        expandedFoldersRef.current.has(path) &&
         shouldReloadLazyFileTreePath(path, files, directories, rootDirectoryMetadataByPath),
     );
     resetLazyTreeState();
@@ -471,7 +364,6 @@ export function useLazyFileTree({
   }, [
     directories,
     directoryMetadata,
-    expandedFolders,
     files,
     ignoredDirectories,
     ignoredFiles,

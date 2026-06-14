@@ -3,6 +3,7 @@ import type {
   WorkspaceDirectoryEntry,
   WorkspaceFilesResponse,
 } from "../../../services/tauri";
+import type { FilterCategory } from "../stores/types";
 
 export type FileTreeNode = {
   name: string;
@@ -10,6 +11,7 @@ export type FileTreeNode = {
   type: "file" | "folder";
   children: FileTreeNode[];
   isLazyLoadable?: boolean;
+  isGitignored?: boolean;
   childState?: WorkspaceDirectoryChildState;
   hasMore?: boolean;
 };
@@ -56,6 +58,7 @@ type FileTreeBuildNode = {
   type: "file" | "folder";
   children: Map<string, FileTreeBuildNode>;
   isLazyLoadable: boolean;
+  isGitignored: boolean;
   childState?: WorkspaceDirectoryChildState;
   hasMore: boolean;
 };
@@ -100,6 +103,28 @@ export const SPECIAL_BUILD_ARTIFACT_DIRECTORIES = new Set([
   ".tox",
   ".dart_tool",
 ]);
+
+export const FILTER_CATEGORY_PATHS: Record<FilterCategory, ReadonlySet<string>> = {
+  Dependencies: SPECIAL_DEPENDENCY_DIRECTORIES,
+  BuildArtifacts: SPECIAL_BUILD_ARTIFACT_DIRECTORIES,
+  IDEConfig: new Set([".idea", ".vscode", ".vs", ".project", ".classpath", ".settings"]),
+};
+
+export const ALL_FILTER_CATEGORIES: readonly FilterCategory[] = [
+  "Dependencies",
+  "BuildArtifacts",
+  "IDEConfig",
+];
+
+export function matchesFilterCategory(dirName: string, hidden: Set<FilterCategory>): boolean {
+  for (const category of hidden) {
+    const paths = FILTER_CATEGORY_PATHS[category];
+    if (paths.has(dirName)) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export function isSameOrDescendantFileTreePath(path: string, rootPath: string) {
   return path === rootPath || path.startsWith(`${rootPath}/`);
@@ -353,6 +378,8 @@ export function buildTree(
   directories: string[],
   lazyLoadableDirectories: Set<string>,
   directoryMetadataByPath: Map<string, WorkspaceDirectoryEntry>,
+  gitignoredDirectories?: Set<string>,
+  hiddenCategories?: Set<FilterCategory>,
 ): FileTreeBuildResult {
   const root = new Map<string, FileTreeBuildNode>();
   const addNode = (
@@ -361,6 +388,7 @@ export function buildTree(
     path: string,
     type: "file" | "folder",
     isLazyLoadable = false,
+    isGitignored = false,
     childState?: WorkspaceDirectoryChildState,
     hasMore = false,
   ) => {
@@ -371,6 +399,9 @@ export function buildTree(
       }
       if (isLazyLoadable) {
         existing.isLazyLoadable = true;
+      }
+      if (isGitignored) {
+        existing.isGitignored = true;
       }
       if (childState) {
         existing.childState = childState;
@@ -386,6 +417,7 @@ export function buildTree(
       type,
       children: new Map(),
       isLazyLoadable,
+      isGitignored,
       childState,
       hasMore,
     };
@@ -401,6 +433,10 @@ export function buildTree(
     let currentMap = root;
     let currentPath = "";
     parts.forEach((segment, index) => {
+      // Skip directories matching hidden filter categories (and their descendants).
+      if (hiddenCategories && hiddenCategories.size > 0 && matchesFilterCategory(segment, hiddenCategories)) {
+        return;
+      }
       const isLeaf = index === parts.length - 1;
       const nextPath = currentPath ? `${currentPath}/${segment}` : segment;
       const nodeType: "file" | "folder" = isLeaf ? leafType : "folder";
@@ -411,6 +447,7 @@ export function buildTree(
         nextPath,
         nodeType,
         nodeType === "folder" && lazyLoadableDirectories.has(nextPath),
+        nodeType === "folder" && (gitignoredDirectories?.has(nextPath) ?? false),
         metadata?.child_state,
         Boolean(metadata?.has_more),
       );
@@ -482,6 +519,7 @@ export function buildTree(
             type: "folder" as const,
             children: toArray(collapsed.node.children),
             isLazyLoadable: collapsed.node.isLazyLoadable,
+            isGitignored: collapsed.node.isGitignored,
             childState: collapsed.node.childState,
             hasMore: collapsed.node.hasMore,
           };
@@ -495,6 +533,49 @@ export function buildTree(
       });
 
   return { nodes: toArray(root), folderPaths };
+}
+
+/**
+ * Incrementally patch a single directory's children in an existing tree.
+ * Used when a lazy-loaded directory's children arrive — avoids full rebuild.
+ * Handles collapsed chains by searching nodes whose path matches the target.
+ */
+export function patchTree(
+  tree: FileTreeNode[],
+  changedPath: string,
+  newChildren: FileTreeNode[],
+): FileTreeNode[] {
+  const segments = changedPath.split("/").filter(Boolean);
+
+  const findNode = (nodes: FileTreeNode[], depth: number): FileTreeNode | null => {
+    for (const node of nodes) {
+      if (node.path === changedPath) return node;
+      if (node.type === "folder" && depth < segments.length) {
+        const found = findNode(node.children, depth + 1);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const target = findNode(tree, 0);
+  if (!target) {
+    // Target not found — fall back to a full rebuild signal
+    return tree;
+  }
+
+  const sortNodes = (a: FileTreeNode, b: FileTreeNode) => {
+    if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  };
+
+  return tree.map((node) => {
+    if (node !== target) return node;
+    return {
+      ...node,
+      children: [...newChildren].sort(sortNodes),
+    };
+  });
 }
 
 export function collectDirectoryCacheSnapshot(
@@ -526,6 +607,70 @@ export function collectDirectoryCacheSnapshot(
     });
     entry.visibleChildren.forEach(visit);
     entry.ignoredChildren.forEach(visit);
+  });
+
+  return { files, directories, metadataByPath };
+}
+
+/**
+ * Incrementally patch a directory cache snapshot when a single directory's
+ * cache entry changes. Instead of re-traversing all cache entries, removes
+ * the old entry's children and adds the new entry's children.
+ */
+export function patchDirectoryCacheSnapshot(
+  previous: DirectoryCacheSnapshot,
+  changedPath: string,
+  oldEntry: DirectoryCacheSnapshotEntry | undefined,
+  newEntry: DirectoryCacheSnapshotEntry,
+): DirectoryCacheSnapshot {
+  const files = new Set(previous.files);
+  const directories = new Set(previous.directories);
+  const metadataByPath = new Map(previous.metadataByPath);
+
+  // Remove old entry's children from the snapshot
+  if (oldEntry) {
+    const removeNode = (node: FileTreeNode) => {
+      if (node.type === "file") {
+        files.delete(node.path);
+      } else {
+        directories.delete(node.path);
+        node.children.forEach(removeNode);
+      }
+    };
+    oldEntry.visibleChildren.forEach(removeNode);
+    oldEntry.ignoredChildren.forEach(removeNode);
+
+    // Remove metadata contributed by this entry's children
+    for (const [path, metadata] of oldEntry.metadataByPath) {
+      const current = metadataByPath.get(path);
+      if (current === metadata) {
+        metadataByPath.delete(path);
+      }
+    }
+  }
+
+  // Add new entry's children to the snapshot
+  const addNode = (node: FileTreeNode) => {
+    if (node.type === "file") {
+      files.add(node.path);
+    } else {
+      directories.add(node.path);
+      if (node.childState) {
+        metadataByPath.set(node.path, {
+          path: node.path,
+          child_state: node.childState,
+          has_more: node.hasMore,
+        });
+      }
+      node.children.forEach(addNode);
+    }
+  };
+  newEntry.visibleChildren.forEach(addNode);
+  newEntry.ignoredChildren.forEach(addNode);
+
+  // Add metadata from the new entry's metadataByPath
+  newEntry.metadataByPath.forEach((metadata, path) => {
+    metadataByPath.set(path, metadata);
   });
 
   return { files, directories, metadataByPath };

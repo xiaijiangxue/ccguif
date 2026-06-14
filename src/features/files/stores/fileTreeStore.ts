@@ -11,6 +11,7 @@ import type {
   FileTreeDirectoryPhase,
   FileTreeSelectionType,
   FileTreeStore,
+  FilterCategory,
 } from "./types";
 
 export type FileTreeStoreApi = StoreApi<FileTreeStore>;
@@ -30,7 +31,10 @@ function normalizeDirectoryMetadata(response: WorkspaceFilesResponse) {
     : [];
 }
 
-function buildChildrenFromResponse(response: WorkspaceFilesResponse) {
+function buildChildrenFromResponse(
+  response: WorkspaceFilesResponse,
+  hiddenCategories?: Set<FilterCategory>,
+) {
   const files = [
     ...(Array.isArray(response.files) ? response.files : []),
     ...(Array.isArray(response.gitignored_files) ? response.gitignored_files : []),
@@ -42,7 +46,7 @@ function buildChildrenFromResponse(response: WorkspaceFilesResponse) {
   const metadataByPath = new Map<string, WorkspaceDirectoryEntry>();
   normalizeDirectoryMetadata(response).forEach((entry) => metadataByPath.set(entry.path, entry));
 
-  return buildTree(files, directories, new Set(), metadataByPath).nodes;
+  return buildTree(files, directories, new Set(), metadataByPath, undefined, hiddenCategories).nodes;
 }
 
 function cloneCacheEntry(entry: DirectoryCacheEntry | undefined): DirectoryCacheEntry {
@@ -130,11 +134,11 @@ function mergeDirectoryResponseIntoState(
   }
 
   if (phase === "visible") {
-    entry.visibleChildren = buildChildrenFromResponse(response);
+    entry.visibleChildren = buildChildrenFromResponse(response, state.hiddenCategories);
     entry.visibleStatus = "loaded";
     entry.visibleError = null;
   } else {
-    entry.ignoredChildren = buildChildrenFromResponse(response);
+    entry.ignoredChildren = buildChildrenFromResponse(response, state.hiddenCategories);
     entry.ignoredStatus = "loaded";
     entry.ignoredError = null;
   }
@@ -150,6 +154,40 @@ function mergeDirectoryResponseIntoState(
     directoryCache: nextDirectoryCache,
     lazyMetadata: nextLazyMetadata,
   };
+}
+
+const DEFAULT_HIDDEN_CATEGORIES: Set<FilterCategory> = new Set([
+  "Dependencies",
+  "BuildArtifacts",
+  "IDEConfig",
+]);
+
+const FILTER_STORAGE_KEY_PREFIX = "fileTree:hiddenCategories:";
+
+function loadHiddenCategories(workspaceId: string): Set<FilterCategory> {
+  try {
+    const stored = localStorage.getItem(`${FILTER_STORAGE_KEY_PREFIX}${workspaceId}`);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed as FilterCategory[]);
+      }
+    }
+  } catch {
+    // ignore malformed storage
+  }
+  return new Set(DEFAULT_HIDDEN_CATEGORIES);
+}
+
+function persistHiddenCategories(workspaceId: string, categories: Set<FilterCategory>) {
+  try {
+    localStorage.setItem(
+      `${FILTER_STORAGE_KEY_PREFIX}${workspaceId}`,
+      JSON.stringify(Array.from(categories)),
+    );
+  } catch {
+    // ignore storage errors
+  }
 }
 
 export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTreeStoreApi {
@@ -173,6 +211,7 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
     selectedType: null,
     multiSelection: new Set(),
     selectionAnchor: null,
+    hiddenCategories: loadHiddenCategories(options.workspaceId),
 
     setTreeData: (treeData, folderPaths) => {
       set({ treeData, folderPaths });
@@ -340,6 +379,26 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
       }));
     },
 
+    resetWorkspaceSwitchState: () => {
+      set((state) => ({
+        directoryCache: new Map(),
+        loadingVisibleDirs: new Set(),
+        loadedVisibleDirs: new Set(),
+        visibleLoadErrors: new Map(),
+        loadingIgnoredDirs: new Set(),
+        loadedIgnoredDirs: new Set(),
+        ignoredLoadErrors: new Map(),
+        lazyMetadata: new Map(),
+        epoch: state.epoch + 1,
+        suppressedDeletedPaths: new Set(),
+        rootExpanded: true,
+        selectedPath: null,
+        selectedType: null,
+        multiSelection: new Set(),
+        selectionAnchor: null,
+      }));
+    },
+
     selectNode: (path, type) => {
       set({
         selectedPath: path,
@@ -404,6 +463,19 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
         selectedType: null,
         multiSelection: new Set(),
         selectionAnchor: null,
+      });
+    },
+
+    toggleCategory: (category) => {
+      set((state) => {
+        const next = new Set(state.hiddenCategories);
+        if (next.has(category)) {
+          next.delete(category);
+        } else {
+          next.add(category);
+        }
+        persistHiddenCategories(state.workspaceId, next);
+        return { hiddenCategories: next };
       });
     },
 

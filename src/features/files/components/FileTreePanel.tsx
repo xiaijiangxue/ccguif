@@ -1,8 +1,10 @@
 import {
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import type { MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,23 +25,27 @@ import {
 import {
   buildTree,
   collectDirectoryCacheSnapshot,
+  patchDirectoryCacheSnapshot,
+  patchTree,
   filterDeletedFileTreePathFromSet,
   filterSuppressedFileTreePaths,
   flattenVisibleTree,
   flattenVisibleTreeEntries,
-  getGitignoredFolderAncestorPaths,
   hasKnownFileTreeChild,
   isDirectlyGitignoredFolderPath,
-  isGitignoredFileTreeNode,
   isSameOrDescendantFileTreePath,
   isSpecialDirectoryPath,
   isSuppressedFileTreePath,
+  matchesFilterCategory,
   type FileTreeNode,
   type VisibleFileTreeRow,
+  type DirectoryCacheSnapshot,
+  type DirectoryCacheSnapshotEntry,
 } from "../utils/treeModel";
 import { FilePreviewPopover } from "./FilePreviewPopover";
 import { FileTreeContainer } from "./FileTreeContainer";
 import { FileTreeRootActions } from "./FileTreeRootActions";
+import { FileTreeFilterControl } from "./FileTreeFilterControl";
 import { FileTreeRow } from "./FileTreeRow";
 import { useLazyFileTree } from "../hooks/useLazyFileTree";
 import { useFilePreview } from "../hooks/useFilePreview";
@@ -149,6 +155,7 @@ export function FileTreePanel({
   const loadedLazyDirectories = useFileTreeStore((state) => state.loadedVisibleDirs);
   const loadingLazyDirectories = useFileTreeStore((state) => state.loadingVisibleDirs);
   const lazyDirectoryLoadErrors = useFileTreeStore((state) => state.visibleLoadErrors);
+  const hiddenCategories = useFileTreeStore((state) => state.hiddenCategories);
   const setExpandedFolders = useCallback(
     (folders: Set<string> | ((current: Set<string>) => Set<string>)) => {
       fileTreeStoreApi.getState().setExpandedFolders(folders);
@@ -192,7 +199,11 @@ export function FileTreePanel({
     [fileTreeStoreApi],
   );
   const panelRef = useRef<HTMLElement | null>(null);
-  const fileTreeScrollApiRef = useRef<{ scrollToIndex: (index: number) => void } | null>(null);
+  const fileTreeScrollApiRef = useRef<{
+    scrollToIndex: (index: number, options?: { align?: string }) => void;
+    scrollOffset: number;
+    scrollDirection: "forward" | "backward";
+  } | null>(null);
   const {
     resetLazyTreeState,
     loadLazyDirectoryChildren,
@@ -208,10 +219,48 @@ export function FileTreePanel({
     expandedFolders,
     setExpandedFolders,
   });
-  const directoryCacheSnapshot = useMemo(
-    () => collectDirectoryCacheSnapshot(directoryCache),
-    [directoryCache],
-  );
+  const prevDirectoryCacheRef = useRef(directoryCache);
+  const prevSnapshotRef = useRef<DirectoryCacheSnapshot | null>(null);
+  const prevBuildTreeCacheRef = useRef(directoryCache);
+  const prevNodesRef = useRef<FileTreeNode[]>([]);
+  const lastToggleTimeRef = useRef(0);
+
+  const directoryCacheSnapshot = useMemo(() => {
+    const prevCache = prevDirectoryCacheRef.current;
+    // Single-entry change (lazy-load completion): incrementally patch the snapshot
+    // instead of re-traversing all cache entries.
+    if (
+      directoryCache.size === prevCache.size + 1 ||
+      (directoryCache.size === prevCache.size && directoryCache.size > 0)
+    ) {
+      let changedPath: string | null = null;
+      let newEntry: DirectoryCacheSnapshotEntry | undefined;
+      for (const [path, entry] of directoryCache) {
+        if (!prevCache.has(path) || prevCache.get(path) !== entry) {
+          changedPath = path;
+          newEntry = entry;
+          break;
+        }
+      }
+      if (changedPath && newEntry) {
+        const result = patchDirectoryCacheSnapshot(
+          prevSnapshotRef.current!,
+          changedPath,
+          prevCache.get(changedPath),
+          newEntry,
+        );
+        prevDirectoryCacheRef.current = directoryCache;
+        prevSnapshotRef.current = result;
+        return result;
+      }
+    }
+    // Full refresh: recompute from scratch
+    prevDirectoryCacheRef.current = directoryCache;
+    const snapshot = collectDirectoryCacheSnapshot(directoryCache);
+    prevSnapshotRef.current = snapshot;
+    return snapshot;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- prevSnapshotRef holds the previous snapshot for incremental patching
+  }, [directoryCache]);
 
   const workspaceRootLabel = useMemo(
     () => resolveWorkspaceRootLabel(workspacePath, workspaceName),
@@ -307,6 +356,11 @@ export function FileTreePanel({
       if (isSpecialDirectoryPath(path)) {
         result.add(path);
       }
+      // Gitignored directories are lazy-loaded on demand — their children
+      // are not scanned eagerly to avoid expensive recursive walks.
+      if (mergedGitignoredDirectories.has(path)) {
+        result.add(path);
+      }
       const childState = directoryMetadataByPath.get(path)?.child_state;
       if (
         childState === "unknown" ||
@@ -319,7 +373,7 @@ export function FileTreePanel({
       }
     });
     return result;
-  }, [directoryMetadataByPath, mergedDirectories, mergedFiles]);
+  }, [directoryMetadataByPath, mergedDirectories, mergedFiles, mergedGitignoredDirectories]);
   const hasTreeEntries = mergedFiles.length > 0 || mergedDirectories.length > 0;
   const showLoading = isLoading && !hasTreeEntries;
   const normalizedLoadError =
@@ -344,56 +398,106 @@ export function FileTreePanel({
     return map;
   }, [gitRootWorkspacePrefix, gitStatusFiles, workspacePath]);
 
-  const { nodes, folderPaths } = useMemo(
-    () => buildTree(
+  const { nodes, folderPaths } = useMemo(() => {
+    const prevCache = prevBuildTreeCacheRef.current;
+    // Detect single-directory change (lazy-load completion) for incremental patching
+    const isSingleDirectoryChange = (
+      directoryCache.size === prevCache.size + 1 ||
+      (directoryCache.size === prevCache.size && directoryCache.size > 0)
+    );
+
+    if (isSingleDirectoryChange && prevNodesRef.current.length > 0) {
+      let changedPath: string | null = null;
+      let changedEntry: DirectoryCacheSnapshotEntry | undefined;
+      for (const [path, entry] of directoryCache) {
+        if (!prevCache.has(path) || prevCache.get(path) !== entry) {
+          changedPath = path;
+          changedEntry = entry;
+          break;
+        }
+      }
+      if (changedPath && changedEntry) {
+        const filterChildren = (children: FileTreeNode[]) =>
+          hiddenCategories.size > 0
+            ? children.filter((child) => !matchesFilterCategory(child.name, hiddenCategories))
+            : children;
+        const newChildren = [
+          ...filterChildren(changedEntry.visibleChildren),
+          ...filterChildren(changedEntry.ignoredChildren),
+        ];
+        const patched = patchTree(prevNodesRef.current, changedPath, newChildren);
+        if (patched !== prevNodesRef.current) {
+          prevBuildTreeCacheRef.current = directoryCache;
+          prevNodesRef.current = patched;
+          const patchedFolderPaths = new Set<string>();
+          const collectFolderPaths = (nodeList: FileTreeNode[]) => {
+            for (const n of nodeList) {
+              if (n.type === "folder") {
+                patchedFolderPaths.add(n.path);
+                collectFolderPaths(n.children);
+              }
+            }
+          };
+          collectFolderPaths(patched);
+          return { nodes: patched, folderPaths: patchedFolderPaths };
+        }
+      }
+    }
+
+    // Full rebuild
+    const result = buildTree(
       mergedFiles,
       mergedDirectories,
       seededLazyLoadableDirectories,
       directoryMetadataByPath,
-    ),
-    [
-      seededLazyLoadableDirectories,
-      directoryMetadataByPath,
-      mergedDirectories,
-      mergedFiles,
-    ],
-  );
+      mergedGitignoredDirectories,
+      hiddenCategories,
+    );
+    prevBuildTreeCacheRef.current = directoryCache;
+    prevNodesRef.current = result.nodes;
+    return result;
+  }, [
+    seededLazyLoadableDirectories,
+    directoryMetadataByPath,
+    mergedDirectories,
+    mergedFiles,
+    mergedGitignoredDirectories,
+    directoryCache,
+    hiddenCategories,
+  ]);
   useEffect(() => {
     fileTreeStoreApi.getState().setTreeData(nodes, folderPaths);
   }, [fileTreeStoreApi, folderPaths, nodes]);
 
-  const gitignoredTreeNodeMap = useMemo(() => {
-    const memo = new Map<string, boolean>();
-    nodes.forEach((node) => {
-      isGitignoredFileTreeNode(
-        node,
-        mergedGitignoredFiles,
-        mergedGitignoredDirectories,
-        memo,
-      );
-    });
-    return memo;
-  }, [mergedGitignoredDirectories, mergedGitignoredFiles, nodes]);
-  const gitignoredFolderAncestorPaths = useMemo(
-    () => getGitignoredFolderAncestorPaths(folderPaths, mergedGitignoredDirectories),
-    [folderPaths, mergedGitignoredDirectories],
+  // Gitignored directories are lazy-loaded on demand, so their ancestors
+  // no longer need to be force-expanded.
+  const effectiveExpandedFolders = expandedFolders;
+  const [folderGitStatusMap, setFolderGitStatusMap] = useState<Map<string, string>>(
+    () => new Map(),
   );
-  const effectiveExpandedFolders = useMemo(() => {
-    if (gitignoredFolderAncestorPaths.size === 0) {
-      return expandedFolders;
-    }
-    const next = new Set(expandedFolders);
-    gitignoredFolderAncestorPaths.forEach((path) => {
-      if (folderPaths.has(path)) {
-        next.add(path);
-      }
-    });
-    return next;
-  }, [expandedFolders, folderPaths, gitignoredFolderAncestorPaths]);
-  const folderGitStatusMap = useMemo(() => {
+  const folderGitStatusMapRef = useRef(folderGitStatusMap);
+  folderGitStatusMapRef.current = folderGitStatusMap;
+  useEffect(() => {
     if (!gitStatusFiles || gitStatusFiles.length === 0) {
-      return new Map<string, string>();
+      startTransition(() => {
+        setFolderGitStatusMap(new Map());
+      });
+      return;
     }
+    // Build the set of visible folder paths so we only compute git status
+    // for folders currently in the viewport (+ virtualizer overscan).
+    const visibleEntries = flattenVisibleTreeEntries({
+      nodes,
+      expandedFolders: effectiveExpandedFolders,
+      rootExpanded,
+    });
+    const visibleFolderSet = new Set<string>();
+    for (const entry of visibleEntries) {
+      if (entry.type === "folder") {
+        visibleFolderSet.add(entry.path);
+      }
+    }
+
     const priority: Record<string, number> = { D: 4, A: 3, M: 2, R: 1, T: 0 };
     const map = new Map<string, string>();
     const assignIfHigherPriority = (folderPath: string, status: string) => {
@@ -421,23 +525,27 @@ export function FileTreePanel({
         entryPath,
       );
       pathCandidates.forEach((candidatePath) => {
-        const segments = candidatePath.split("/").filter(Boolean);
-        if (segments.length <= 1) {
+        // Leaf-to-root walk: avoid split/filter/concat overhead.
+        const lastSlash = candidatePath.lastIndexOf("/");
+        if (lastSlash <= 0) {
           return;
         }
-        let folderPath = "";
-        for (let index = 0; index < segments.length - 1; index += 1) {
-          const segment = segments[index] ?? "";
-          folderPath = folderPath
-            ? `${folderPath}/${segment}`
-            : segment;
-          assignIfHigherPriority(folderPath, entryStatus);
+        let currentPath = candidatePath.slice(0, lastSlash);
+        while (currentPath.length > 0) {
+          if (visibleFolderSet.has(currentPath)) {
+            assignIfHigherPriority(currentPath, entryStatus);
+          }
+          const slashIndex = currentPath.lastIndexOf("/");
+          if (slashIndex <= 0) break;
+          currentPath = currentPath.slice(0, slashIndex);
         }
       });
     }
 
-    return map;
-  }, [gitRootWorkspacePrefix, gitStatusFiles, workspacePath]);
+    startTransition(() => {
+      setFolderGitStatusMap(map);
+    });
+  }, [gitRootWorkspacePrefix, gitStatusFiles, workspacePath, nodes, effectiveExpandedFolders, rootExpanded]);
 
   const isRootVisibleExpanded = rootExpanded;
   const visibleTreeNodeEntries = useMemo(
@@ -477,17 +585,17 @@ export function FileTreePanel({
       ),
     [visibleTreeNodeEntries],
   );
+  // Derive all tree node paths from already-computed data instead of a recursive walk.
   const allTreeNodePaths = useMemo(() => {
     const result = new Set<string>([""]);
-    const visit = (node: FileTreeNode) => {
-      result.add(node.path);
-      if (node.type === "folder") {
-        node.children.forEach(visit);
-      }
-    };
-    nodes.forEach(visit);
+    for (const path of folderPaths) {
+      result.add(path);
+    }
+    for (const path of mergedFiles) {
+      result.add(path);
+    }
     return result;
-  }, [nodes]);
+  }, [folderPaths, mergedFiles]);
 
   const setSingleSelection = useCallback((path: string, type: "file" | "folder" | "root") => {
     setSelectedNodePaths(new Set([path]));
@@ -567,24 +675,6 @@ export function FileTreePanel({
   }, [folderPaths]);
 
   useEffect(() => {
-    if (gitignoredFolderAncestorPaths.size === 0) {
-      return;
-    }
-    setExpandedFolders((prev) => {
-      let changed = false;
-      const next = new Set(prev);
-      gitignoredFolderAncestorPaths.forEach((path) => {
-        if (!folderPaths.has(path) || next.has(path)) {
-          return;
-        }
-        next.add(path);
-        changed = true;
-      });
-      return changed ? next : prev;
-    });
-  }, [folderPaths, gitignoredFolderAncestorPaths]);
-
-  useEffect(() => {
     setSelectedNodePaths((prev) => {
       if (prev.size === 0) {
         return prev;
@@ -630,25 +720,19 @@ export function FileTreePanel({
 
   // --- Sync file tree with active editor file ---
   const pendingEditorScrollRef = useRef<string | null>(null);
-
-  // Lookup: path → FileTreeNode for folder nodes (used to check isLazyLoadable).
-  const folderNodeMap = useMemo(() => {
-    const map = new Map<string, FileTreeNode>();
-    const visit = (node: FileTreeNode) => {
-      if (node.type === "folder") {
-        map.set(node.path, node);
-        node.children.forEach(visit);
-      }
-    };
-    nodes.forEach(visit);
-    return map;
-  }, [nodes]);
+  const lastAutoRevealEditorPathRef = useRef<string | null>(null);
 
   // Phase 1: when activeEditorFilePath changes, expand ancestor folders and trigger lazy loads.
   useEffect(() => {
-    if (!activeEditorFilePath) return;
+    if (!activeEditorFilePath) {
+      lastAutoRevealEditorPathRef.current = null;
+      pendingEditorScrollRef.current = null;
+      return;
+    }
+    if (lastAutoRevealEditorPathRef.current === activeEditorFilePath) return;
     const segments = activeEditorFilePath.split("/").filter(Boolean);
     if (segments.length <= 1) return;
+    lastAutoRevealEditorPathRef.current = activeEditorFilePath;
     const ancestorFolders: string[] = [];
     for (let i = 1; i < segments.length; i++) {
       ancestorFolders.push(segments.slice(0, i).join("/"));
@@ -664,8 +748,7 @@ export function FileTreePanel({
           changed = true;
         }
         if (!loadedLazyDirectories.has(folder) && !loadingLazyDirectories.has(folder)) {
-          const node = folderNodeMap.get(folder);
-          if (node && (node.isLazyLoadable ?? false)) {
+          if (seededLazyLoadableDirectories.has(folder)) {
             needsLazyLoad = true;
           }
         }
@@ -675,16 +758,17 @@ export function FileTreePanel({
     if (needsLazyLoad) {
       for (const folder of ancestorFolders) {
         if (!loadedLazyDirectories.has(folder) && !loadingLazyDirectories.has(folder)) {
-          const node = folderNodeMap.get(folder);
-          if (node && (node.isLazyLoadable ?? false)) {
+          if (seededLazyLoadableDirectories.has(folder)) {
             void loadLazyDirectoryChildren(folder);
           }
         }
       }
     }
-  }, [activeEditorFilePath, folderPaths, folderNodeMap, loadedLazyDirectories, loadingLazyDirectories, loadLazyDirectoryChildren]);
+  }, [activeEditorFilePath, folderPaths, seededLazyLoadableDirectories, loadedLazyDirectories, loadingLazyDirectories, loadLazyDirectoryChildren]);
 
   // Phase 2: once rows recompute after expansion/lazy-load, scroll or trigger next lazy load.
+  // Also fires when activeEditorFilePath changes so that switching tabs scrolls even when
+  // the file is already visible and visibleFileTreeRows doesn't change.
   useEffect(() => {
     const filePath = pendingEditorScrollRef.current;
     if (!filePath) return;
@@ -693,7 +777,10 @@ export function FileTreePanel({
     );
     if (idx >= 0) {
       pendingEditorScrollRef.current = null;
-      fileTreeScrollApiRef.current?.scrollToIndex(idx);
+      // Use rAF to ensure the virtualizer has committed the updated row list before scrolling.
+      requestAnimationFrame(() => {
+        fileTreeScrollApiRef.current?.scrollToIndex(idx, { align: "auto" });
+      });
       return;
     }
     // File not visible yet — check if an intermediate lazy folder just finished loading
@@ -716,39 +803,19 @@ export function FileTreePanel({
     });
     for (const folder of ancestorFolders) {
       if (!loadedLazyDirectories.has(folder) && !loadingLazyDirectories.has(folder)) {
-        const node = folderNodeMap.get(folder);
-        if (node && (node.isLazyLoadable ?? false)) {
+        if (seededLazyLoadableDirectories.has(folder)) {
           void loadLazyDirectoryChildren(folder);
         }
       }
     }
-  }, [visibleFileTreeRows, folderPaths, folderNodeMap, loadedLazyDirectories, loadingLazyDirectories, loadLazyDirectoryChildren]);
-
-  useEffect(() => {
-    closePreview();
-    resetLazyTreeState();
-    resetDialogs();
-    setSuppressedDeletedPaths(new Set());
-    setRootExpanded(true);
-    setSelectedNodePath(null);
-    setSelectedNodeType(null);
-    setSelectedNodePaths(new Set());
-    setSelectionAnchorPath(null);
-  }, [
-    resetLazyTreeState,
-    resetDialogs,
-    closePreview,
-    setRootExpanded,
-    setSelectedNodePath,
-    setSelectedNodePaths,
-    setSelectedNodeType,
-    setSelectionAnchorPath,
-    setSuppressedDeletedPaths,
-    workspaceId,
-  ]);
+  }, [activeEditorFilePath, visibleFileTreeRows, folderPaths, seededLazyLoadableDirectories, loadedLazyDirectories, loadingLazyDirectories, loadLazyDirectoryChildren]);
 
   const expandedFoldersRef = useRef(expandedFolders);
   expandedFoldersRef.current = expandedFolders;
+
+  // Leading debounce: fire immediately on first call, ignore subsequent calls
+  // within the cooldown window. Prevents expand→collapse flicker on double-click.
+  const TOGGLE_DEBOUNCE_MS = 50;
 
   const toggleFolder = (path: string) => {
     setExpandedFolders((prev) => {
@@ -764,6 +831,11 @@ export function FileTreePanel({
 
   const toggleFolderExpandedState = useCallback(
     (path: string, isLazyFolder: boolean) => {
+      const now = Date.now();
+      if (now - lastToggleTimeRef.current < TOGGLE_DEBOUNCE_MS) {
+        return;
+      }
+      lastToggleTimeRef.current = now;
       const shouldExpand = !expandedFoldersRef.current.has(path);
       toggleFolder(path);
       if (shouldExpand && isLazyFolder) {
@@ -1161,9 +1233,9 @@ export function FileTreePanel({
       const isLazyFolder = isFolder && (node.isLazyLoadable ?? false);
       const hasChildren = isFolder && node.children.length > 0;
       const canExpand = isFolder && (hasChildren || isLazyFolder);
-      const isExpanded = canExpand && expandedFolders.has(node.path);
+      const isExpanded = canExpand && expandedFoldersRef.current.has(node.path);
       const rawGitStatus = isFolder
-        ? folderGitStatusMap.get(node.path) ?? null
+        ? folderGitStatusMapRef.current.get(node.path) ?? null
         : gitStatusMap.get(node.path) ?? null;
       const fileGitStatus =
         isFolder && rawGitStatus?.toUpperCase() === "D"
@@ -1173,8 +1245,8 @@ export function FileTreePanel({
         ? ` git-${fileGitStatus.toLowerCase()}`
         : "";
       const isGitignored = isFolder
-        ? isDirectlyGitignoredFolderPath(node.path, mergedGitignoredDirectories) ||
-          gitignoredTreeNodeMap.get(node.path) === true
+        ? (node.isGitignored ?? false) ||
+          isDirectlyGitignoredFolderPath(node.path, mergedGitignoredDirectories)
         : mergedGitignoredFiles.has(node.path);
       const isSelected = selectedNodePaths.has(node.path);
       const isPrimarySelection = selectedNodePath === node.path;
@@ -1208,12 +1280,9 @@ export function FileTreePanel({
     [
       t,
       loadLazyDirectoryChildren,
-      expandedFolders,
-      folderGitStatusMap,
       gitStatusMap,
       mergedGitignoredDirectories,
       mergedGitignoredFiles,
-      gitignoredTreeNodeMap,
       selectedNodePaths,
       selectedNodePath,
       activeEditorFilePath,
@@ -1227,7 +1296,11 @@ export function FileTreePanel({
       handleTreeRowMention,
     ],
   );
-  const handleFileTreeRowsReady = useCallback((api: { scrollToIndex: (index: number) => void }) => {
+  const handleFileTreeRowsReady = useCallback((api: {
+    scrollToIndex: (index: number) => void;
+    scrollOffset: number;
+    scrollDirection: "forward" | "backward";
+  }) => {
     fileTreeScrollApiRef.current = api;
   }, []);
 
@@ -1277,6 +1350,7 @@ export function FileTreePanel({
           />
         </div>
       </div>
+      <FileTreeFilterControl />
       <FileTreeContainer
         rows={visibleFileTreeRows}
         isRootExpanded={isRootVisibleExpanded}

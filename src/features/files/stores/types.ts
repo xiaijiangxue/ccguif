@@ -9,6 +9,8 @@ export type FileTreeSelectionType = "file" | "folder" | null;
 export type FileTreeLoadStatus = "idle" | "loading" | "loaded" | "error";
 export type FileTreeDirectoryPhase = "visible" | "ignored";
 
+export type FilterCategory = "Dependencies" | "BuildArtifacts" | "IDEConfig";
+
 export type DirectoryCacheEntry = {
   visibleChildren: FileTreeNode[];
   ignoredChildren: FileTreeNode[];
@@ -42,6 +44,7 @@ export type FileTreeStoreState = {
   selectedType: FileTreeSelectionType;
   multiSelection: Set<string>;
   selectionAnchor: string | null;
+  hiddenCategories: Set<FilterCategory>;
 };
 
 export type FileTreeStoreActions = {
@@ -77,6 +80,7 @@ export type FileTreeStoreActions = {
   failIgnoredLoad: (path: string, error: string) => void;
   incrementEpoch: () => number;
   resetLazyState: () => void;
+  resetWorkspaceSwitchState: () => void;
   selectNode: (path: string, type: Exclude<FileTreeSelectionType, null>) => void;
   setSelectionState: (selection: {
     selectedPath?: string | null;
@@ -98,6 +102,7 @@ export type FileTreeStoreActions = {
     visiblePathOrder?: string[],
     pathTypeByPath?: Map<string, "file" | "folder" | "root">,
   ) => void;
+  toggleCategory: (category: FilterCategory) => void;
 };
 
 export type FileTreeStore = FileTreeStoreState & FileTreeStoreActions;
