@@ -1282,3 +1282,36 @@ Added session-scoped directory scan cache, git2 repo handle caching, cache inval
 ### Next Steps
 
 - None - task complete
+
+
+## Session 32: perf(file-tree): add mtime-based cache staleness detection
+
+**Date**: 2026-06-14
+**Task**: perf(file-tree): add mtime-based cache staleness detection
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added directory_mtime_ms to responses and cache entries, mtime-based staleness checks on backend cache hits, selective directory reset on file change events, and createEmptyCacheEntry optimization to reduce allocations.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `618edaaf` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
