@@ -422,8 +422,8 @@ export function FileTreePanel({
             ? children.filter((child) => !matchesFilterCategory(child.name, hiddenCategories))
             : children;
         const newChildren = [
-          ...filterChildren(changedEntry.visibleChildren),
-          ...filterChildren(changedEntry.ignoredChildren),
+          ...filterChildren(changedEntry.visibleChildren.flatMap((n) => n.children)),
+          ...filterChildren(changedEntry.ignoredChildren.flatMap((n) => n.children)),
         ];
         const patched = patchTree(prevNodesRef.current, changedPath, newChildren);
         if (patched !== prevNodesRef.current) {

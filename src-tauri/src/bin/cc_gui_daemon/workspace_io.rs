@@ -22,6 +22,7 @@ pub(crate) struct CachedDirectoryChildren {
     pub(crate) gitignored_directories: Vec<String>,
     pub(crate) scan_state: WorkspaceScanState,
     pub(crate) limit_hit: bool,
+    pub(crate) cached_mtime_ms: Option<u64>,
 }
 
 pub(crate) type DirectoryCache =
@@ -51,6 +52,8 @@ pub(crate) struct WorkspaceFilesResponse {
     limit_hit: bool,
     #[serde(default)]
     directory_entries: Vec<WorkspaceDirectoryEntry>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    directory_mtime_ms: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -245,6 +248,7 @@ fn workspace_files_response(
     scan_state: WorkspaceScanState,
     limit_hit: bool,
     directory_entries: Vec<WorkspaceDirectoryEntry>,
+    directory_mtime_ms: Option<u64>,
 ) -> WorkspaceFilesResponse {
     WorkspaceFilesResponse {
         files,
@@ -254,6 +258,7 @@ fn workspace_files_response(
         scan_state,
         limit_hit,
         directory_entries,
+        directory_mtime_ms,
     }
 }
 
@@ -473,6 +478,7 @@ pub(crate) fn list_external_spec_tree_inner(
             WorkspaceScanState::Complete,
             false,
             directory_entries,
+        None,
         ));
     }
     let root = resolved.root;
@@ -546,6 +552,7 @@ pub(crate) fn list_external_spec_tree_inner(
         scan_state,
         limit_hit,
         directory_entries,
+    None,
     ))
 }
 
@@ -644,6 +651,7 @@ pub(crate) fn list_workspace_files_inner(
                         scan_state,
                         true,
                         directory_entries,
+                    None,
                     );
                 }
             }
@@ -785,6 +793,11 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
     if !metadata.is_dir() {
         return Err("Path is not a directory.".to_string());
     }
+    let directory_mtime_ms = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64);
 
     let include_gitignore_markers = !normalized_path.is_empty();
     let owned_repo;
@@ -901,6 +914,7 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
         scan_state,
         limit_hit,
         directory_entries,
+        directory_mtime_ms,
     ))
 }
 
@@ -1028,6 +1042,7 @@ pub(crate) fn list_external_absolute_directory_children_inner(
         scan_state,
         limit_hit,
         Vec::new(),
+    None,
     ))
 }
 

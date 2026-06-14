@@ -356,7 +356,61 @@ export function useLazyFileTree({
         expandedFoldersRef.current.has(path) &&
         shouldReloadLazyFileTreePath(path, files, directories, rootDirectoryMetadataByPath),
     );
-    resetLazyTreeState();
+
+    // Selective reset: only clear directories that need re-fetching from the
+    // frontend cache. Directories NOT in this list retain their cached tree
+    // nodes, avoiding redundant re-parsing when the backend cache serves the
+    // same data (no filesystem change behind those directories).
+    if (expandedLazyFolders.length > 0) {
+      const dirsToReload = new Set(expandedLazyFolders);
+      const state = fileTreeStoreApi.getState();
+      const nextDirectoryCache = new Map(state.directoryCache);
+      dirsToReload.forEach((dirPath) => nextDirectoryCache.delete(dirPath));
+      const nextLoadedVisible = new Set(state.loadedVisibleDirs);
+      const nextLoadingVisible = new Set(state.loadingVisibleDirs);
+      const nextLoadedIgnored = new Set(state.loadedIgnoredDirs);
+      const nextLoadingIgnored = new Set(state.loadingIgnoredDirs);
+      const nextVisibleErrors = new Map(state.visibleLoadErrors);
+      const nextIgnoredErrors = new Map(state.ignoredLoadErrors);
+      const nextLazyMeta = new Map(state.lazyMetadata);
+      dirsToReload.forEach((dirPath) => {
+        nextLoadedVisible.delete(dirPath);
+        nextLoadingVisible.delete(dirPath);
+        nextLoadedIgnored.delete(dirPath);
+        nextLoadingIgnored.delete(dirPath);
+        nextVisibleErrors.delete(dirPath);
+        nextIgnoredErrors.delete(dirPath);
+        nextLazyMeta.delete(dirPath);
+      });
+      // Remove from ref tracking so loadLazyDirectoryChildren will re-fetch.
+      const removeDirsFromSet = (set: Set<string>) => {
+        let changed = false;
+        const next = new Set<string>();
+        set.forEach((path) => {
+          if (dirsToReload.has(path)) {
+            changed = true;
+          } else {
+            next.add(path);
+          }
+        });
+        return changed ? next : set;
+      };
+      loadedLazyDirectoriesRef.current = removeDirsFromSet(loadedLazyDirectoriesRef.current);
+      loadingLazyDirectoriesRef.current = removeDirsFromSet(loadingLazyDirectoriesRef.current);
+      fileTreeStoreApi.setState({
+        directoryCache: nextDirectoryCache,
+        loadingVisibleDirs: nextLoadingVisible,
+        loadedVisibleDirs: nextLoadedVisible,
+        visibleLoadErrors: nextVisibleErrors,
+        loadingIgnoredDirs: nextLoadingIgnored,
+        loadedIgnoredDirs: nextLoadedIgnored,
+        ignoredLoadErrors: nextIgnoredErrors,
+        lazyMetadata: nextLazyMeta,
+        epoch: state.epoch + 1,
+      });
+      lazyLoadEpochRef.current += 1;
+    }
+
     setExpandedFolders((prev) => filterUnknownExpandedFileTreePaths(prev, files, directories));
     expandedLazyFolders.forEach((path) => {
       void loadLazyDirectoryChildren(path);
@@ -368,7 +422,7 @@ export function useLazyFileTree({
     ignoredDirectories,
     ignoredFiles,
     loadLazyDirectoryChildren,
-    resetLazyTreeState,
+    fileTreeStoreApi,
     setExpandedFolders,
     workspaceId,
   ]);

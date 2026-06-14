@@ -30,6 +30,9 @@ pub(crate) struct CachedDirectoryChildren {
     pub(crate) gitignored_directories: Vec<String>,
     pub(crate) scan_state: WorkspaceScanState,
     pub(crate) limit_hit: bool,
+    /// Directory mtime (millis since UNIX epoch) captured at scan time.
+    /// Used for staleness checks on subsequent cache hits.
+    pub(crate) cached_mtime_ms: Option<u64>,
 }
 
 /// Thread-safe directory scan cache. The key is the **canonical** directory
@@ -52,6 +55,7 @@ impl CachedDirectoryChildren {
             gitignored_directories: response.gitignored_directories.clone(),
             scan_state: response.scan_state,
             limit_hit: response.limit_hit,
+            cached_mtime_ms: response.directory_mtime_ms,
         }
     }
 
@@ -105,6 +109,7 @@ impl CachedDirectoryChildren {
             self.scan_state,
             self.limit_hit,
             directory_entries,
+            self.cached_mtime_ms,
         )
     }
 }
@@ -145,7 +150,23 @@ pub(crate) fn list_workspace_directory_children_cached(
     {
         let cache_guard = cache.lock().map_err(|err| err.to_string())?;
         if let Some(cached) = cache_guard.get(&canonical_path) {
-            return Ok(cached.to_response(scope, &normalized_path));
+            // Staleness check: if we have a cached mtime, compare against the
+            // directory's current mtime. On most OSes the directory mtime
+            // updates when direct children are added/removed.
+            if let Some(cached_mtime) = cached.cached_mtime_ms {
+                let current_mtime = std::fs::metadata(&canonical_path)
+                    .ok()
+                    .and_then(|m| m.modified().ok())
+                    .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+                    .map(|d| d.as_millis() as u64);
+                if current_mtime == Some(cached_mtime) {
+                    return Ok(cached.to_response(scope, &normalized_path));
+                }
+                // mtime changed — drop stale entry and fall through to rescan.
+            } else {
+                // No mtime recorded (legacy entry) — serve from cache.
+                return Ok(cached.to_response(scope, &normalized_path));
+            }
         }
     }
 
@@ -447,6 +468,10 @@ pub(crate) struct WorkspaceFilesResponse {
     pub(crate) limit_hit: bool,
     #[serde(default)]
     pub(crate) directory_entries: Vec<WorkspaceDirectoryEntry>,
+    /// Directory mtime (millis since UNIX epoch) at scan time, for cache
+    /// staleness detection on the frontend.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) directory_mtime_ms: Option<u64>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -507,6 +532,7 @@ fn workspace_files_response(
     scan_state: WorkspaceScanState,
     limit_hit: bool,
     directory_entries: Vec<WorkspaceDirectoryEntry>,
+    directory_mtime_ms: Option<u64>,
 ) -> WorkspaceFilesResponse {
     WorkspaceFilesResponse {
         files,
@@ -516,6 +542,7 @@ fn workspace_files_response(
         scan_state,
         limit_hit,
         directory_entries,
+        directory_mtime_ms,
     }
 }
 
@@ -1226,6 +1253,7 @@ pub(crate) fn list_workspace_files_inner(
                         scan_state,
                         true,
                         directory_entries,
+                    None,
                     );
                 }
             }
@@ -1381,6 +1409,7 @@ pub(crate) fn list_workspace_files_inner(
         scan_state,
         limit_hit,
         directory_entries,
+        None,
     )
 }
 
@@ -1422,6 +1451,11 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
     if !metadata.is_dir() {
         return Err("Path is not a directory.".to_string());
     }
+    let directory_mtime_ms = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64);
 
     // Enable gitignore detection at root level when scope is All so the
     // frontend knows which directories are gitignored and can lazy-load them.
@@ -1541,6 +1575,7 @@ fn list_workspace_directory_children_scoped_inner_with_scope(
         scan_state,
         limit_hit,
         directory_entries,
+        directory_mtime_ms,
     ))
 }
 
@@ -1668,6 +1703,7 @@ pub(crate) fn list_external_absolute_directory_children_inner(
         scan_state,
         limit_hit,
         Vec::new(),
+    None,
     ))
 }
 
@@ -1810,6 +1846,7 @@ pub(crate) fn list_external_spec_tree_inner(
             WorkspaceScanState::Complete,
             false,
             directory_entries,
+        None,
         ));
     }
     let root = resolved.root;
@@ -1883,6 +1920,7 @@ pub(crate) fn list_external_spec_tree_inner(
         scan_state,
         limit_hit,
         directory_entries,
+    None,
     ))
 }
 

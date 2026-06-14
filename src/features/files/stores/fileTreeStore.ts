@@ -49,18 +49,19 @@ function buildChildrenFromResponse(
   return buildTree(files, directories, new Set(), metadataByPath, undefined, hiddenCategories).nodes;
 }
 
-function cloneCacheEntry(entry: DirectoryCacheEntry | undefined): DirectoryCacheEntry {
+function createEmptyCacheEntry(): DirectoryCacheEntry {
   return {
-    visibleChildren: entry?.visibleChildren ?? [...EMPTY_DIRECTORY_CHILDREN],
-    ignoredChildren: entry?.ignoredChildren ?? [...EMPTY_DIRECTORY_CHILDREN],
-    metadataByPath: new Map(entry?.metadataByPath),
-    childState: entry?.childState ?? null,
-    visibleStatus: entry?.visibleStatus ?? "idle",
-    ignoredStatus: entry?.ignoredStatus ?? "idle",
-    visibleError: entry?.visibleError ?? null,
-    ignoredError: entry?.ignoredError ?? null,
-    confirmedEmpty: entry?.confirmedEmpty ?? false,
-    loadedEpoch: entry?.loadedEpoch ?? 0,
+    visibleChildren: [...EMPTY_DIRECTORY_CHILDREN],
+    ignoredChildren: [...EMPTY_DIRECTORY_CHILDREN],
+    metadataByPath: new Map(),
+    childState: null,
+    visibleStatus: "idle",
+    ignoredStatus: "idle",
+    visibleError: null,
+    ignoredError: null,
+    confirmedEmpty: false,
+    loadedEpoch: 0,
+    cachedMtimeMs: null,
   };
 }
 
@@ -121,8 +122,11 @@ function mergeDirectoryResponseIntoState(
   options?: { allowParentStateOverride?: boolean; confirmedEmpty?: boolean },
 ) {
   const allowParentStateOverride = options?.allowParentStateOverride ?? true;
-  const nextDirectoryCache = new Map(state.directoryCache);
-  const entry = cloneCacheEntry(nextDirectoryCache.get(path));
+  const existingEntry = state.directoryCache.get(path);
+
+  // Mutable update: reuse existing entry object instead of cloning.
+  // This avoids allocating new Maps/Sets on every lazy-load completion.
+  const entry = existingEntry ?? createEmptyCacheEntry();
   const metadata = normalizeDirectoryMetadata(response).filter(
     (item) => allowParentStateOverride || item.path !== path,
   );
@@ -145,6 +149,11 @@ function mergeDirectoryResponseIntoState(
 
   entry.confirmedEmpty = options?.confirmedEmpty ?? entry.confirmedEmpty;
   entry.loadedEpoch = state.epoch;
+  entry.cachedMtimeMs = response.directory_mtime_ms ?? null;
+
+  // Create a new Map reference to trigger Zustand's shallow equality check.
+  // The entry object was mutated in place — only the Map wrapper is new.
+  const nextDirectoryCache = new Map(state.directoryCache);
   nextDirectoryCache.set(path, entry);
 
   const nextLazyMetadata = new Map(state.lazyMetadata);
@@ -322,7 +331,8 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
         loadingVisibleDirs: removePathFromSet(state.loadingVisibleDirs, path),
         visibleLoadErrors: setLoadError(state.visibleLoadErrors, path, error),
         directoryCache: new Map(state.directoryCache).set(path, {
-          ...cloneCacheEntry(state.directoryCache.get(path)),
+          ...createEmptyCacheEntry(),
+          ...(state.directoryCache.get(path) ?? {}),
           visibleStatus: "error",
           visibleError: error,
           loadedEpoch: state.epoch,
@@ -351,7 +361,8 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
         loadingIgnoredDirs: removePathFromSet(state.loadingIgnoredDirs, path),
         ignoredLoadErrors: setLoadError(state.ignoredLoadErrors, path, error),
         directoryCache: new Map(state.directoryCache).set(path, {
-          ...cloneCacheEntry(state.directoryCache.get(path)),
+          ...createEmptyCacheEntry(),
+          ...(state.directoryCache.get(path) ?? {}),
           ignoredStatus: "error",
           ignoredError: error,
           loadedEpoch: state.epoch,

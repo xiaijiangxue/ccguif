@@ -1631,6 +1631,7 @@ export type WorkspaceFilesResponse = {
   scan_state?: WorkspaceFileScanState;
   limit_hit?: boolean;
   directory_entries?: WorkspaceDirectoryEntry[];
+  directory_mtime_ms?: number | null;
 };
 
 export type WorkspaceFileScanState = "complete" | "partial";

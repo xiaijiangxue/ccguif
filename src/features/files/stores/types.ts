@@ -22,6 +22,7 @@ export type DirectoryCacheEntry = {
   ignoredError: string | null;
   confirmedEmpty: boolean;
   loadedEpoch: number;
+  cachedMtimeMs: number | null;
 };
 
 export type FileTreeStoreState = {
