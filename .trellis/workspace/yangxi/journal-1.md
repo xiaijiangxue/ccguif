@@ -1414,3 +1414,36 @@ Shortcuts page polish: start categories collapsed by default, reorder default sh
 ### Next Steps
 
 - None - task complete
+
+
+## Session 36: feat(shortcuts): add navigation shortcuts (definition, usages, implementation)
+
+**Date**: 2026-06-15
+**Task**: feat(shortcuts): add navigation shortcuts (definition, usages, implementation)
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added goToDefinition (cmd+b), findUsages (alt+f7), goToImplementation (alt+cmd+b) shortcut settings across full stack: Rust types, TS types, settings hook, shortcuts metadata, icons, i18n.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `131e9f1b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
