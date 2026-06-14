@@ -1249,3 +1249,36 @@ Major refactor: decomposed ~3000-line FileTreePanel into FileTreeContainer, File
 ### Next Steps
 
 - None - task complete
+
+
+## Session 31: perf(file-tree): add directory scan caching and filter controls
+
+**Date**: 2026-06-14
+**Task**: perf(file-tree): add directory scan caching and filter controls
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added session-scoped directory scan cache, git2 repo handle caching, cache invalidation after writes, scoped child scan responses, filter category system with localStorage persistence, FileTreeFilterControl component, and treeModel filter enhancements. Includes perf brainstorm and optimization plan docs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b8160b2a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
