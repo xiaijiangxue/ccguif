@@ -38,7 +38,7 @@ type CheckForUpdatesOptions = {
   interactive?: boolean;
 };
 
-const AUTO_UPDATE_ENABLED = true;
+const AUTO_UPDATE_ENABLED = false;
 
 function normalizeUpdateVersion(value: string | null | undefined): string | null {
   const trimmed = value?.trim();

@@ -187,7 +187,7 @@ export function ShortcutsSection({
   const [searchQuery, setSearchQuery] = useState("");
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<ShortcutCategory>
-  >(new Set());
+  >(new Set(shortcutCategoryDefinitions.map((c) => c.id)));
   const savedCollapsedRef = useRef<Set<ShortcutCategory>>(new Set());
 
   const isSearching = searchQuery.trim().length > 0;
@@ -323,12 +323,6 @@ export function ShortcutsSection({
 
   return (
     <section className="settings-section settings-shortcuts-section">
-      <div className="settings-section-title">
-        {t("settings.shortcutsTitle")}
-      </div>
-      <div className="settings-section-subtitle">
-        {t("settings.shortcutsDescription")}
-      </div>
 
       {/* Search bar */}
       <div className="settings-shortcuts-search">
@@ -404,6 +398,12 @@ export function ShortcutsSection({
                           <span className="settings-shortcuts-item-title">
                             {t(action.labelKey)}
                           </span>
+                          <span className="settings-shortcuts-item-default">
+                            {t(action.defaultLabelKey ?? "settings.defaultColon")}{" "}
+                            {defaultShortcut
+                              ? formatShortcutForPlatform(defaultShortcut)
+                              : t("settings.notSet")}
+                          </span>
                           <ShortcutInput
                             className={`settings-input settings-input--shortcut settings-shortcuts-item-input${conflicts?.length ? " settings-shortcuts-item-input--conflict" : ""}`}
                             value={
@@ -422,12 +422,6 @@ export function ShortcutsSection({
                                 : undefined
                             }
                           />
-                          <span className="settings-shortcuts-item-default">
-                            {t(action.defaultLabelKey ?? "settings.defaultColon")}{" "}
-                            {defaultShortcut
-                              ? formatShortcutForPlatform(defaultShortcut)
-                              : t("settings.notSet")}
-                          </span>
                           {draftValue ? (
                             <>
                               {defaultShortcut && draftValue.toLowerCase() !== defaultShortcut.toLowerCase() && (

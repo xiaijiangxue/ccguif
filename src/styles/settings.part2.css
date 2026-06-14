@@ -1918,7 +1918,7 @@
 .settings-shortcuts-groups {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 6px;
 }
 
 /* --- Search bar --- */
@@ -2008,13 +2008,14 @@
 .settings-shortcuts-grid {
   display: flex;
   flex-direction: column;
+  padding-left: 24px;
 }
 
 /* --- Item row --- */
 
 .settings-shortcuts-item {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto;
   align-items: center;
   gap: 10px;
   min-height: 36px;
