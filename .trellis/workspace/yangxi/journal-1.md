@@ -1315,3 +1315,36 @@ Added directory_mtime_ms to responses and cache entries, mtime-based staleness c
 ### Next Steps
 
 - None - task complete
+
+
+## Session 33: refactor(file-tree): move filter dropdown to root actions bar
+
+**Date**: 2026-06-14
+**Task**: refactor(file-tree): move filter dropdown to root actions bar
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Moved hidden category dropdown from FileTreeFilterControl to FileTreeRootActions, simplified filter chips to remove borders and use muted colors, updated dropdown positioning to right-align.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `66311745` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

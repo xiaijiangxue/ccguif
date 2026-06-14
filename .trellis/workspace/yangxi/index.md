@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 32
+- **Total Sessions**: 33
 - **Last Active**: 2026-06-14
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1317 | Active |
+| `journal-1.md` | ~1350 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 33 | 2026-06-14 | refactor(file-tree): move filter dropdown to root actions bar | `66311745` | `refactor/liquid-precision-ui` |
 | 32 | 2026-06-14 | perf(file-tree): add mtime-based cache staleness detection | `618edaaf` | `refactor/liquid-precision-ui` |
 | 31 | 2026-06-14 | perf(file-tree): add directory scan caching and filter controls | `b8160b2a` | `refactor/liquid-precision-ui` |
 | 30 | 2026-06-14 | refactor(file-tree): decompose monolithic FileTreePanel into focused modules | `a86bb70d` | `refactor/liquid-precision-ui` |
