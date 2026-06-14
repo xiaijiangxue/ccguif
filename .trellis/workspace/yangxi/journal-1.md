@@ -1447,3 +1447,36 @@ Added goToDefinition (cmd+b), findUsages (alt+f7), goToImplementation (alt+cmd+b
 ### Next Steps
 
 - None - task complete
+
+
+## Session 37: fix: type assertions, null guards, and unused import cleanup
+
+**Date**: 2026-06-15
+**Task**: fix: type assertions, null guards, and unused import cleanup
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Small fixes: null guards for scrollOffset and fileContent, Zustand type assertions, explicit generic on flatMap, unused import/variable cleanup, test fixture updates for gitignored fields.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b911bb13` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
