@@ -1348,3 +1348,36 @@ Moved hidden category dropdown from FileTreeFilterControl to FileTreeRootActions
 ### Next Steps
 
 - None - task complete
+
+
+## Session 34: refactor(shortcuts): add search, new shortcuts, and page redesign
+
+**Date**: 2026-06-15
+**Task**: refactor(shortcuts): add search, new shortcuts, and page redesign
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added 12 new shortcut settings to AppSettings, redesigned ShortcutsSection with search/filter and Mac symbol normalization, added ShortcutInput with flash animation, shortcut conflict detection, en/zh i18n, and updated CSS. Includes brainstorm and plan docs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `94fa0a2d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
