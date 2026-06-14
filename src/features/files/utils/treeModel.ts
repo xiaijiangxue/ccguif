@@ -619,7 +619,7 @@ export function collectDirectoryCacheSnapshot(
  */
 export function patchDirectoryCacheSnapshot(
   previous: DirectoryCacheSnapshot,
-  changedPath: string,
+  _changedPath: string,
   oldEntry: DirectoryCacheSnapshotEntry | undefined,
   newEntry: DirectoryCacheSnapshotEntry,
 ): DirectoryCacheSnapshot {

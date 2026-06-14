@@ -420,7 +420,7 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
     },
 
     setSelectionState: (selection) => {
-      set(selection);
+      set(selection as FileTreeStore);
     },
 
     setMultiSelection: (selection) => {
@@ -493,7 +493,7 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
     pruneSelection: (existingPaths, visiblePathOrder, pathTypeByPath) => {
       set((state) => {
         if (state.multiSelection.size === 0) {
-          return {};
+          return {} as FileTreeStore;
         }
         let changed = false;
         const next = new Set<string>();
@@ -505,7 +505,7 @@ export function createFileTreeStore(options: CreateFileTreeStoreOptions): FileTr
           }
         });
         if (!changed) {
-          return {};
+          return {} as FileTreeStore;
         }
         const nextPrimaryPath =
           state.selectedPath && next.has(state.selectedPath)

@@ -217,7 +217,6 @@ export function FileTreePanel({
     scrollDirection: "forward" | "backward";
   } | null>(null);
   const {
-    resetLazyTreeState,
     loadLazyDirectoryChildren,
     purgeLazyDeletedPath,
     createExpandedLazyDirectoryReloader,
@@ -310,7 +309,6 @@ export function FileTreePanel({
     newFolderInputRef,
     openNewFolderPrompt,
     cancelNewFolder,
-    resetDialogs,
   } = useTreeDialogs(getFileTreeItemName);
   const resolvePath = useCallback(
     (relativePath: string) => {

@@ -50,7 +50,9 @@ export function useJdtlsWarmup({
           setState({ isWarming: false, error: null });
           return;
         }
-        await getJdtlsDidOpen(workspaceId, { filePath, content: fileContent });
+        if (fileContent != null) {
+          await getJdtlsDidOpen(workspaceId, { filePath, content: fileContent });
+        }
         if (!cancelled) {
           warmedWorkspaceRef.current = workspacePath;
           setState({ isWarming: false, error: null });

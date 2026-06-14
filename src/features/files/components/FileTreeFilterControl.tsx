@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import {
   ALL_FILTER_CATEGORIES,
 } from "../utils/treeModel";
@@ -12,7 +11,6 @@ const CATEGORY_LABELS: Record<FilterCategory, string> = {
 };
 
 export function FileTreeFilterControl() {
-  const { t } = useTranslation();
   const hiddenCategories = useFileTreeStore((s) => s.hiddenCategories);
   const fileTreeStoreApi = useFileTreeStoreApi();
 

@@ -21,6 +21,8 @@ describe("fileTreeStore", () => {
     store.getState().completeVisibleLoad("src", {
       files: ["src/index.ts"],
       directories: [],
+      gitignored_files: [],
+      gitignored_directories: [],
       directory_entries: [{ path: "src", child_state: "loaded" }],
     });
     expect(store.getState().loadingVisibleDirs.has("src")).toBe(false);
@@ -31,6 +33,8 @@ describe("fileTreeStore", () => {
     store.getState().completeIgnoredLoad("src", {
       files: ["src/.ignored.ts"],
       directories: [],
+      gitignored_files: [],
+      gitignored_directories: [],
     });
 
     const cacheEntry = store.getState().directoryCache.get("src");
@@ -87,7 +91,12 @@ describe("fileTreeStore", () => {
     const listener = vi.fn();
 
     const unsubscribe = store.subscribe(listener, (state) => state.selectedPath);
-    store.getState().completeVisibleLoad("src", { files: ["src/index.ts"], directories: [] });
+    store.getState().completeVisibleLoad("src", {
+      files: ["src/index.ts"],
+      directories: [],
+      gitignored_files: [],
+      gitignored_directories: [],
+    });
 
     expect(listener).not.toHaveBeenCalled();
     unsubscribe();

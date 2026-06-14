@@ -101,6 +101,8 @@ describe("treeModel", () => {
       hasWorkspaceDirectoryEntries({
         files: ["src/index.ts"],
         directories: [],
+        gitignored_files: [],
+        gitignored_directories: [],
       }),
     ).toBe(true);
   });

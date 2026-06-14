@@ -1212,7 +1212,7 @@ export function FileViewPanel({
     if (!fileIsJava && !fileIsMapperXml) {
       return [];
     }
-    return content.split(/\r?\n/).flatMap((lineText, index) => {
+    return content.split(/\r?\n/).flatMap<GutterNavigationEntry>((lineText, index) => {
       const line = index + 1;
       if (fileIsJava && extractJavaMethodName(lineText)) {
         return [{

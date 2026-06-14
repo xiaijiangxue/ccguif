@@ -54,6 +54,9 @@ export function FileTreeContainer({
   });
 
   useEffect(() => {
+    if (rowVirtualizer.scrollOffset == null || rowVirtualizer.scrollDirection == null) {
+      return;
+    }
     onRowsReady?.({
       scrollToIndex: (index) => rowVirtualizer.scrollToIndex(index, { align: "auto" }),
       scrollOffset: rowVirtualizer.scrollOffset,
