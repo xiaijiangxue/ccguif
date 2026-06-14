@@ -930,6 +930,13 @@ pub(crate) struct AppSettings {
         rename = "composerCollaborationShortcut"
     )]
     pub(crate) composer_collaboration_shortcut: Option<String>,
+    #[serde(
+        default = "default_open_settings_shortcut",
+        rename = "openSettingsShortcut"
+    )]
+    pub(crate) open_settings_shortcut: Option<String>,
+    #[serde(default = "default_new_window_shortcut", rename = "newWindowShortcut")]
+    pub(crate) new_window_shortcut: Option<String>,
     #[serde(default = "default_new_agent_shortcut", rename = "newAgentShortcut")]
     pub(crate) new_agent_shortcut: Option<String>,
     #[serde(
@@ -952,6 +959,33 @@ pub(crate) struct AppSettings {
         rename = "closeCurrentSessionShortcut"
     )]
     pub(crate) close_current_session_shortcut: Option<String>,
+    #[serde(default = "default_open_chat_shortcut", rename = "openChatShortcut")]
+    pub(crate) open_chat_shortcut: Option<String>,
+    #[serde(
+        default = "default_open_kanban_shortcut",
+        rename = "openKanbanShortcut"
+    )]
+    pub(crate) open_kanban_shortcut: Option<String>,
+    #[serde(
+        default = "default_cycle_open_session_prev_shortcut",
+        rename = "cycleOpenSessionPrevShortcut"
+    )]
+    pub(crate) cycle_open_session_prev_shortcut: Option<String>,
+    #[serde(
+        default = "default_cycle_open_session_next_shortcut",
+        rename = "cycleOpenSessionNextShortcut"
+    )]
+    pub(crate) cycle_open_session_next_shortcut: Option<String>,
+    #[serde(
+        default = "default_toggle_left_conversation_sidebar_shortcut",
+        rename = "toggleLeftConversationSidebarShortcut"
+    )]
+    pub(crate) toggle_left_conversation_sidebar_shortcut: Option<String>,
+    #[serde(
+        default = "default_toggle_right_conversation_sidebar_shortcut",
+        rename = "toggleRightConversationSidebarShortcut"
+    )]
+    pub(crate) toggle_right_conversation_sidebar_shortcut: Option<String>,
     #[serde(
         default = "default_toggle_projects_sidebar_shortcut",
         rename = "toggleProjectsSidebarShortcut"
@@ -977,6 +1011,43 @@ pub(crate) struct AppSettings {
         rename = "toggleTerminalShortcut"
     )]
     pub(crate) toggle_terminal_shortcut: Option<String>,
+    #[serde(
+        default = "default_toggle_runtime_console_shortcut",
+        rename = "toggleRuntimeConsoleShortcut"
+    )]
+    pub(crate) toggle_runtime_console_shortcut: Option<String>,
+    #[serde(
+        default = "default_toggle_files_surface_shortcut",
+        rename = "toggleFilesSurfaceShortcut"
+    )]
+    pub(crate) toggle_files_surface_shortcut: Option<String>,
+    #[serde(default = "default_save_file_shortcut", rename = "saveFileShortcut")]
+    pub(crate) save_file_shortcut: Option<String>,
+    #[serde(
+        default = "default_find_in_file_shortcut",
+        rename = "findInFileShortcut"
+    )]
+    pub(crate) find_in_file_shortcut: Option<String>,
+    #[serde(
+        default = "default_toggle_git_diff_list_view_shortcut",
+        rename = "toggleGitDiffListViewShortcut"
+    )]
+    pub(crate) toggle_git_diff_list_view_shortcut: Option<String>,
+    #[serde(
+        default = "default_increase_ui_scale_shortcut",
+        rename = "increaseUiScaleShortcut"
+    )]
+    pub(crate) increase_ui_scale_shortcut: Option<String>,
+    #[serde(
+        default = "default_decrease_ui_scale_shortcut",
+        rename = "decreaseUiScaleShortcut"
+    )]
+    pub(crate) decrease_ui_scale_shortcut: Option<String>,
+    #[serde(
+        default = "default_reset_ui_scale_shortcut",
+        rename = "resetUiScaleShortcut"
+    )]
+    pub(crate) reset_ui_scale_shortcut: Option<String>,
     #[serde(
         default = "default_cycle_agent_next_shortcut",
         rename = "cycleAgentNextShortcut"
@@ -1364,12 +1435,20 @@ fn default_composer_collaboration_shortcut() -> Option<String> {
     Some("shift+tab".to_string())
 }
 
+fn default_open_settings_shortcut() -> Option<String> {
+    Some("cmd+,".to_string())
+}
+
+fn default_new_window_shortcut() -> Option<String> {
+    Some("cmd+shift+n".to_string())
+}
+
 fn default_new_agent_shortcut() -> Option<String> {
     Some("cmd+n".to_string())
 }
 
 fn default_new_worktree_agent_shortcut() -> Option<String> {
-    Some("cmd+shift+n".to_string())
+    Some("cmd+alt+shift+n".to_string())
 }
 
 fn default_new_clone_agent_shortcut() -> Option<String> {
@@ -1382,6 +1461,30 @@ fn default_archive_thread_shortcut() -> Option<String> {
 
 fn default_close_current_session_shortcut() -> Option<String> {
     Some("cmd+w".to_string())
+}
+
+fn default_open_chat_shortcut() -> Option<String> {
+    Some("cmd+j".to_string())
+}
+
+fn default_open_kanban_shortcut() -> Option<String> {
+    Some("cmd+k".to_string())
+}
+
+fn default_cycle_open_session_prev_shortcut() -> Option<String> {
+    Some("cmd+shift+[".to_string())
+}
+
+fn default_cycle_open_session_next_shortcut() -> Option<String> {
+    Some("cmd+shift+]".to_string())
+}
+
+fn default_toggle_left_conversation_sidebar_shortcut() -> Option<String> {
+    Some("cmd+alt+[".to_string())
+}
+
+fn default_toggle_right_conversation_sidebar_shortcut() -> Option<String> {
+    Some("cmd+alt+]".to_string())
 }
 
 fn default_toggle_projects_sidebar_shortcut() -> Option<String> {
@@ -1402,6 +1505,38 @@ fn default_toggle_debug_panel_shortcut() -> Option<String> {
 
 fn default_toggle_terminal_shortcut() -> Option<String> {
     Some("cmd+shift+t".to_string())
+}
+
+fn default_toggle_runtime_console_shortcut() -> Option<String> {
+    Some("cmd+shift+`".to_string())
+}
+
+fn default_toggle_files_surface_shortcut() -> Option<String> {
+    Some("cmd+shift+e".to_string())
+}
+
+fn default_save_file_shortcut() -> Option<String> {
+    Some("cmd+s".to_string())
+}
+
+fn default_find_in_file_shortcut() -> Option<String> {
+    Some("cmd+f".to_string())
+}
+
+fn default_toggle_git_diff_list_view_shortcut() -> Option<String> {
+    Some("alt+shift+v".to_string())
+}
+
+fn default_increase_ui_scale_shortcut() -> Option<String> {
+    Some("cmd+=".to_string())
+}
+
+fn default_decrease_ui_scale_shortcut() -> Option<String> {
+    Some("cmd+-".to_string())
+}
+
+fn default_reset_ui_scale_shortcut() -> Option<String> {
+    Some("cmd+0".to_string())
 }
 
 fn default_cycle_agent_next_shortcut() -> Option<String> {
@@ -1696,16 +1831,34 @@ impl Default for AppSettings {
             composer_reasoning_shortcut: default_composer_reasoning_shortcut(),
             interrupt_shortcut: default_interrupt_shortcut(),
             composer_collaboration_shortcut: default_composer_collaboration_shortcut(),
+            open_settings_shortcut: default_open_settings_shortcut(),
+            new_window_shortcut: default_new_window_shortcut(),
             new_agent_shortcut: default_new_agent_shortcut(),
             new_worktree_agent_shortcut: default_new_worktree_agent_shortcut(),
             new_clone_agent_shortcut: default_new_clone_agent_shortcut(),
             archive_thread_shortcut: default_archive_thread_shortcut(),
             close_current_session_shortcut: default_close_current_session_shortcut(),
+            open_chat_shortcut: default_open_chat_shortcut(),
+            open_kanban_shortcut: default_open_kanban_shortcut(),
+            cycle_open_session_prev_shortcut: default_cycle_open_session_prev_shortcut(),
+            cycle_open_session_next_shortcut: default_cycle_open_session_next_shortcut(),
+            toggle_left_conversation_sidebar_shortcut:
+                default_toggle_left_conversation_sidebar_shortcut(),
+            toggle_right_conversation_sidebar_shortcut:
+                default_toggle_right_conversation_sidebar_shortcut(),
             toggle_projects_sidebar_shortcut: default_toggle_projects_sidebar_shortcut(),
             toggle_git_sidebar_shortcut: default_toggle_git_sidebar_shortcut(),
             toggle_global_search_shortcut: default_toggle_global_search_shortcut(),
             toggle_debug_panel_shortcut: default_toggle_debug_panel_shortcut(),
             toggle_terminal_shortcut: default_toggle_terminal_shortcut(),
+            toggle_runtime_console_shortcut: default_toggle_runtime_console_shortcut(),
+            toggle_files_surface_shortcut: default_toggle_files_surface_shortcut(),
+            save_file_shortcut: default_save_file_shortcut(),
+            find_in_file_shortcut: default_find_in_file_shortcut(),
+            toggle_git_diff_list_view_shortcut: default_toggle_git_diff_list_view_shortcut(),
+            increase_ui_scale_shortcut: default_increase_ui_scale_shortcut(),
+            decrease_ui_scale_shortcut: default_decrease_ui_scale_shortcut(),
+            reset_ui_scale_shortcut: default_reset_ui_scale_shortcut(),
             cycle_agent_next_shortcut: default_cycle_agent_next_shortcut(),
             cycle_agent_prev_shortcut: default_cycle_agent_prev_shortcut(),
             cycle_workspace_next_shortcut: default_cycle_workspace_next_shortcut(),
@@ -1882,6 +2035,8 @@ mod tests {
             settings.composer_collaboration_shortcut.as_deref(),
             Some("shift+tab")
         );
+        assert_eq!(settings.open_settings_shortcut.as_deref(), Some("cmd+,"));
+        assert_eq!(settings.new_window_shortcut.as_deref(), Some("cmd+shift+n"));
         let expected_interrupt = if cfg!(target_os = "macos") {
             "ctrl+c"
         } else {
@@ -1899,6 +2054,28 @@ mod tests {
             settings.close_current_session_shortcut.as_deref(),
             Some("cmd+w")
         );
+        assert_eq!(settings.open_chat_shortcut.as_deref(), Some("cmd+j"));
+        assert_eq!(settings.open_kanban_shortcut.as_deref(), Some("cmd+k"));
+        assert_eq!(
+            settings.cycle_open_session_prev_shortcut.as_deref(),
+            Some("cmd+shift+[")
+        );
+        assert_eq!(
+            settings.cycle_open_session_next_shortcut.as_deref(),
+            Some("cmd+shift+]")
+        );
+        assert_eq!(
+            settings
+                .toggle_left_conversation_sidebar_shortcut
+                .as_deref(),
+            Some("cmd+alt+[")
+        );
+        assert_eq!(
+            settings
+                .toggle_right_conversation_sidebar_shortcut
+                .as_deref(),
+            Some("cmd+alt+]")
+        );
         assert_eq!(
             settings.toggle_debug_panel_shortcut.as_deref(),
             Some("cmd+shift+d")
@@ -1911,6 +2088,29 @@ mod tests {
             settings.toggle_global_search_shortcut.as_deref(),
             Some("cmd+o")
         );
+        assert_eq!(
+            settings.toggle_runtime_console_shortcut.as_deref(),
+            Some("cmd+shift+`")
+        );
+        assert_eq!(
+            settings.toggle_files_surface_shortcut.as_deref(),
+            Some("cmd+shift+e")
+        );
+        assert_eq!(settings.save_file_shortcut.as_deref(), Some("cmd+s"));
+        assert_eq!(settings.find_in_file_shortcut.as_deref(), Some("cmd+f"));
+        assert_eq!(
+            settings.toggle_git_diff_list_view_shortcut.as_deref(),
+            Some("alt+shift+v")
+        );
+        assert_eq!(
+            settings.increase_ui_scale_shortcut.as_deref(),
+            Some("cmd+=")
+        );
+        assert_eq!(
+            settings.decrease_ui_scale_shortcut.as_deref(),
+            Some("cmd+-")
+        );
+        assert_eq!(settings.reset_ui_scale_shortcut.as_deref(), Some("cmd+0"));
         assert_eq!(
             settings.cycle_agent_next_shortcut.as_deref(),
             Some("cmd+ctrl+down")
@@ -2025,6 +2225,79 @@ mod tests {
             decoded.session_attribution_mode,
             WorkspaceSessionAttributionMode::WorkspaceOnly
         );
+    }
+
+    #[test]
+    fn app_settings_round_trip_preserves_all_shortcut_fields() {
+        let mut settings = AppSettings::default();
+        settings.open_settings_shortcut = Some("cmd+alt+,".to_string());
+        settings.new_window_shortcut = Some("cmd+alt+shift+w".to_string());
+        settings.open_chat_shortcut = Some("cmd+alt+j".to_string());
+        settings.open_kanban_shortcut = None;
+        settings.cycle_open_session_prev_shortcut = Some("cmd+alt+left".to_string());
+        settings.cycle_open_session_next_shortcut = Some("cmd+alt+right".to_string());
+        settings.toggle_left_conversation_sidebar_shortcut = Some("cmd+ctrl+[".to_string());
+        settings.toggle_right_conversation_sidebar_shortcut = Some("cmd+ctrl+]".to_string());
+        settings.toggle_runtime_console_shortcut = Some("cmd+alt+`".to_string());
+        settings.toggle_files_surface_shortcut = Some("cmd+alt+e".to_string());
+        settings.save_file_shortcut = Some("cmd+alt+s".to_string());
+        settings.find_in_file_shortcut = None;
+        settings.toggle_git_diff_list_view_shortcut = Some("ctrl+shift+v".to_string());
+        settings.increase_ui_scale_shortcut = Some("cmd+alt+=".to_string());
+        settings.decrease_ui_scale_shortcut = Some("cmd+alt+-".to_string());
+        settings.reset_ui_scale_shortcut = None;
+
+        let json = serde_json::to_string(&settings).expect("serialize settings");
+        let decoded: AppSettings = serde_json::from_str(&json).expect("deserialize settings");
+
+        assert_eq!(decoded.open_settings_shortcut.as_deref(), Some("cmd+alt+,"));
+        assert_eq!(
+            decoded.new_window_shortcut.as_deref(),
+            Some("cmd+alt+shift+w")
+        );
+        assert_eq!(decoded.open_chat_shortcut.as_deref(), Some("cmd+alt+j"));
+        assert!(decoded.open_kanban_shortcut.is_none());
+        assert_eq!(
+            decoded.cycle_open_session_prev_shortcut.as_deref(),
+            Some("cmd+alt+left")
+        );
+        assert_eq!(
+            decoded.cycle_open_session_next_shortcut.as_deref(),
+            Some("cmd+alt+right")
+        );
+        assert_eq!(
+            decoded.toggle_left_conversation_sidebar_shortcut.as_deref(),
+            Some("cmd+ctrl+[")
+        );
+        assert_eq!(
+            decoded
+                .toggle_right_conversation_sidebar_shortcut
+                .as_deref(),
+            Some("cmd+ctrl+]")
+        );
+        assert_eq!(
+            decoded.toggle_runtime_console_shortcut.as_deref(),
+            Some("cmd+alt+`")
+        );
+        assert_eq!(
+            decoded.toggle_files_surface_shortcut.as_deref(),
+            Some("cmd+alt+e")
+        );
+        assert_eq!(decoded.save_file_shortcut.as_deref(), Some("cmd+alt+s"));
+        assert!(decoded.find_in_file_shortcut.is_none());
+        assert_eq!(
+            decoded.toggle_git_diff_list_view_shortcut.as_deref(),
+            Some("ctrl+shift+v")
+        );
+        assert_eq!(
+            decoded.increase_ui_scale_shortcut.as_deref(),
+            Some("cmd+alt+=")
+        );
+        assert_eq!(
+            decoded.decrease_ui_scale_shortcut.as_deref(),
+            Some("cmd+alt+-")
+        );
+        assert!(decoded.reset_ui_scale_shortcut.is_none());
     }
 
     #[test]

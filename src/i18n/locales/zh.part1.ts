@@ -1597,6 +1597,9 @@ const zhPart1 = {
     previousAgent: "上一个代理",
     nextWorkspace: "下一个工作区",
     previousWorkspace: "上一个工作区",
+    searchShortcuts: "搜索快捷键…",
+    noShortcutsFound: "没有匹配的快捷键。",
+    shortcutConflict: "与以下快捷键冲突",
 
     // Open in 部分
     openInTitle: "打开方式",

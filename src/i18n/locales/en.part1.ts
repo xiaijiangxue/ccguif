@@ -1569,6 +1569,9 @@ const enPart1 = {
     previousAgent: "Previous agent",
     nextWorkspace: "Next workspace",
     previousWorkspace: "Previous workspace",
+    searchShortcuts: "Search shortcuts…",
+    noShortcutsFound: "No shortcuts match your search.",
+    shortcutConflict: "Conflicts with",
 
     // Open in section
     openInTitle: "Open in",

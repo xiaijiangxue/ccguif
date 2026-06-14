@@ -390,6 +390,39 @@ describe("useAppSettings", () => {
     expect(result.current.settings.toggleGlobalSearchShortcut).toBeNull();
   });
 
+  it("preserves custom and cleared shortcut values after saving settings", async () => {
+    getAppSettingsMock.mockResolvedValue({} as AppSettings);
+    const { result } = renderHook(() => useAppSettings());
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    const next: AppSettings = {
+      ...result.current.settings,
+      openChatShortcut: "cmd+alt+j",
+      openKanbanShortcut: null,
+      saveFileShortcut: "cmd+alt+s",
+      resetUiScaleShortcut: null,
+    };
+    updateAppSettingsMock.mockResolvedValue(next);
+
+    await act(async () => {
+      await result.current.saveSettings(next);
+    });
+
+    expect(updateAppSettingsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        openChatShortcut: "cmd+alt+j",
+        openKanbanShortcut: null,
+        saveFileShortcut: "cmd+alt+s",
+        resetUiScaleShortcut: null,
+      }),
+    );
+    expect(result.current.settings.openChatShortcut).toBe("cmd+alt+j");
+    expect(result.current.settings.openKanbanShortcut).toBeNull();
+    expect(result.current.settings.saveFileShortcut).toBe("cmd+alt+s");
+    expect(result.current.settings.resetUiScaleShortcut).toBeNull();
+  });
+
   it("preserves dim theme while sanitizing preset ids into valid appearance slots", async () => {
     getAppSettingsMock.mockResolvedValue({
       theme: "dim",
