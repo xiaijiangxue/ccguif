@@ -767,6 +767,7 @@ pub(crate) fn list_workspace_files_inner(
         scan_state,
         limit_hit,
         directory_entries,
+        None,
     )
 }
 
