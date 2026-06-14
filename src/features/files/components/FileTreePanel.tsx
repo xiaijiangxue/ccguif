@@ -37,6 +37,7 @@ import {
   isSpecialDirectoryPath,
   isSuppressedFileTreePath,
   matchesFilterCategory,
+  ALL_FILTER_CATEGORIES,
   type FileTreeNode,
   type VisibleFileTreeRow,
   type DirectoryCacheSnapshot,
@@ -53,6 +54,7 @@ import { useTreeDialogs } from "../hooks/useTreeDialogs";
 import { useTreeDrag } from "../hooks/useTreeDrag";
 import { useTreeClipboard } from "../hooks/useTreeClipboard";
 import { useFileTreeStore, useFileTreeStoreApi } from "../stores/fileTreeStoreContext";
+import type { FilterCategory } from "../stores/types";
 import { RendererContextMenu } from "../../../components/ui/RendererContextMenu";
 
 type FileTreePanelProps = {
@@ -156,6 +158,16 @@ export function FileTreePanel({
   const loadingLazyDirectories = useFileTreeStore((state) => state.loadingVisibleDirs);
   const lazyDirectoryLoadErrors = useFileTreeStore((state) => state.visibleLoadErrors);
   const hiddenCategories = useFileTreeStore((state) => state.hiddenCategories);
+  const toggleCategory = useCallback(
+    (cat: FilterCategory) => {
+      fileTreeStoreApi.getState().toggleCategory(cat);
+    },
+    [fileTreeStoreApi],
+  );
+  const hiddenCategoryList = useMemo(
+    () => ALL_FILTER_CATEGORIES.filter((cat) => hiddenCategories.has(cat)),
+    [hiddenCategories],
+  );
   const setExpandedFolders = useCallback(
     (folders: Set<string> | ((current: Set<string>) => Set<string>)) => {
       fileTreeStoreApi.getState().setExpandedFolders(folders);
@@ -1347,6 +1359,8 @@ export function FileTreePanel({
             detachedInitialFilePath={detachedInitialFilePath}
             onRefreshFiles={onRefreshFiles ? handleRefreshFiles : undefined}
             showDetachedExplorerAction={showDetachedExplorerAction}
+            hiddenCategoryList={hiddenCategoryList}
+            onToggleCategory={toggleCategory}
           />
         </div>
       </div>
