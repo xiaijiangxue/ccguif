@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 34
+- **Total Sessions**: 35
 - **Last Active**: 2026-06-15
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1383 | Active |
+| `journal-1.md` | ~1416 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 35 | 2026-06-15 | fix(shortcuts): polish shortcuts page layout and defaults | `69872b7f` | `refactor/liquid-precision-ui` |
 | 34 | 2026-06-15 | refactor(shortcuts): add search, new shortcuts, and page redesign | `94fa0a2d` | `refactor/liquid-precision-ui` |
 | 33 | 2026-06-14 | refactor(file-tree): move filter dropdown to root actions bar | `66311745` | `refactor/liquid-precision-ui` |
 | 32 | 2026-06-14 | perf(file-tree): add mtime-based cache staleness detection | `618edaaf` | `refactor/liquid-precision-ui` |

@@ -1381,3 +1381,36 @@ Added 12 new shortcut settings to AppSettings, redesigned ShortcutsSection with 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 35: fix(shortcuts): polish shortcuts page layout and defaults
+
+**Date**: 2026-06-15
+**Task**: fix(shortcuts): polish shortcuts page layout and defaults
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Shortcuts page polish: start categories collapsed by default, reorder default shortcut display before input, remove redundant headings, add grid padding, disable auto-update.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `69872b7f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
