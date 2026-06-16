@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 37
-- **Last Active**: 2026-06-15
+- **Total Sessions**: 38
+- **Last Active**: 2026-06-17
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1482 | Active |
+| `journal-1.md` | ~1515 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 38 | 2026-06-17 | fix(composer): derive Claude window usage from reported percentages | `1577122f` | `refactor/liquid-precision-ui` |
 | 37 | 2026-06-15 | fix: type assertions, null guards, and unused import cleanup | `b911bb13` | `refactor/liquid-precision-ui` |
 | 36 | 2026-06-15 | feat(shortcuts): add navigation shortcuts (definition, usages, implementation) | `131e9f1b` | `refactor/liquid-precision-ui` |
 | 35 | 2026-06-15 | fix(shortcuts): polish shortcuts page layout and defaults | `69872b7f` | `refactor/liquid-precision-ui` |

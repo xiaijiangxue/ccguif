@@ -1480,3 +1480,36 @@ Small fixes: null guards for scrollOffset and fileContent, Zustand type assertio
 ### Next Steps
 
 - None - task complete
+
+
+## Session 38: fix(composer): derive Claude window usage from reported percentages
+
+**Date**: 2026-06-17
+**Task**: fix(composer): derive Claude window usage from reported percentages
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Fixed context window usage calculation to prioritize reported percentages over token sum. Added resolveClaudeNewTurnTokens, percentage-based derivation in resolveClaudeWindowUsedTokens, and new test.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `1577122f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
