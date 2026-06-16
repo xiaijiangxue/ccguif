@@ -200,15 +200,36 @@ function resolveClaudeEstimatedContextWindow(
   return officialCandidate ? 200_000 : null;
 }
 
-function resolveClaudeWindowUsedTokens(contextUsage: ThreadTokenUsage): number | null {
+function resolveClaudeWindowUsedTokens(
+  contextUsage: ThreadTokenUsage,
+  contextWindow: number | null,
+): number | null {
   const explicitContextUsedTokens = finiteNonNegative(contextUsage.contextUsedTokens);
   if (explicitContextUsedTokens !== null) {
     return explicitContextUsedTokens;
+  }
+  const reportedUsedPercent = finitePercent(contextUsage.contextUsedPercent);
+  if (reportedUsedPercent !== null && contextWindow !== null) {
+    return (reportedUsedPercent / 100) * contextWindow;
+  }
+  const reportedRemainingPercent = finitePercent(contextUsage.contextRemainingPercent);
+  if (reportedRemainingPercent !== null && contextWindow !== null) {
+    return ((100 - reportedRemainingPercent) / 100) * contextWindow;
   }
   const inputTokens = finiteNonNegative(contextUsage.last.inputTokens) ?? 0;
   const cachedInputTokens = finiteNonNegative(contextUsage.last.cachedInputTokens) ?? 0;
   const hasWindowSnapshot = inputTokens > 0 || cachedInputTokens > 0;
   return hasWindowSnapshot ? inputTokens + cachedInputTokens : null;
+}
+
+function resolveClaudeNewTurnTokens(contextUsage: ThreadTokenUsage): number | null {
+  const inputTokens = finiteNonNegative(contextUsage.total.inputTokens);
+  const cachedInputTokens = finiteNonNegative(contextUsage.total.cachedInputTokens) ?? 0;
+  const outputTokens = finiteNonNegative(contextUsage.total.outputTokens);
+  if (inputTokens === null && outputTokens === null) {
+    return null;
+  }
+  return Math.max((inputTokens ?? 0) - cachedInputTokens, 0) + (outputTokens ?? 0);
 }
 
 type ComposerProps = {
@@ -1809,10 +1830,10 @@ export const Composer = memo(function Composer({
     if (!contextUsage || selectedEngine !== "claude") {
       return null;
     }
-    const usedTokens = resolveClaudeWindowUsedTokens(contextUsage);
     const contextWindow = finitePositive(contextUsage.modelContextWindow)
       ?? resolveClaudeEstimatedContextWindow(selectedModelOption ?? null, selectedModelId);
-    const totalTokens = finiteNonNegative(contextUsage.total.totalTokens);
+    const usedTokens = resolveClaudeWindowUsedTokens(contextUsage, contextWindow);
+    const totalTokens = resolveClaudeNewTurnTokens(contextUsage);
     const inputTokens = finiteNonNegative(contextUsage.total.inputTokens);
     const cachedInputTokens = finiteNonNegative(contextUsage.total.cachedInputTokens);
     const outputTokens = finiteNonNegative(contextUsage.total.outputTokens);
@@ -1848,8 +1869,8 @@ export const Composer = memo(function Composer({
       return null;
     }
     if (selectedEngine === "claude") {
-      const usedTokens = resolveClaudeWindowUsedTokens(contextUsage);
       const contextWindow = finitePositive(contextUsage.modelContextWindow);
+      const usedTokens = resolveClaudeWindowUsedTokens(contextUsage, contextWindow);
       return usedTokens !== null && contextWindow !== null
         ? { used: usedTokens, total: contextWindow }
         : null;

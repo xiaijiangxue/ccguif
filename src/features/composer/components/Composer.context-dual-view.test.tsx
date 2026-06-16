@@ -227,7 +227,7 @@ describe("Composer dual context usage model", () => {
     expect(adapter.getAttribute("data-legacy-total")).toBe("258400");
     expect(adapter.getAttribute("data-claude-used")).toBe("167960");
     expect(adapter.getAttribute("data-claude-total")).toBe("258400");
-    expect(adapter.getAttribute("data-claude-total-tokens")).toBe("570400");
+    expect(adapter.getAttribute("data-claude-total-tokens")).toBe("530400");
     expect(adapter.getAttribute("data-claude-input")).toBe("400000");
     expect(adapter.getAttribute("data-claude-cached")).toBe("20000");
     expect(adapter.getAttribute("data-claude-output")).toBe("150400");
@@ -235,6 +235,40 @@ describe("Composer dual context usage model", () => {
     expect(adapter.getAttribute("data-claude-remaining-percent")).toBe("35");
     expect(adapter.getAttribute("data-claude-freshness")).toBe("live");
     expect(adapter.getAttribute("data-claude-source")).toBe("context_window");
+  });
+
+  it("derives Claude window usage from reported percentages before message totals", () => {
+    render(
+      <ComposerHarness
+        selectedEngine="claude"
+        contextUsage={{
+          total: {
+            totalTokens: 12_238_300,
+            inputTokens: 12_209_400,
+            cachedInputTokens: 12_022_800,
+            outputTokens: 28_900,
+            reasoningOutputTokens: 0,
+          },
+          last: {
+            totalTokens: 12_238_300,
+            inputTokens: 12_209_400,
+            cachedInputTokens: 12_022_800,
+            outputTokens: 28_900,
+            reasoningOutputTokens: 0,
+          },
+          modelContextWindow: 1_000_000,
+          contextUsageSource: "context_window",
+          contextUsageFreshness: "live",
+          contextUsedPercent: 28,
+          contextRemainingPercent: 72,
+        }}
+      />,
+    );
+
+    const adapter = screen.getByTestId("chat-input-box-adapter");
+    expect(adapter.getAttribute("data-claude-used")).toBe("280000");
+    expect(adapter.getAttribute("data-legacy-used")).toBe("280000");
+    expect(adapter.getAttribute("data-claude-total-tokens")).toBe("215500");
   });
 
   it("keeps Claude context usage unknown when no window telemetry is available", () => {
