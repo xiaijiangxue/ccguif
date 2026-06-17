@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 41
+- **Total Sessions**: 42
 - **Last Active**: 2026-06-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1614 | Active |
+| `journal-1.md` | ~1647 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 42 | 2026-06-18 | fix(todolist): use display:none for hidden state to preserve animation | `7de31caa` | `refactor/liquid-precision-ui` |
 | 41 | 2026-06-18 | feat(todolist): auto-scroll to bottom when new todos are added | `a67c6d53` | `refactor/liquid-precision-ui` |
 | 40 | 2026-06-18 | fix(todolist): remove auto-collapse that overrides user expand state | `c8ceb67e` | `refactor/liquid-precision-ui` |
 | 39 | 2026-06-18 | feat(todolist): add floating todo window with plan integration | `9982992b` | `refactor/liquid-precision-ui` |

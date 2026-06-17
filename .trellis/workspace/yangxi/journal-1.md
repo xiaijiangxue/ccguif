@@ -1612,3 +1612,36 @@ Added auto-scroll to bottom in TodoFloatingWindow when new todo items are append
 ### Next Steps
 
 - None - task complete
+
+
+## Session 42: fix(todolist): use display:none for hidden state to preserve animation
+
+**Date**: 2026-06-18
+**Task**: fix(todolist): use display:none for hidden state to preserve animation
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Changed TodoFloatingWindow from conditional render (return null) to display:none when hidden, preserving motion animation state.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7de31caa` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
