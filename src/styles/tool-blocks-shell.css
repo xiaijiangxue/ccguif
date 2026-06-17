@@ -134,7 +134,7 @@
 
 .tool-operation-timeline-copy {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
   white-space: nowrap;
@@ -197,6 +197,9 @@
 }
 
 .tool-operation-timeline-meta {
+  display: flex;
+  align-items: center;
+  gap: 2px;
   justify-self: end;
   max-width: 190px;
   overflow: hidden;
