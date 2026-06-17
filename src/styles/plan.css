@@ -67,7 +67,7 @@
   letter-spacing: 0.02em;
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .plan-explanation {
@@ -103,7 +103,7 @@
 }
 
 .plan-step-status {
-  font-family: "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace);
   font-size: 14px;
   line-height: 1.3;
   color: var(--text-faint);

@@ -1408,7 +1408,7 @@
   flex: 0 0 auto;
   align-self: center;
   font-size: 11px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1492,7 +1492,7 @@
   padding-left: 6px;
   align-self: center;
   font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1595,7 +1595,7 @@
   line-height: 1.4;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .session-activity-preview-toggle {
@@ -1634,7 +1634,7 @@
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
   border: none;
   box-shadow: none;
 }

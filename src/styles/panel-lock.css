@@ -79,7 +79,7 @@
   font-size: 38px;
   line-height: 1.08;
   letter-spacing: -0.024em;
-  font-family: "Avenir Next", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
 }
 
 .panel-lock-hero-description {
@@ -156,7 +156,7 @@
   color: var(--text-strong);
   font-size: 20px;
   letter-spacing: -0.015em;
-  font-family: "Avenir Next", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
 }
 
 .panel-lock-content-header p {
@@ -420,7 +420,7 @@
   font-size: 26px;
   line-height: 1.1;
   letter-spacing: -0.02em;
-  font-family: "Avenir Next", "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
 }
 
 .panel-lock-auth p {

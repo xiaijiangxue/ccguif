@@ -368,7 +368,7 @@
   height: 38px;
   padding: 0 10px;
   font-size: 14px;
-  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, "Cascadia Code", "Courier New", monospace;
   line-height: 1;
 }
 
@@ -745,7 +745,7 @@
   color: color-mix(in srgb, var(--text-strong), #ffffff 8%);
   border: 1px solid color-mix(in srgb, var(--border-subtle), transparent 14%);
   background: color-mix(in srgb, var(--surface-card-muted), transparent 16%);
-  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, "Courier New", monospace;
+  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Monaco, "Cascadia Code", "Courier New", monospace;
   overflow: hidden;
   text-overflow: ellipsis;
 }

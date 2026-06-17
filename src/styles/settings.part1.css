@@ -742,7 +742,7 @@
 }
 
 .settings-input--shortcut {
-  font-family: "SF Mono", "Fira Mono", "Menlo", monospace;
+  font-family: var(--code-font-family, "SF Mono", "Fira Mono", "Menlo", "Cascadia Code", monospace);
   letter-spacing: 0.02em;
 }
 

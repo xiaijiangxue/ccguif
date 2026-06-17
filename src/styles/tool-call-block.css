@@ -59,7 +59,7 @@
 
 .tcb-tool-name {
   color: color-mix(in srgb, var(--status-info, #3b82f6) 78%, var(--text-strong, #d6d9df));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, "Liberation Mono", monospace;
 }
 
 .tcb-preview {
@@ -67,7 +67,7 @@
   max-width: min(70vw, 56rem);
   overflow: hidden;
   color: var(--text-muted, #9aa3ad);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.45;
@@ -149,7 +149,7 @@
 
 .tcb-param-row dt {
   color: color-mix(in srgb, var(--status-info, #3b82f6) 68%, var(--text-strong, #d6d9df));
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -157,7 +157,7 @@
 .tcb-param-row dd {
   margin: 0;
   color: var(--text-strong, #d6d9df);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-size: 0.75rem;
   line-height: 1.45;
   white-space: pre-wrap;
@@ -183,7 +183,7 @@
 }
 
 .tcb-raw code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-size: 0.74rem;
 }
 

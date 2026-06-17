@@ -158,7 +158,7 @@
   border: 1px solid var(--border-subtle);
   color: var(--text-faint);
   padding: 10px 12px;
-  font-family: "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace);
   font-size: 12px;
   text-align: left;
   white-space: pre-wrap;

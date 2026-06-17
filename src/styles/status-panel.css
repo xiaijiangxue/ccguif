@@ -269,7 +269,7 @@
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   opacity: 0.8;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .sp-tab-loading {
@@ -287,7 +287,7 @@
   gap: 6px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
   white-space: nowrap;
 }
 
@@ -777,7 +777,7 @@ button.sp-subagent-main:focus-visible,
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--text-faint);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .sp-file-summary-count {
@@ -805,7 +805,7 @@ button.sp-subagent-main:focus-visible,
   padding: 1px 5px;
   border-radius: 4px;
   flex-shrink: 0;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .sp-file-main {
@@ -891,7 +891,7 @@ button.sp-subagent-main:focus-visible,
   flex-shrink: 0;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .sp-file-summary-actions {
@@ -1009,7 +1009,7 @@ button.sp-subagent-main:focus-visible,
   font-size: 12px;
   line-height: 1.4;
   color: var(--text-strong);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
 }
 
 .sp-command-text.is-expanded {
@@ -1307,7 +1307,7 @@ button.sp-subagent-main:focus-visible,
   background: color-mix(in srgb, var(--surface-item) 78%, transparent);
   color: var(--text-strong);
   font-size: 10px;
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, ui-monospace, SFMono-Regular, "SF Mono", Menlo, "Cascadia Code", monospace);
   padding: 2px 6px;
   cursor: pointer;
 }

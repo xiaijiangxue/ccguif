@@ -261,7 +261,7 @@
 }
 
 .approval-toast-detail-code {
-  font-family: "SF Mono", Menlo, monospace;
+  font-family: var(--code-font-family, "SF Mono", Menlo, "Cascadia Code", Consolas, monospace);
   font-size: 11px;
   color: var(--text-muted);
   white-space: pre-wrap;

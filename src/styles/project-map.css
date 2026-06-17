@@ -1200,7 +1200,7 @@
   display: block;
   max-width: 100%;
   color: var(--project-map-text-strong);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   font-weight: 560;
   line-height: 1.35;

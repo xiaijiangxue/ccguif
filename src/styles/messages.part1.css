@@ -1062,7 +1062,7 @@
 
 .browser-context-summary-evidence-origin {
   color: var(--text-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Cascadia Code", Consolas, monospace;
 }
 
 .memory-context-summary-toggle {
