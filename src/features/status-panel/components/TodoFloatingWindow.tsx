@@ -59,9 +59,7 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
     [className, state.todos, state.visibility],
   );
 
-  if (state.visibility === "hidden") {
-    return null;
-  }
+  const isHidden = state.visibility === "hidden";
 
   return (
     <motion.div
@@ -71,6 +69,7 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
         x,
         y,
         width: FLOATING_WIDTH,
+        display: isHidden ? "none" : undefined,
       }}
       drag
       dragControls={dragControls}
