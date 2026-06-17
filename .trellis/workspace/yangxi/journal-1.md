@@ -1744,3 +1744,36 @@ Fixed vertical alignment in tool-operation-timeline: center-aligned copy row and
 ### Next Steps
 
 - None - task complete
+
+
+## Session 46: feat(git-history): add flat/tree view toggle for details changed files
+
+**Date**: 2026-06-18
+**Task**: feat(git-history): add flat/tree view toggle for details changed files
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added flat/tree view toggle for git history details changed files panel, with detailsListView state, detailsFileTreeItems memo, and shared CSS for list tabs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f97694a5` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
