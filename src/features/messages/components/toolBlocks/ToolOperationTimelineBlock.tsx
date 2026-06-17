@@ -349,13 +349,13 @@ export const ToolOperationTimelineBlock = memo(function ToolOperationTimelineBlo
   );
   const failureSummary = useMemo(() => getFailureSummary(items), [items]);
   const userTouchedRef = useRef(false);
-  const [isExpanded, setIsExpanded] = useState(() => status !== "completed");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (userTouchedRef.current) {
       return;
     }
-    setIsExpanded(status !== "completed");
+    setIsExpanded(false);
   }, [status]);
 
   const toggleExpanded = () => {
@@ -365,10 +365,15 @@ export const ToolOperationTimelineBlock = memo(function ToolOperationTimelineBlo
 
   const statusLabel = t(`messages.operationTimeline.status.${status}`);
   const detailId = firstItem ? `tool-operation-detail-${firstItem.id}` : undefined;
+  const lastItem = items[items.length - 1];
+  const lastItemToolName = lastItem ? extractToolName(lastItem.title) : "";
+  const lastItemDisplayName = lastItemToolName
+    ? getToolDisplayName(lastItemToolName || category, String(lastItem?.title ?? ""), (key) => t(key))
+    : "";
   const metaParts = [
     statusLabel,
-    items.length > 1
-      ? t("messages.operationTimeline.operationCount", { count: items.length })
+    items.length > 1 && lastItemDisplayName
+      ? lastItemDisplayName
       : null,
   ].filter((part): part is string => Boolean(part));
 
@@ -421,16 +426,19 @@ export const ToolOperationTimelineBlock = memo(function ToolOperationTimelineBlo
             <span className="tool-operation-timeline-target">{targetSummary}</span>
           ) : null}
         </span>
-        <span className="tool-operation-timeline-meta">{metaParts.join(" · ")}</span>
+        <span className="tool-operation-timeline-meta">
+          {metaParts.join(" · ")}
+          <span className={`tool-operation-timeline-chevron codicon codicon-chevron${isExpanded ? '-down' : '-right'}`} aria-hidden />
+        </span>
       </button>
-      {status === "failed" && failureSummary ? (
-        <div className="tool-operation-timeline-failure">{failureSummary}</div>
-      ) : null}
       {isExpanded ? (
         <div
           id={detailId}
           className={`tool-operation-timeline-detail tool-operation-timeline-detail--${category}`}
         >
+          {status === "failed" && failureSummary ? (
+            <div className="tool-operation-timeline-failure">{failureSummary}</div>
+          ) : null}
           {provenanceNode}
           {children}
         </div>
