@@ -7,7 +7,6 @@ import {
   readTodoFloatingPosition,
   resolveDefaultTodoFloatingPosition,
   resolveTodoSummary,
-  hasIncompleteTodo,
   shouldShowTodoFloatingWindow,
   writeTodoFloatingExpandState,
   writeTodoFloatingPosition,
@@ -63,18 +62,8 @@ export function useTodoFloatingState(
     positionRef.current = position;
   }, [position]);
 
-  useEffect(() => {
-    if (!hasIncompleteTodo(todos)) {
-      setIsExpanded(false);
-      return;
-    }
-    const nextExpanded = readTodoFloatingExpandState(sessionId);
-    if (nextExpanded !== undefined) {
-      setIsExpanded(nextExpanded);
-      return;
-    }
-    setIsExpanded(false);
-  }, [sessionId, todos]);
+  // NOTE: expand/collapse state is ONLY controlled by toggleExpand (user action).
+  // Do NOT auto-collapse on data changes — it breaks the user's manual state.
 
   useEffect(() => {
     writeTodoFloatingExpandState(sessionId, isExpanded);
