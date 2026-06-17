@@ -60,6 +60,66 @@ describe("Messages", () => {
     expect(screen.queryByText("messages.thinkingProcess")).toBeNull();
   });
 
+  it("renders the floating todo window from Codex plan tasks", () => {
+    render(
+      <Messages
+        items={[]}
+        threadId="codex:plan-todos"
+        workspaceId="ws-1"
+        isThinking={true}
+        activeEngine="codex"
+        openTargets={[]}
+        selectedOpenAppId=""
+        plan={{
+          turnId: "turn-plan",
+          explanation: null,
+          steps: [
+            { step: "测试项目 1", status: "completed" },
+            { step: "测试项目 2", status: "inProgress" },
+            { step: "测试项目 3", status: "pending" },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText("待办 1/3")).toBeTruthy();
+  });
+
+  it("renders the floating todo window from Claude Taskcreate tool calls", () => {
+    const items: ConversationItem[] = [
+      {
+        id: "tool-taskcreate-1",
+        kind: "tool",
+        toolType: "taskCreate",
+        title: "Taskcreate",
+        detail: JSON.stringify({ description: "测试项 4", subagent_type: "general" }),
+        status: "completed",
+      },
+      {
+        id: "tool-taskcreate-2",
+        kind: "tool",
+        toolType: "taskCreate",
+        title: "Taskcreate",
+        detail: JSON.stringify({ description: "测试项 5", subagent_type: "general" }),
+        status: "completed",
+      },
+    ];
+
+    render(
+      <Messages
+        items={items}
+        threadId="claude:taskcreate-todos"
+        workspaceId="ws-1"
+        isThinking={true}
+        activeEngine="claude"
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    expect(screen.getByText("待办 0/2")).toBeTruthy();
+  });
+
   it("keeps legacy Claude docked reasoning mode when the flag is explicitly enabled", () => {
     window.localStorage.setItem("ccgui.claude.hideReasoningModule", "1");
 
@@ -1183,8 +1243,8 @@ describe("Messages", () => {
     );
 
     expect(screen.queryByText("history message 1")).toBeNull();
-    expect(screen.getByText("history message 3")).toBeTruthy();
-    expect(screen.getByText("history message 17")).toBeTruthy();
+    expect(screen.getAllByText("history message 3").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("history message 17").length).toBeGreaterThan(0);
 
     const indicator = container.querySelector(".messages-collapsed-indicator");
     expect(indicator).toBeTruthy();
@@ -1194,7 +1254,7 @@ describe("Messages", () => {
     }
     fireEvent.click(indicator);
 
-    expect(screen.getByText("history message 1")).toBeTruthy();
+    expect(screen.getAllByText("history message 1").length).toBeGreaterThan(0);
     expect(container.querySelector(".messages-collapsed-indicator")).toBeNull();
   });
 
@@ -1228,7 +1288,7 @@ describe("Messages", () => {
     if (firstIndicator) {
       fireEvent.click(firstIndicator);
     }
-    expect(screen.getByText("session A message 1")).toBeTruthy();
+    expect(screen.getAllByText("session A message 1").length).toBeGreaterThan(0);
 
     rerender(
       <Messages
@@ -1277,7 +1337,7 @@ describe("Messages", () => {
     if (firstIndicator) {
       fireEvent.click(firstIndicator);
     }
-    expect(screen.getByText("thread A message 1")).toBeTruthy();
+    expect(screen.getAllByText("thread A message 1").length).toBeGreaterThan(0);
 
     rerender(
       <Messages

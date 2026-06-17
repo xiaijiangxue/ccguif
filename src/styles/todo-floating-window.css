@@ -1,0 +1,66 @@
+.tfw-window {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  max-width: calc(100vw - 32px);
+  border: 1px solid var(--border-muted);
+  border-radius: 12px;
+  background: var(--surface-card);
+  color: var(--text-stronger);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+}
+
+.tfw-window.is-expanded {
+  max-height: 320px;
+}
+
+.tfw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: color-mix(in srgb, var(--surface-card) 92%, var(--surface-hover));
+  color: inherit;
+  text-align: left;
+  cursor: grab;
+}
+
+.tfw-header:active {
+  cursor: grabbing;
+}
+
+.tfw-header:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent-primary, #6ea8fe) 42%, transparent);
+  outline-offset: -2px;
+}
+
+.tfw-summary {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-stronger);
+}
+
+.tfw-body {
+  overflow-y: auto;
+  padding: 8px 8px 10px;
+  border-top: 1px solid var(--border-muted);
+}
+
+.tfw-body .sp-todo-list {
+  gap: 4px;
+}
+
+.tfw-body .sp-todo-item {
+  padding: 6px 8px;
+}

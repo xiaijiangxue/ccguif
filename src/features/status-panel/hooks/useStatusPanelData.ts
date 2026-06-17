@@ -20,6 +20,7 @@ import {
   normalizeCollabAgentStatusMap,
   parseCollabFallbackLink,
 } from "../../../utils/collabToolParsing";
+import { collectTodoItems } from "../utils/todoFloatingWindow";
 
 interface StatusPanelData {
   todos: TodoItem[];
@@ -153,34 +154,10 @@ export function useStatusPanelData(
     deferSummary,
   );
 
-  const todos = useMemo(() => {
-    let lastTodos: TodoItem[] = [];
-    for (const item of projectionInputs.items) {
-      if (item.kind !== "tool") continue;
-      const toolName = extractToolName(getToolTitle(item)).trim().toLowerCase();
-      if (toolName !== "todowrite" && toolName !== "todo_write") continue;
-      const args = parseToolArgs(getToolDetail(item));
-      if (!args) continue;
-      const raw = args.todos;
-      if (!Array.isArray(raw)) continue;
-      lastTodos = raw
-        .filter(
-          (t): t is { content: string; status: string } =>
-            typeof t === "object" &&
-            t !== null &&
-            typeof (t as Record<string, unknown>).content === "string",
-        )
-        .map((t) => ({
-          content: t.content,
-          status: normalizeTodoStatus(t.status),
-          activeForm:
-            typeof (t as Record<string, unknown>).activeForm === "string"
-              ? ((t as Record<string, unknown>).activeForm as string)
-              : undefined,
-        }));
-    }
-    return lastTodos;
-  }, [projectionInputs.items]);
+  const todos = useMemo(
+    () => collectTodoItems(projectionInputs.items),
+    [projectionInputs.items],
+  );
 
   const scopedToolEntries = useMemo(
     () =>
@@ -1015,18 +992,4 @@ function uniqueStringList(values: string[]) {
     result.push(normalized);
   });
   return result;
-}
-
-function normalizeTodoStatus(status: unknown): TodoItem["status"] {
-  if (typeof status !== "string") return "pending";
-  const lower = status.toLowerCase();
-  if (lower === "completed" || lower === "done") return "completed";
-  if (
-    lower === "in_progress" ||
-    lower === "in-progress" ||
-    lower === "inprogress"
-  ) {
-    return "in_progress";
-  }
-  return "pending";
 }

@@ -47,6 +47,7 @@ import "./styles/tool-blocks-shell.css";
 import "./styles/tool-blocks.css";
 import "./styles/tool-call-block.css";
 import "./styles/status-panel.css";
+import "./styles/todo-floating-window.css";
 import "./styles/engine-task-output.css";
 import "./styles/status-panel.responsive.css";
 import "./styles/status-panel.plan-list.css";

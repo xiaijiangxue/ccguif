@@ -25,6 +25,7 @@ import { isMacPlatform, isWindowsPlatform } from "../../../utils/platform";
 import type { ConversationState } from "../../threads/contracts/conversationCurtainContracts";
 import { ApprovalToasts } from "../../app/components/ApprovalToasts";
 import { RequestUserInputMessage } from "../../app/components/RequestUserInputMessage";
+import { isEngineCapabilityAvailable } from "../../engine/engineCapabilityMatrix";
 import { useStreamActivityPhase } from "../../threads/hooks/useStreamActivityPhase";
 import {
   noteThreadVisibleTextRendered,
@@ -45,6 +46,9 @@ import {
 import { useFileLinkOpener } from "../hooks/useFileLinkOpener";
 import { RendererContextMenu } from "../../../components/ui/RendererContextMenu";
 import { appendRendererDiagnostic } from "../../../services/rendererDiagnostics";
+import { TodoFloatingWindow } from "../../status-panel/components/TodoFloatingWindow";
+import type { TodoItem } from "../../status-panel/types";
+import { collectTodoItems } from "../../status-panel/utils/todoFloatingWindow";
 import {
   groupToolItems,
   shouldHideToolItemForRender,
@@ -370,10 +374,16 @@ export const Messages = memo(function Messages({
     [conversationState, legacyItems, legacyThreadId, legacyWorkspaceId],
   );
   const userInputRequests = effectiveState.userInputQueue;
+  const plan = effectiveState.plan ?? legacyPlan;
   const workspaceId = effectiveState.meta.workspaceId || legacyWorkspaceId;
   const threadId = effectiveState.meta.threadId || legacyThreadId;
   const activeTurnId = effectiveState.meta.activeTurnId ?? null;
   const activeEngine = toConversationEngine(effectiveState.meta.engine);
+  const supportsCollaborationMode =
+    activeEngine === "codex" &&
+    isEngineCapabilityAvailable(activeEngine, "collaboration.mode");
+  const usePlanAsTaskList =
+    activeEngine === "codex" && supportsCollaborationMode;
   const isThinking = conversationState
     ? effectiveState.meta.isThinking
     : legacyIsThinking;
@@ -421,9 +431,25 @@ export const Messages = memo(function Messages({
     () => resolveRetryMessageForReconnectItem(items, latestRuntimeReconnectItemId),
     [items, latestRuntimeReconnectItemId],
   );
+  const floatingTodoItems = useMemo<TodoItem[]>(() => {
+    if (usePlanAsTaskList && plan?.steps.length) {
+      return plan.steps.map((step) => ({
+        content: step.step,
+        status:
+          step.status === "completed"
+            ? "completed"
+            : step.status === "inProgress"
+              ? "in_progress"
+              : "pending",
+      }));
+    }
+    return collectTodoItems(items);
+  }, [items, plan, usePlanAsTaskList]);
+
   const renderStartedAt =
     typeof performance === "undefined" ? 0 : performance.now();
   const bottomRef = useRef<HTMLDivElement | null>(null);
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const userInputNodeRef = useRef<HTMLDivElement | null>(null);
   const pendingHistoryExpansionScrollSnapshotRef =
@@ -2618,6 +2644,7 @@ export const Messages = memo(function Messages({
 
   return (
     <div
+      ref={shellRef}
       className={`messages-shell${hasAnchorRail ? " has-anchor-rail" : ""}${enableClaudeRenderSafeMode ? " claude-render-safe" : ""}`}
     >
       {hasAnchorRail && (
@@ -2747,6 +2774,11 @@ export const Messages = memo(function Messages({
           className="renderer-context-menu messages-file-link-context-menu"
         />
       ) : null}
+      <TodoFloatingWindow
+        todos={floatingTodoItems}
+        sessionId={threadId ?? "current-thread"}
+        constraintRef={shellRef}
+      />
     </div>
   );
 });
