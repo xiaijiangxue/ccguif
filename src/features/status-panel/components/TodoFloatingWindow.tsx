@@ -25,8 +25,10 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
 }: TodoFloatingWindowProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const suppressNextClickRef = useRef(false);
   const state = useTodoFloatingState(todos, sessionId);
+  const prevTodoCountRef = useRef(state.todos.length);
   const dragControls = useDragControls();
   const x = useMotionValue(state.position.x);
   const y = useMotionValue(state.position.y);
@@ -35,6 +37,14 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
     x.set(state.position.x);
     y.set(state.position.y);
   }, [state.position.x, state.position.y, x, y]);
+
+  // Auto-scroll to bottom when new todos are added
+  useEffect(() => {
+    if (state.todos.length > prevTodoCountRef.current && bodyRef.current) {
+      bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+    }
+    prevTodoCountRef.current = state.todos.length;
+  }, [state.todos.length]);
 
   const windowClassName = useMemo(
     () =>
@@ -100,7 +110,7 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
         {state.isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
       </button>
       {state.isExpanded ? (
-        <div className="tfw-body">
+        <div className="tfw-body" ref={bodyRef}>
           <TodoList todos={state.todos} />
         </div>
       ) : null}
