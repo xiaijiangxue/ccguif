@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 39
+- **Total Sessions**: 40
 - **Last Active**: 2026-06-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1548 | Active |
+| `journal-1.md` | ~1581 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 40 | 2026-06-18 | fix(todolist): remove auto-collapse that overrides user expand state | `c8ceb67e` | `refactor/liquid-precision-ui` |
 | 39 | 2026-06-18 | feat(todolist): add floating todo window with plan integration | `9982992b` | `refactor/liquid-precision-ui` |
 | 38 | 2026-06-17 | fix(composer): derive Claude window usage from reported percentages | `1577122f` | `refactor/liquid-precision-ui` |
 | 37 | 2026-06-15 | fix: type assertions, null guards, and unused import cleanup | `b911bb13` | `refactor/liquid-precision-ui` |

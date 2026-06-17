@@ -1546,3 +1546,36 @@ Added TodoFloatingWindow with drag/resize/pin, useTodoFloatingState hook, extrac
 ### Next Steps
 
 - None - task complete
+
+
+## Session 40: fix(todolist): remove auto-collapse that overrides user expand state
+
+**Date**: 2026-06-18
+**Task**: fix(todolist): remove auto-collapse that overrides user expand state
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed useEffect that auto-collapsed floating todo window on data changes. Expand/collapse is now exclusively controlled by user toggle.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c8ceb67e` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
