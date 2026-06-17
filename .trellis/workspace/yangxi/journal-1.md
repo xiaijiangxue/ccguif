@@ -1579,3 +1579,36 @@ Removed useEffect that auto-collapsed floating todo window on data changes. Expa
 ### Next Steps
 
 - None - task complete
+
+
+## Session 41: feat(todolist): auto-scroll to bottom when new todos are added
+
+**Date**: 2026-06-18
+**Task**: feat(todolist): auto-scroll to bottom when new todos are added
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added auto-scroll to bottom in TodoFloatingWindow when new todo items are appended.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a67c6d53` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
