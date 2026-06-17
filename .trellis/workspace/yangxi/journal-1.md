@@ -1513,3 +1513,36 @@ Fixed context window usage calculation to prioritize reported percentages over t
 ### Next Steps
 
 - None - task complete
+
+
+## Session 39: feat(todolist): add floating todo window with plan integration
+
+**Date**: 2026-06-18
+**Task**: feat(todolist): add floating todo window with plan integration
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added TodoFloatingWindow with drag/resize/pin, useTodoFloatingState hook, extracted collectTodoItems from useStatusPanelData, integrated in Messages for Codex collaboration mode, CSS styling, and full docs (brainstorm, plan, OpenSpec).
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9982992b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
