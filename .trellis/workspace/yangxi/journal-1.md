@@ -1678,3 +1678,36 @@ Updated default UI and code font families to cross-platform system font stacks, 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 44: fix(tool-timeline): start collapsed, show last tool name, add chevron
+
+**Date**: 2026-06-18
+**Task**: fix(tool-timeline): start collapsed, show last tool name, add chevron
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+ToolOperationTimelineBlock now starts collapsed, shows last tool display name instead of count, adds chevron indicator, and moves failure summary inside expanded detail.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `cb63dd7f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
