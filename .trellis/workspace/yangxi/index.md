@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 50
+- **Total Sessions**: 51
 - **Last Active**: 2026-06-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1911 | Active |
+| `journal-1.md` | ~1944 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 51 | 2026-06-18 | style(tool-blocks): refine tool output shell and markdown typography | `ddfdb36a` | `refactor/liquid-precision-ui` |
 | 50 | 2026-06-18 | feat(tool-blocks): add syntax highlighting for read tool output | `edf41fde` | `refactor/liquid-precision-ui` |
 | 49 | 2026-06-18 | style: normalize font weights, switch markdown to UI font, refine sidebar | `0b424e5f` | `refactor/liquid-precision-ui` |
 | 48 | 2026-06-18 | style: refine resizer visuals and commit input sizing | `2909b4d6` | `refactor/liquid-precision-ui` |

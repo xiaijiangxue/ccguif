@@ -1909,3 +1909,36 @@ Added HighlightedReadCodePreview with line numbers and PrismJS token highlightin
 ### Next Steps
 
 - None - task complete
+
+
+## Session 51: style(tool-blocks): refine tool output shell and markdown typography
+
+**Date**: 2026-06-18
+**Task**: style(tool-blocks): refine tool output shell and markdown typography
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Refined tool output styling: added Result label, markdown shell with border/background, improved markdown typography with line-height 1.58 and list spacing, inline code overrides, and timeline detail styles.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ddfdb36a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
