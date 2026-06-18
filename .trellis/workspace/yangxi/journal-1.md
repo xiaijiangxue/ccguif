@@ -1810,3 +1810,36 @@ Removed hover-reveal animation for git panel actions, bumped font sizes to 13px,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 48: style: refine resizer visuals and commit input sizing
+
+**Date**: 2026-06-18
+**Task**: style: refine resizer visuals and commit input sizing
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Increased commit input min-height to 80px, refactored resizer styles to use transparent backgrounds with opacity-based divider lines and hover transitions.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2909b4d6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
