@@ -170,3 +170,36 @@ Moved formatSearchQueryKey, selectFirstSearchMatch, and selectFirstSearchMatchOn
 ### Next Steps
 
 - None - task complete
+
+
+## Session 58: feat: middle-click to close session tabs and file view tabs
+
+**Date**: 2026-06-19
+**Task**: feat: middle-click to close session tabs and file view tabs
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added onAuxClick middle mouse button (button === 1) handlers to close session tabs and file view tabs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `bce419b4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
