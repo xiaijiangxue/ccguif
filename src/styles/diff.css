@@ -43,11 +43,6 @@
 }
 
 .diff-panel--floating-git-actions {
-  transition: padding-top 150ms ease;
-}
-
-.diff-panel--floating-git-actions:hover,
-.diff-panel--floating-git-actions:focus-within {
   padding-top: calc(
     var(--git-panel-floating-actions-top) + var(--git-panel-floating-actions-height) +
       var(--git-panel-floating-actions-gap)
@@ -156,41 +151,20 @@
   min-height: var(--git-panel-floating-actions-height);
   z-index: 5;
   border-bottom-color: transparent;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .git-panel-header--hover-actions .git-panel-actions {
   flex-wrap: nowrap;
   max-width: 100%;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-10px);
-  transition:
-    opacity 150ms ease,
-    transform 170ms ease;
-  z-index: 2;
-}
-
-.diff-panel:hover .git-panel-header--hover-actions .git-panel-actions,
-.git-panel-header--hover-actions:focus-within .git-panel-actions {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(0);
-}
-
-.diff-panel:hover .git-panel-header--hover-actions,
-.git-panel-header--hover-actions:focus-within {
-  pointer-events: auto;
+  z-index: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .diff-panel--floating-git-actions {
     transition: none;
-  }
-
-  .git-panel-header--hover-actions .git-panel-actions {
-    transform: none;
-    transition: opacity 120ms ease;
   }
 }
 
@@ -376,7 +350,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-faint);
   margin-bottom: 4px;
 }
@@ -384,7 +358,7 @@
 .git-root-label {
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
@@ -533,7 +507,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-faint);
 }
 
@@ -1755,17 +1729,17 @@
 
 .commit-message-input {
   width: 100%;
-  font-family: var(--code-font-family);
-  font-size: var(--code-font-size, 11px);
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
+  font-size: 13px;
   line-height: 1.5;
   color: var(--text-muted);
   background: transparent;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  padding: 8px 36px 8px 10px;
+  padding: 10px 36px 10px 12px;
   resize: vertical;
-  min-height: 48px;
-  max-height: 120px;
+  min-height: 64px;
+  max-height: 160px;
   transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
@@ -1908,7 +1882,7 @@
 }
 
 .commit-message-hint {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -1925,7 +1899,7 @@
   justify-content: center;
   gap: 6px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
   background: transparent;
