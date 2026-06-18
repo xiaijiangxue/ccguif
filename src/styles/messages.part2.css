@@ -363,8 +363,8 @@
 :root {
   --message-codeblock-bg: color-mix(in srgb, var(--surface-card) 42%, transparent);
   --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 32%, transparent);
-  --message-codeblock-border: color-mix(in srgb, var(--border-subtle) 36%, transparent);
-  --message-codeblock-header-border: color-mix(in srgb, var(--border-subtle) 34%, transparent);
+  --message-codeblock-border: color-mix(in srgb, var(--border-subtle) 80%, #000);
+  --message-codeblock-header-border: color-mix(in srgb, var(--border-subtle) 80%, #000);
   --message-codeblock-shadow: none;
   --message-code-token-comment: rgba(150, 170, 200, 0.75);
   --message-code-token-punctuation: rgba(200, 210, 220, 0.85);
@@ -379,8 +379,8 @@
 :root[data-theme="light"] {
   --message-codeblock-bg: color-mix(in srgb, var(--surface-card) 58%, transparent);
   --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 38%, transparent);
-  --message-codeblock-border: color-mix(in srgb, var(--border-subtle) 48%, transparent);
-  --message-codeblock-header-border: color-mix(in srgb, var(--border-subtle) 42%, transparent);
+  --message-codeblock-border: color-mix(in srgb, var(--border-subtle) 80%, #000);
+  --message-codeblock-header-border: color-mix(in srgb, var(--border-subtle) 80%, #000);
   --message-code-token-comment: rgba(87, 96, 110, 0.86);
   --message-code-token-punctuation: rgba(36, 41, 47, 0.88);
   --message-code-token-constant: #cf222e;
@@ -863,7 +863,7 @@
   display: block;
   max-width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 80%, #000);
   border-radius: 8px;
 }
 
@@ -877,8 +877,8 @@
 
 .markdown th,
 .markdown td {
-  border-bottom: 1px solid var(--border-subtle);
-  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 80%, #000);
+  border-right: 1px solid color-mix(in srgb, var(--border-subtle) 80%, #000);
   padding: 10px 16px;
   text-align: left;
   word-wrap: break-word;

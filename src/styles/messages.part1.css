@@ -1331,7 +1331,7 @@
   padding: 12px;
   overflow: auto;
   color: var(--text-muted);
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid color-mix(in srgb, var(--border-subtle) 80%, #000);
   background: rgba(0, 0, 0, 0.18);
   font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
   font-size: 11px;

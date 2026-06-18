@@ -460,7 +460,7 @@
   font-size: 12px;
   line-height: 1.46;
   background: color-mix(in srgb, var(--surface-command) 46%, transparent);
-  border-color: color-mix(in srgb, var(--border-subtle) 58%, transparent);
+  border-color: color-mix(in srgb, var(--border-subtle) 80%, #000);
   border-radius: 5px;
   padding: 7px 8px;
 }
