@@ -1,10 +1,12 @@
 import {
   EditorView,
+  ViewPlugin,
   runScopeHandlers,
   type KeyBinding,
   type Panel,
   type ViewUpdate,
 } from "@codemirror/view";
+import { EditorSelection } from "@codemirror/state";
 import {
   closeSearchPanel,
   findNext,
@@ -22,6 +24,11 @@ import {
 const RESULT_LIMIT = 10_000;
 const panelInstances = new WeakMap<HTMLElement, IdeaSearchPanel>();
 const replaceVisibilityByView = new WeakMap<EditorView, boolean>();
+
+type SearchSelectionRange = {
+  from: number;
+  to: number;
+};
 
 export interface SearchPanelLabels {
   find: string;
@@ -115,6 +122,122 @@ function toggle(
   labelEl.append(input, document.createTextNode(label));
   return labelEl;
 }
+
+function formatSearchQueryKey(view: EditorView) {
+  const query = getSearchQuery(view.state);
+  return JSON.stringify({
+    search: query.search,
+    caseSensitive: query.caseSensitive,
+    regexp: query.regexp,
+    wholeWord: query.wholeWord,
+  });
+}
+
+function selectFirstSearchMatch(view: EditorView): SearchSelectionRange | null {
+  const query = getSearchQuery(view.state);
+  if (!query.valid || !query.search) {
+    return null;
+  }
+
+  const firstMatch = query.getCursor(view.state, 0).next();
+  if (firstMatch.done) {
+    return null;
+  }
+
+  const selection = EditorSelection.single(firstMatch.value.from, firstMatch.value.to);
+  view.dispatch({
+    selection,
+    effects: EditorView.scrollIntoView(selection.main, { y: "center" }),
+    userEvent: "select.search",
+  });
+  return {
+    from: firstMatch.value.from,
+    to: firstMatch.value.to,
+  };
+}
+
+function collapseAutoSearchSelection(
+  view: EditorView,
+  lastAutoSelection: SearchSelectionRange | null,
+) {
+  if (!lastAutoSelection) {
+    return;
+  }
+  const selection = view.state.selection.main;
+  if (selection.from !== lastAutoSelection.from || selection.to !== lastAutoSelection.to) {
+    return;
+  }
+  view.dispatch({
+    selection: EditorSelection.cursor(selection.head),
+    userEvent: "select.search.clear",
+  });
+}
+
+export const selectFirstSearchMatchOnQueryChange = ViewPlugin.fromClass(
+  class {
+    private previousQueryKey: string;
+    private lastAutoSelection: SearchSelectionRange | null = null;
+    private rafId: number | null = null;
+
+    constructor(private readonly view: EditorView) {
+      this.previousQueryKey = formatSearchQueryKey(view);
+      this.bindSearchPanelInputs();
+    }
+
+    update() {
+      this.bindSearchPanelInputs();
+    }
+
+    destroy() {
+      if (this.rafId != null) {
+        cancelAnimationFrame(this.rafId);
+      }
+    }
+
+    private bindSearchPanelInputs() {
+      if (!searchPanelOpen(this.view.state)) {
+        return;
+      }
+      const searchPanel = this.view.dom.querySelector(".cm-search");
+      const inputs = searchPanel?.querySelectorAll("input");
+      inputs?.forEach((input) => {
+        if (input.getAttribute("data-fvp-first-match-bound") === "true") {
+          return;
+        }
+        input.setAttribute("data-fvp-first-match-bound", "true");
+        input.addEventListener("input", this.handleSearchControlsChange);
+        input.addEventListener("change", this.handleSearchControlsChange);
+      });
+    }
+
+    private handleSearchControlsChange = () => {
+      if (this.rafId != null) {
+        cancelAnimationFrame(this.rafId);
+      }
+      this.rafId = requestAnimationFrame(() => {
+        this.rafId = null;
+        const nextQueryKey = formatSearchQueryKey(this.view);
+        if (nextQueryKey === this.previousQueryKey) {
+          return;
+        }
+        this.previousQueryKey = nextQueryKey;
+
+        const query = getSearchQuery(this.view.state);
+        if (!query.valid || !query.search) {
+          collapseAutoSearchSelection(this.view, this.lastAutoSelection);
+          this.lastAutoSelection = null;
+          return;
+        }
+
+        const nextAutoSelection = selectFirstSearchMatch(this.view);
+        if (!nextAutoSelection) {
+          collapseAutoSearchSelection(this.view, this.lastAutoSelection);
+        }
+        this.lastAutoSelection = nextAutoSelection;
+      });
+    };
+  },
+);
 
 class IdeaSearchPanel implements Panel {
   readonly dom: HTMLElement;

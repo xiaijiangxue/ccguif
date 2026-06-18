@@ -32,16 +32,17 @@ import type {
 import {
   Decoration,
   EditorView,
-  ViewPlugin,
   WidgetType,
   keymap,
 } from "@codemirror/view";
 import {
-  getSearchQuery,
   search,
-  searchPanelOpen,
 } from "@codemirror/search";
-import { createSearchPanelFactory, searchReplaceKeymap } from "../search-panel";
+import {
+  createSearchPanelFactory,
+  searchReplaceKeymap,
+  selectFirstSearchMatchOnQueryChange,
+} from "../search-panel";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   EditorSelection,
@@ -256,88 +257,6 @@ function toCodeMirrorShortcut(value: string | null | undefined): string | null {
     (parsed.key.length === 1 ? parsed.key : parsed.key);
   return [...modifiers, keyLabel].join("-");
 }
-
-function formatSearchQueryKey(view: EditorView) {
-  const query = getSearchQuery(view.state);
-  return JSON.stringify({
-    search: query.search,
-    caseSensitive: query.caseSensitive,
-    regexp: query.regexp,
-    wholeWord: query.wholeWord,
-  });
-}
-
-function selectFirstSearchMatch(view: EditorView) {
-  const query = getSearchQuery(view.state);
-  if (!query.valid || !query.search) {
-    return;
-  }
-
-  const firstMatch = query.getCursor(view.state, 0).next();
-  if (firstMatch.done) {
-    return;
-  }
-
-  const selection = EditorSelection.single(firstMatch.value.from, firstMatch.value.to);
-  view.dispatch({
-    selection,
-    effects: EditorView.scrollIntoView(selection.main, { y: "center" }),
-    userEvent: "select.search",
-  });
-}
-
-const selectFirstSearchMatchOnQueryChange = ViewPlugin.fromClass(
-  class {
-    private previousQueryKey: string;
-    private rafId: number | null = null;
-
-    constructor(private readonly view: EditorView) {
-      this.previousQueryKey = formatSearchQueryKey(view);
-      this.bindSearchPanelInputs();
-    }
-
-    update() {
-      this.bindSearchPanelInputs();
-    }
-
-    destroy() {
-      if (this.rafId != null) {
-        cancelAnimationFrame(this.rafId);
-      }
-    }
-
-    private bindSearchPanelInputs() {
-      if (!searchPanelOpen(this.view.state)) {
-        return;
-      }
-      const searchPanel = this.view.dom.querySelector(".cm-search");
-      const inputs = searchPanel?.querySelectorAll("input");
-      inputs?.forEach((input) => {
-        if (input.getAttribute("data-fvp-first-match-bound") === "true") {
-          return;
-        }
-        input.setAttribute("data-fvp-first-match-bound", "true");
-        input.addEventListener("input", this.handleSearchControlsChange);
-        input.addEventListener("change", this.handleSearchControlsChange);
-      });
-    }
-
-    private handleSearchControlsChange = () => {
-      if (this.rafId != null) {
-        cancelAnimationFrame(this.rafId);
-      }
-      this.rafId = requestAnimationFrame(() => {
-        this.rafId = null;
-        const nextQueryKey = formatSearchQueryKey(this.view);
-        if (nextQueryKey === this.previousQueryKey) {
-          return;
-        }
-        this.previousQueryKey = nextQueryKey;
-        selectFirstSearchMatch(this.view);
-      });
-    };
-  },
-);
 
 function resolveEditorTheme(): EditorTheme {
   return readDocumentThemeAppearance();
