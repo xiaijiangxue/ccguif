@@ -2,7 +2,8 @@
   border: none;
   background: transparent;
   color: inherit;
-  font-size: 10px;
+  font-family: var(--ui-font-family);
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.1;
   max-width: 180px;
@@ -177,6 +178,7 @@
 /* ── Topbar ── */
 
 .fvp-topbar {
+  --fvp-header-font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -203,6 +205,7 @@
 }
 
 .fvp-header-row {
+  --fvp-header-font-size: 13px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -339,7 +342,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-family: var(--code-font-family);
+  font-family: var(--ui-font-family);
 }
 
 .fvp-dirty-dot {
@@ -389,9 +392,14 @@
   padding: 1px 0;
   color: var(--text-muted);
   background: transparent;
-  font-size: 9px;
   font-weight: 600;
   transition: color 120ms ease, opacity 120ms ease;
+}
+
+.fvp-topbar .fvp-action-btn,
+.fvp-header-row .fvp-action-btn {
+  font-family: var(--ui-font-family);
+  font-size: 11px;
 }
 
 .fvp-action-group .fvp-action-btn:hover:not(:disabled) {
@@ -411,10 +419,17 @@
 .fvp-action-group .fvp-action-btn.primary {
   background: transparent;
   color: var(--text-strong);
+  box-shadow: none;
 }
 
 .fvp-action-group .fvp-action-btn.primary:hover:not(:disabled) {
   background: transparent;
+}
+
+.fvp-action-group .fvp-action-btn.primary:disabled,
+.fvp-action-group .fvp-action-btn.primary.is-saved {
+  background: transparent;
+  box-shadow: none;
 }
 
 .fvp-action-group .fvp-save-btn {
@@ -511,8 +526,8 @@
   overflow: auto;
   flex: 1;
   padding: 12px 0;
-  font-family: var(--code-font-family);
-  font-size: var(--code-font-size, 12px);
+  font-family: var(--ui-font-family);
+  font-size: 13px;
   font-weight: var(--code-font-weight, 400);
   line-height: var(--code-line-height, 1.6);
   color: var(--fvp-reader-text);
@@ -1910,8 +1925,8 @@
 
 .fvp-cm .cm-scroller {
   overflow: auto;
-  font-family: var(--code-font-family);
-  font-size: var(--code-font-size, 13px);
+  font-family: var(--ui-font-family);
+  font-size: 13px;
   font-weight: var(--code-font-weight, 400);
   line-height: var(--code-line-height, 1.6);
   color: var(--fvp-reader-text);
