@@ -6,7 +6,7 @@ use tauri::menu::{Menu, MenuItem, MenuItemBuilder, PredefinedMenuItem, Submenu, 
 use tauri::{Emitter, Manager, Runtime, WebviewUrl, WebviewWindowBuilder};
 
 const NEW_WINDOW_ACCELERATOR: &str = "CmdOrCtrl+Shift+N";
-const RELOAD_WINDOW_ACCELERATOR: &str = "CmdOrCtrl+R";
+const RELOAD_WINDOW_ACCELERATOR: &str = "CmdOrCtrl+Shift+R";
 
 fn reload_window_accelerator() -> Option<&'static str> {
     #[cfg(target_os = "macos")]
@@ -262,9 +262,8 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
     let cycle_access_item = MenuItemBuilder::with_id("composer_cycle_access", "切换访问模式")
         .accelerator("CmdOrCtrl+Shift+A")
         .build(handle)?;
-    let cycle_reasoning_item = MenuItemBuilder::with_id("composer_cycle_reasoning", "切换推理模式")
-        .accelerator("CmdOrCtrl+Shift+R")
-        .build(handle)?;
+    let cycle_reasoning_item =
+        MenuItemBuilder::with_id("composer_cycle_reasoning", "切换推理模式").build(handle)?;
     let cycle_collaboration_item =
         MenuItemBuilder::with_id("composer_cycle_collaboration", "切换协作模式")
             .accelerator("Shift+Tab")
@@ -551,7 +550,7 @@ mod tests {
     #[test]
     fn reload_window_menu_shortcut_matches_expected() {
         #[cfg(target_os = "macos")]
-        assert_eq!(reload_window_accelerator(), Some("CmdOrCtrl+R"));
+        assert_eq!(reload_window_accelerator(), Some("CmdOrCtrl+Shift+R"));
         #[cfg(not(target_os = "macos"))]
         assert_eq!(reload_window_accelerator(), None);
     }

@@ -41,6 +41,7 @@ import {
   search,
   searchPanelOpen,
 } from "@codemirror/search";
+import { createSearchPanelFactory, searchReplaceKeymap } from "../search-panel";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
   EditorSelection,
@@ -913,6 +914,7 @@ export function FileViewPanel({
   const usesSingleRowHeader = headerLayout === "single-row";
   const splitResizeCleanupRef = useRef<(() => void) | null>(null);
   const pendingOpenFindPanelRef = useRef(false);
+  const pendingOpenReplacePanelRef = useRef(false);
   const gitRootWorkspacePrefix = useMemo(
     () => resolveGitRootWorkspacePrefix(workspacePath, gitRoot),
     [gitRoot, workspacePath],
@@ -1114,6 +1116,7 @@ export function FileViewPanel({
     editorNavigationKeymapExt,
     ctrlClickDefinitionExt,
     openFindPanelInEditor,
+    openReplacePanelInEditor,
     toggleFindPanelInEditor,
   } = useFileNavigation({
     workspaceId,
@@ -1522,7 +1525,27 @@ export function FileViewPanel({
     },
     [saveFileShortcut],
   );
-  const persistentSearchExtension = useMemo(() => search({ top: true }), []);
+  const persistentSearchExtension = useMemo(
+    () =>
+      search({
+        top: true,
+        createPanel: createSearchPanelFactory({
+          find: t("files.searchPanelFind"),
+          replace: t("files.searchPanelReplace"),
+          matchCase: t("files.searchPanelMatchCase"),
+          wholeWord: t("files.searchPanelWholeWord"),
+          regexp: t("files.searchPanelRegexp"),
+          previous: t("files.searchPanelPrevious"),
+          next: t("files.searchPanelNext"),
+          selectAll: t("files.searchPanelSelectAll"),
+          replaceAll: t("files.searchPanelReplaceAll"),
+          close: t("files.searchPanelClose"),
+          resultCount: (count) => t("files.searchPanelResultCount", { count }),
+          resultCountLimit: (limit) => t("files.searchPanelResultCountLimit", { limit }),
+        }),
+      }),
+    [t],
+  );
   const handleCodeMirrorCreate: NonNullable<ReactCodeMirrorProps["onCreateEditor"]> =
     useCallback((view) => {
       view.dispatch({
@@ -1600,6 +1623,20 @@ export function FileViewPanel({
     }
   }, [mode, skipTextRead, toggleFindPanelInEditor, truncated]);
 
+  const handleOpenReplacePanel = useCallback(() => {
+    if (skipTextRead || truncated) {
+      return;
+    }
+    pendingOpenReplacePanelRef.current = true;
+    if (mode !== "edit") {
+      setMode("edit");
+      return;
+    }
+    if (openReplacePanelInEditor()) {
+      pendingOpenReplacePanelRef.current = false;
+    }
+  }, [mode, openReplacePanelInEditor, skipTextRead, truncated]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!matchesShortcutForPlatform(event, findInFileShortcut)) {
@@ -1622,7 +1659,31 @@ export function FileViewPanel({
   }, [findInFileShortcut, handleOpenFindPanel]);
 
   useEffect(() => {
-    if (!pendingOpenFindPanelRef.current) {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "r") {
+        return;
+      }
+      const panelRoot = panelRootRef.current;
+      const target = event.target;
+      if (!panelRoot || !(target instanceof Node) || !panelRoot.contains(target)) {
+        return;
+      }
+      if (isEditableShortcutTarget(target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      handleOpenReplacePanel();
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [handleOpenReplacePanel]);
+
+  useEffect(() => {
+    if (!pendingOpenFindPanelRef.current && !pendingOpenReplacePanelRef.current) {
       return;
     }
     if (mode !== "edit" || isLoading || truncated) {
@@ -1632,7 +1693,12 @@ export function FileViewPanel({
     let attemptCount = 0;
     const attemptOpen = () => {
       attemptCount += 1;
-      if (openFindPanelInEditor()) {
+      if (pendingOpenReplacePanelRef.current && openReplacePanelInEditor()) {
+        pendingOpenReplacePanelRef.current = false;
+        pendingOpenFindPanelRef.current = false;
+        return;
+      }
+      if (pendingOpenFindPanelRef.current && openFindPanelInEditor()) {
         pendingOpenFindPanelRef.current = false;
         return;
       }
@@ -1646,7 +1712,7 @@ export function FileViewPanel({
         window.cancelAnimationFrame(rafId);
       }
     };
-  }, [isLoading, mode, openFindPanelInEditor, truncated]);
+  }, [isLoading, mode, openFindPanelInEditor, openReplacePanelInEditor, truncated]);
 
   // Syntax highlighted lines for code preview
   const previewMetrics = useMemo(
@@ -1753,6 +1819,7 @@ export function FileViewPanel({
       editorNavigationKeymapExt,
       ctrlClickDefinitionExt,
       persistentSearchExtension,
+      keymap.of(searchReplaceKeymap),
       selectFirstSearchMatchOnQueryChange,
       annotationWidgetsExt,
       diagnosticExtension(),

@@ -1434,7 +1434,7 @@ fn default_composer_access_shortcut() -> Option<String> {
 }
 
 fn default_composer_reasoning_shortcut() -> Option<String> {
-    Some("cmd+shift+r".to_string())
+    Some("cmd+alt+shift+r".to_string())
 }
 
 fn default_interrupt_shortcut() -> Option<String> {
@@ -2059,7 +2059,7 @@ mod tests {
         );
         assert_eq!(
             settings.composer_reasoning_shortcut.as_deref(),
-            Some("cmd+shift+r")
+            Some("cmd+alt+shift+r")
         );
         assert_eq!(
             settings.composer_collaboration_shortcut.as_deref(),

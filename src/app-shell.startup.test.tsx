@@ -69,7 +69,7 @@ const startupState = vi.hoisted(() => {
       experimentalSteerEnabled: false,
       composerModelShortcut: "Mod+Shift+M",
       composerAccessShortcut: "Mod+Shift+A",
-      composerReasoningShortcut: "Mod+Shift+R",
+      composerReasoningShortcut: "Mod+Alt+Shift+R",
       composerCollaborationShortcut: "Mod+Shift+C",
       composerEditorPreset: "default",
       composerFenceExpandOnSpace: false,

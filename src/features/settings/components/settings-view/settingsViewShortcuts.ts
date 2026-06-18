@@ -385,7 +385,7 @@ export const shortcutActions: ShortcutActionMetadata[] = [
     draftKey: "reasoning",
     category: "composer",
     labelKey: "settings.cycleReasoningMode",
-    defaultShortcut: "cmd+shift+r",
+    defaultShortcut: "cmd+alt+shift+r",
     scope: "editor",
     triggerSurface: "editor",
   },

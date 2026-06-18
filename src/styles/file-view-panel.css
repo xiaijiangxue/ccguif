@@ -1915,6 +1915,7 @@
 }
 
 .fvp-cm .cm-editor {
+  position: relative;
   height: 100%;
   background: var(--fvp-reader-surface);
 }
@@ -1975,6 +1976,12 @@
 }
 
 .fvp-cm .cm-panels-top {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 20;
+  overflow: visible;
   border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent);
 }
 
@@ -1982,165 +1989,250 @@
   border-top: 1px solid color-mix(in srgb, var(--border-subtle) 85%, transparent);
 }
 
-.fvp-cm .cm-search {
+/* ─── IDEA-style search panel ─────────────────────────────── */
+
+.fvp-cm .cm-search.cm-search-idea {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 42px 6px 10px;
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  color: var(--text-strong);
+  position: relative;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--surface-card) 12%, transparent);
+}
+
+/* Rows */
+.fvp-cm .cm-search-idea .cm-search-row {
   display: flex;
   align-items: center;
-  gap: 4px;
-  flex-wrap: wrap;
-  padding: 3px 8px;
-  font-size: 10px;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
 }
 
-.fvp-cm .cm-search label {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: var(--text-muted);
-  font-size: 9px;
-  line-height: 1;
+/* Replace row hidden by default, shown via data attribute */
+.fvp-cm .cm-search-idea .cm-search-row--replace {
+  display: none;
 }
 
-.fvp-cm .cm-search input[type="text"],
-.fvp-cm .cm-search input:not([type]) {
+.fvp-cm .cm-search-idea[data-replace-visible="true"] .cm-search-row--replace {
+  display: flex;
+}
+
+/* Search icon (left of input) */
+.fvp-cm .cm-search-idea .cm-search-row > .codicon {
+  flex: 0 0 auto;
+  font-size: 15px;
+  color: var(--fvp-reader-text);
+}
+
+/* Text inputs */
+.fvp-cm .cm-search-idea .cm-search-input {
+  flex: 1 1 160px;
+  min-width: 0;
   background: color-mix(in srgb, var(--surface-command) 88%, transparent);
   color: var(--text-strong);
   border: 1px solid color-mix(in srgb, var(--border-subtle) 90%, transparent);
   border-radius: 6px;
-  padding: 2px 6px;
-  min-height: 18px;
-  font-size: 9px;
-  line-height: 1.1;
+  padding: 4px 8px;
+  min-height: 28px;
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  line-height: 1.2;
 }
 
-.fvp-cm .cm-search input[type="text"]:focus,
-.fvp-cm .cm-search input:not([type]):focus {
+.fvp-cm .cm-search-idea .cm-search-input:focus {
   outline: none;
   border-color: color-mix(in srgb, var(--border-accent) 68%, var(--border-subtle));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-accent) 20%, transparent);
 }
 
-.fvp-cm .cm-search .cm-button {
-  width: auto;
-  height: auto;
-  min-height: 0;
-  padding: 1px 3px;
-  border-radius: 4px;
-  border: none;
+.fvp-cm .cm-search-idea .cm-search-input::placeholder {
+  color: var(--fvp-reader-text);
+  opacity: 0.7;
+}
+
+/* ─── Toggle buttons (Aa / W / *) ─────────────────────── */
+
+.fvp-cm .cm-search-idea .cm-search-toggle {
+  flex: 0 0 auto;
   display: inline-flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: flex-start;
-  gap: 3px;
-  font-size: 9px;
-  line-height: 1;
+  justify-content: center;
+  min-width: 26px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-family: var(--ui-font-family);
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted);
+  line-height: 1;
+  color: var(--fvp-reader-text);
   cursor: pointer;
+  user-select: none;
+  transition:
+    color 120ms ease,
+    background 120ms ease,
+    border-color 120ms ease;
+  border: 1px solid transparent;
+}
+
+.fvp-cm .cm-search-idea .cm-search-toggle:hover {
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--surface-control-hover) 40%, transparent);
+}
+
+/* Hidden native checkbox inside toggle */
+.fvp-cm .cm-search-idea .cm-search-toggle > input[type="checkbox"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Active toggle (checkbox checked) */
+.fvp-cm .cm-search-idea .cm-search-toggle:has(input:checked) {
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--border-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--border-accent) 32%, transparent);
+}
+
+/* ─── Result count ─────────────────────────────────── */
+
+.fvp-cm .cm-search-idea .cm-search-result-count {
+  flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fvp-reader-text);
+  white-space: nowrap;
+  padding: 0 2px;
+}
+
+/* ─── Navigation buttons (↑ ↓ ◎) ──────────────────── */
+
+.fvp-cm .cm-search-idea .cm-search-nav {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
   background: transparent;
-  box-shadow: none;
+  color: var(--fvp-reader-text);
+  cursor: pointer;
   transition:
     color 120ms ease,
     background 120ms ease;
 }
 
-.fvp-cm .cm-search .cm-button::before {
-  font-size: 11px;
-  line-height: 1;
-  font-weight: 700;
-  color: var(--text-stronger);
-  letter-spacing: -0.02em;
+.fvp-cm .cm-search-idea .cm-search-nav .codicon {
+  font-size: 14px;
 }
 
-.fvp-cm .cm-search .cm-button:hover {
+.fvp-cm .cm-search-idea .cm-search-nav:hover {
   color: var(--text-strong);
-  background: color-mix(in srgb, var(--surface-control-hover) 55%, transparent);
+  background: color-mix(in srgb, var(--surface-control-hover) 45%, transparent);
 }
 
-.fvp-cm .cm-search .cm-button:active {
-  background: color-mix(in srgb, var(--surface-control-hover) 70%, transparent);
+.fvp-cm .cm-search-idea .cm-search-nav:active {
+  background: color-mix(in srgb, var(--surface-control-hover) 65%, transparent);
 }
 
-.fvp-cm .cm-search .cm-button:focus-visible {
+.fvp-cm .cm-search-idea .cm-search-nav:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--surface-card) 78%, transparent),
     0 0 0 4px color-mix(in srgb, var(--border-accent) 45%, transparent);
 }
 
-.fvp-cm .cm-search .cm-button[name="next"]::before {
-  content: "↓";
-}
+/* ─── Action buttons (Replace / Replace All) ───────── */
 
-.fvp-cm .cm-search .cm-button[name="prev"]::before {
-  content: "↑";
-}
-
-.fvp-cm .cm-search .cm-button[name="select"]::before {
-  content: "◎";
-}
-
-.fvp-cm .cm-search .cm-button[name="replace"]::before {
-  content: "\eb3d";
-}
-
-.fvp-cm .cm-search .cm-button[name="replaceAll"]::before {
-  content: "\eb3c";
-}
-
-.fvp-cm .cm-search .cm-button[name="replace"]::before,
-.fvp-cm .cm-search .cm-button[name="replaceAll"]::before {
-  font-family: codicon;
-  font-size: 11px;
-  font-weight: 400;
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  line-height: 1;
-  text-align: center;
-}
-
-.fvp-cm .cm-search button[name="close"] {
-  margin-left: auto;
-  align-self: center;
-  min-height: 0;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, #ef4444 48%, transparent);
-  background: color-mix(in srgb, #ef4444 12%, transparent);
-  color: transparent;
-  padding: 0;
-  font-size: 0;
+.fvp-cm .cm-search-idea .cm-search-action {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 70%, transparent);
+  border-radius: 5px;
+  background: transparent;
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fvp-reader-text);
+  cursor: pointer;
   transition:
     color 120ms ease,
     background 120ms ease,
-    border-color 120ms ease,
-    transform 120ms ease;
+    border-color 120ms ease;
 }
 
-.fvp-cm .cm-search button[name="close"]::before {
-  content: "✕";
-  font-size: 13px;
-  line-height: 1;
-  font-weight: 700;
-  color: #ef4444;
+.fvp-cm .cm-search-idea .cm-search-action:hover {
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--surface-control-hover) 40%, transparent);
+  border-color: color-mix(in srgb, var(--border-subtle) 100%, transparent);
 }
 
-.fvp-cm .cm-search button[name="close"]:hover {
-  background: color-mix(in srgb, #ef4444 20%, transparent);
-  border-color: color-mix(in srgb, #ef4444 70%, transparent);
-  transform: scale(1.04);
+.fvp-cm .cm-search-idea .cm-search-action:active {
+  background: color-mix(in srgb, var(--surface-control-hover) 60%, transparent);
 }
 
-.fvp-cm .cm-search button[name="close"]:focus-visible {
+.fvp-cm .cm-search-idea .cm-search-action:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--surface-card) 78%, transparent),
-    0 0 0 4px color-mix(in srgb, #ef4444 32%, transparent);
+    0 0 0 4px color-mix(in srgb, var(--border-accent) 45%, transparent);
 }
+
+/* ─── Close button (top-right, gray) ───────────────── */
+
+.fvp-cm .cm-search-idea .cm-search-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--fvp-reader-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    color 120ms ease,
+    background 120ms ease;
+}
+
+.fvp-cm .cm-search-idea .cm-search-close .codicon {
+  font-size: 14px;
+}
+
+.fvp-cm .cm-search-idea .cm-search-close:hover {
+  color: var(--text-strong);
+  background: color-mix(in srgb, var(--surface-control-hover) 50%, transparent);
+}
+
+.fvp-cm .cm-search-idea .cm-search-close:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--surface-card) 78%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--border-accent) 45%, transparent);
+}
+
+/* ─── Keep original highlight styles ────────────────── */
 
 .fvp-cm .cm-searchMatch {
   background: color-mix(in srgb, #f59e0b 36%, transparent);

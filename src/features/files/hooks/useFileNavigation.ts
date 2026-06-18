@@ -9,6 +9,7 @@ import {
 import { EditorView, keymap } from "@codemirror/view";
 import { closeSearchPanel, openSearchPanel, searchPanelOpen } from "@codemirror/search";
 import type { ReactCodeMirrorRef } from "@uiw/react-codemirror";
+import { openSearchWithReplace } from "../search-panel";
 import {
   getCodeIntelDefinition,
   getCodeIntelReferences,
@@ -706,6 +707,15 @@ export function useFileNavigation({
     return true;
   }, [cmRef]);
 
+  const openReplacePanelInEditor = useCallback(() => {
+    const view = cmRef.current?.view;
+    if (!view) {
+      return false;
+    }
+    openSearchWithReplace(view as unknown as EditorView);
+    return true;
+  }, [cmRef]);
+
   const toggleFindPanelInEditor = useCallback(() => {
     const view = cmRef.current?.view;
     if (!view) {
@@ -738,6 +748,7 @@ export function useFileNavigation({
     editorNavigationKeymapExt,
     ctrlClickDefinitionExt,
     openFindPanelInEditor,
+    openReplacePanelInEditor,
     toggleFindPanelInEditor,
   };
 }

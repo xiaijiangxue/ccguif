@@ -150,7 +150,7 @@ const defaultSettings: AppSettings = {
   defaultAccessMode: "full-access",
   composerModelShortcut: "cmd+shift+m",
   composerAccessShortcut: "cmd+shift+a",
-  composerReasoningShortcut: "cmd+shift+r",
+  composerReasoningShortcut: "cmd+alt+shift+r",
   composerCollaborationShortcut: "shift+tab",
   interruptShortcut: getDefaultInterruptShortcut(),
   openSettingsShortcut: "cmd+,",
@@ -278,11 +278,19 @@ const defaultSettings: AppSettings = {
 
 const CODEX_WARM_TTL_DEFAULT_SECONDS = 7200;
 const LEGACY_TOGGLE_PROJECTS_SIDEBAR_SHORTCUT = "cmd+shift+p";
+const LEGACY_COMPOSER_REASONING_SHORTCUTS = new Set(["cmd+shift+r", "ctrl+shift+r"]);
 
 function normalizeToggleProjectsSidebarShortcut(value: string | null | undefined) {
   const normalized = normalizeShortcutValue(value);
   return normalized === LEGACY_TOGGLE_PROJECTS_SIDEBAR_SHORTCUT
     ? defaultSettings.toggleProjectsSidebarShortcut
+    : normalized;
+}
+
+function normalizeComposerReasoningShortcut(value: string | null | undefined) {
+  const normalized = normalizeShortcutValue(value);
+  return normalized && LEGACY_COMPOSER_REASONING_SHORTCUTS.has(normalized)
+    ? defaultSettings.composerReasoningShortcut
     : normalized;
 }
 
@@ -479,6 +487,9 @@ function normalizeAppSettings(
     ),
     toggleGlobalSearchShortcut: normalizeGlobalSearchShortcut(
       settings.toggleGlobalSearchShortcut,
+    ),
+    composerReasoningShortcut: normalizeComposerReasoningShortcut(
+      settings.composerReasoningShortcut,
     ),
     openAppTargets: normalizedTargets,
     selectedOpenAppId,
