@@ -71,6 +71,12 @@ export function TopbarSessionTabs({
               tab.threadId,
             );
           }}
+          onAuxClick={(event) => {
+            if (event.button === 1) {
+              event.preventDefault();
+              onCloseThread(tab.workspaceId, tab.threadId);
+            }
+          }}
           onClick={() => {
             if (!tab.isActive) {
               onSelectThread(tab.workspaceId, tab.threadId);

@@ -2206,6 +2206,12 @@ export function FileViewPanel({
                 className="fvp-tab-main"
                 role="tab"
                 aria-selected={isActive}
+                onAuxClick={(event) => {
+                  if (event.button === 1 && onCloseTab) {
+                    event.preventDefault();
+                    onCloseTab(tabPath);
+                  }
+                }}
                 onClick={() => onActivateTab?.(tabPath)}
                 onDoubleClick={() => onToggleEditorFileMaximized?.()}
                 onContextMenu={openTabContextMenu}
