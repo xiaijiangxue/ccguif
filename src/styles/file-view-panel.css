@@ -1995,7 +1995,10 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding: 6px 42px 6px 10px;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding: 6px 4px 6px 10px;
   font-family: var(--ui-font-family);
   font-size: 13px;
   color: var(--text-strong);
@@ -2013,6 +2016,18 @@
   min-height: 30px;
 }
 
+.fvp-cm .cm-search-idea .cm-search-row--find {
+  display: flex;
+}
+
+.fvp-cm .cm-search-idea .cm-search-row-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 /* Replace row hidden by default, shown via data attribute */
 .fvp-cm .cm-search-idea .cm-search-row--replace {
   display: none;
@@ -2023,7 +2038,8 @@
 }
 
 /* Search icon (left of input) */
-.fvp-cm .cm-search-idea .cm-search-row > .codicon {
+.fvp-cm .cm-search-idea .cm-search-row > .codicon,
+.fvp-cm .cm-search-idea .cm-search-row-main > .codicon {
   flex: 0 0 auto;
   font-size: 15px;
   color: var(--fvp-reader-text);
@@ -2188,44 +2204,6 @@
 }
 
 .fvp-cm .cm-search-idea .cm-search-action:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--surface-card) 78%, transparent),
-    0 0 0 4px color-mix(in srgb, var(--border-accent) 45%, transparent);
-}
-
-/* ─── Close button (top-right, gray) ───────────────── */
-
-.fvp-cm .cm-search-idea .cm-search-close {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--fvp-reader-text);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  transition:
-    color 120ms ease,
-    background 120ms ease;
-}
-
-.fvp-cm .cm-search-idea .cm-search-close .codicon {
-  font-size: 14px;
-}
-
-.fvp-cm .cm-search-idea .cm-search-close:hover {
-  color: var(--text-strong);
-  background: color-mix(in srgb, var(--surface-control-hover) 50%, transparent);
-}
-
-.fvp-cm .cm-search-idea .cm-search-close:focus-visible {
   outline: none;
   box-shadow:
     0 0 0 2px color-mix(in srgb, var(--surface-card) 78%, transparent),

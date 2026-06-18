@@ -246,14 +246,9 @@ class IdeaSearchPanel implements Panel {
       { name: "replaceAll", title: this.labels.replaceAll },
       [this.labels.replaceAll],
     );
-    const closeButton = button(
-      "cm-search-close",
-      { name: "close", "aria-label": this.labels.close },
-      [createIcon("close")],
-    );
-
     const findRow = createElement("div", "cm-search-row cm-search-row--find");
-    findRow.append(
+    const findRowMain = createElement("div", "cm-search-row-main");
+    findRowMain.append(
       createIcon("search"),
       this.searchField,
       toggle(this.caseField, "Aa", this.labels.matchCase),
@@ -264,6 +259,7 @@ class IdeaSearchPanel implements Panel {
       nextButton,
       selectButton,
     );
+    findRow.append(findRowMain);
 
     const replaceRow = createElement("div", "cm-search-row cm-search-row--replace");
     replaceRow.append(
@@ -273,7 +269,7 @@ class IdeaSearchPanel implements Panel {
       replaceAllButton,
     );
 
-    panel.append(findRow, replaceRow, closeButton);
+    panel.append(findRow, replaceRow);
 
     this.searchField.addEventListener("input", this.commit);
     this.searchField.addEventListener("change", this.commit);
@@ -287,7 +283,6 @@ class IdeaSearchPanel implements Panel {
     selectButton.addEventListener("click", () => selectMatches(this.view));
     replaceButton.addEventListener("click", () => replaceNext(this.view));
     replaceAllButton.addEventListener("click", () => replaceAll(this.view));
-    closeButton.addEventListener("click", () => closeSearchPanel(this.view));
 
     return panel;
   }
