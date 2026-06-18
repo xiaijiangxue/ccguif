@@ -361,10 +361,11 @@
 }
 
 :root {
-  --message-codeblock-bg: color-mix(in srgb, var(--surface-command) 92%, var(--surface-card) 8%);
-  --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 88%, var(--surface-card) 12%);
-  --message-codeblock-border: color-mix(in srgb, var(--border-stronger) 92%, transparent);
-  --message-codeblock-shadow: 0 10px 20px rgba(0, 0, 0, 0.14);
+  --message-codeblock-bg: color-mix(in srgb, var(--surface-card) 42%, transparent);
+  --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 32%, transparent);
+  --message-codeblock-border: color-mix(in srgb, var(--border-subtle) 36%, transparent);
+  --message-codeblock-header-border: color-mix(in srgb, var(--border-subtle) 34%, transparent);
+  --message-codeblock-shadow: none;
   --message-code-token-comment: rgba(150, 170, 200, 0.75);
   --message-code-token-punctuation: rgba(200, 210, 220, 0.85);
   --message-code-token-constant: #ff7b72;
@@ -376,10 +377,10 @@
 }
 
 :root[data-theme="light"] {
-  --message-codeblock-bg: color-mix(in srgb, var(--surface-card-strong) 94%, #eef4ff 6%);
-  --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 72%, #eef4ff 28%);
-  --message-codeblock-border: color-mix(in srgb, var(--border-stronger) 74%, #9db7eb 26%);
-  --message-codeblock-shadow: 0 8px 18px rgba(15, 23, 36, 0.08);
+  --message-codeblock-bg: color-mix(in srgb, var(--surface-card) 58%, transparent);
+  --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 38%, transparent);
+  --message-codeblock-border: color-mix(in srgb, var(--border-subtle) 48%, transparent);
+  --message-codeblock-header-border: color-mix(in srgb, var(--border-subtle) 42%, transparent);
   --message-code-token-comment: rgba(87, 96, 110, 0.86);
   --message-code-token-punctuation: rgba(36, 41, 47, 0.88);
   --message-code-token-constant: #cf222e;
@@ -392,11 +393,11 @@
 
 .message .markdown-codeblock {
   border: 1px solid var(--message-codeblock-border);
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--message-codeblock-bg);
   overflow: hidden;
   box-shadow: var(--message-codeblock-shadow);
-  margin: 6px 0;
+  margin: 7px 0;
 }
 
 .message .markdown-codeblock-header {
@@ -404,52 +405,59 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 4px 8px;
+  padding: 6px 8px 5px;
   background: var(--message-codeblock-header-bg);
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--message-codeblock-header-border);
   font-size: 10px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
-  color: var(--text-faint);
+  color: var(--text-tertiary, var(--text-muted));
 }
 
 .message .markdown-codeblock-language {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .message .markdown-codeblock-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .message .markdown-codeblock-copy {
-  border: 1px solid var(--border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 20px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 58%, transparent);
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 0 7px;
+  background: transparent;
   font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-stronger);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-faint);
 }
 
 .message .markdown-codeblock-copy:hover {
-  background: var(--surface-control-hover);
+  background: color-mix(in srgb, var(--surface-hover) 70%, transparent);
+  color: var(--text-primary);
 }
 
 .message .markdown-codeblock-copy.is-copied {
   border-color: var(--border-accent);
+  color: var(--text-accent);
 }
 
 .message .markdown-codeblock pre {
   margin: 0;
-  padding: 10px 0 12px;
+  padding: 9px 0 11px;
   white-space: pre;
   overflow-x: auto;
   font-family: var(--ui-font-family);
   font-size: var(--code-font-size, 11px);
   font-weight: var(--code-font-weight, 400);
-  line-height: var(--code-line-height, 1.28);
+  line-height: var(--code-line-height, 1.36);
 }
 
 .message .markdown-codeblock code,
@@ -465,7 +473,7 @@
 
 .message .markdown-codeblock-line {
   display: block;
-  min-height: calc(var(--code-font-size, 11px) * var(--code-line-height, 1.28));
+  min-height: calc(var(--code-font-size, 11px) * var(--code-line-height, 1.36));
   padding: 0 12px;
 }
 
@@ -511,27 +519,27 @@
 
 .message .markdown-codeblock-single {
   margin: 6px 0;
-  padding: 10px 12px 12px;
+  padding: 9px 12px 11px;
   border: 1px solid var(--message-codeblock-border);
-  border-radius: 10px;
+  border-radius: 6px;
   background: var(--message-codeblock-bg);
   white-space: pre;
   overflow-x: auto;
   font-family: var(--ui-font-family);
   font-size: var(--code-font-size, 11px);
   font-weight: var(--code-font-weight, 400);
-  line-height: var(--code-line-height, 1.28);
+  line-height: var(--code-line-height, 1.36);
   box-shadow: var(--message-codeblock-shadow);
 }
 
 .message .markdown-codeblock-markdown {
-  --message-codeblock-bg: color-mix(in srgb, var(--surface-card-strong) 88%, var(--surface-command) 12%);
-  --message-codeblock-header-bg: color-mix(in srgb, #8bb5ff 12%, var(--surface-control) 88%);
+  --message-codeblock-bg: color-mix(in srgb, var(--surface-card) 50%, transparent);
+  --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 36%, transparent);
 }
 
 :root[data-theme="light"] .message .markdown-codeblock-markdown {
-  --message-codeblock-bg: color-mix(in srgb, var(--surface-card-strong) 92%, #f3f8ff 8%);
-  --message-codeblock-header-bg: color-mix(in srgb, #dceaff 70%, var(--surface-control) 30%);
+  --message-codeblock-bg: color-mix(in srgb, var(--surface-card) 64%, transparent);
+  --message-codeblock-header-bg: color-mix(in srgb, var(--surface-control) 42%, transparent);
 }
 
 .message .markdown-codeblock-markdown-content {
