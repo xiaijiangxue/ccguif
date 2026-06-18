@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 46
+- **Total Sessions**: 47
 - **Last Active**: 2026-06-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1779 | Active |
+| `journal-1.md` | ~1812 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 47 | 2026-06-18 | style(diff): always show git actions, bump font sizes, improve commit input | `45e3a17f` | `refactor/liquid-precision-ui` |
 | 46 | 2026-06-18 | feat(git-history): add flat/tree view toggle for details changed files | `f97694a5` | `refactor/liquid-precision-ui` |
 | 45 | 2026-06-18 | style(tool-timeline): fix vertical alignment of meta and copy rows | `b1421c59` | `refactor/liquid-precision-ui` |
 | 44 | 2026-06-18 | fix(tool-timeline): start collapsed, show last tool name, add chevron | `cb63dd7f` | `refactor/liquid-precision-ui` |

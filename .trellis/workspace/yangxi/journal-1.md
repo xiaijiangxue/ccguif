@@ -1777,3 +1777,36 @@ Added flat/tree view toggle for git history details changed files panel, with de
 ### Next Steps
 
 - None - task complete
+
+
+## Session 47: style(diff): always show git actions, bump font sizes, improve commit input
+
+**Date**: 2026-06-18
+**Task**: style(diff): always show git actions, bump font sizes, improve commit input
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed hover-reveal animation for git panel actions, bumped font sizes to 13px, switched commit input to UI font with increased padding and height.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `45e3a17f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
