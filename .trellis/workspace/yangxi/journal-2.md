@@ -137,3 +137,36 @@ Removed close button from search panel, wrapped find row in flex container, set 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 57: refactor(search): extract search query logic from FileViewPanel to search-panel
+
+**Date**: 2026-06-19
+**Task**: refactor(search): extract search query logic from FileViewPanel to search-panel
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Moved formatSearchQueryKey, selectFirstSearchMatch, and selectFirstSearchMatchOnQueryChange ViewPlugin from FileViewPanel to search-panel.ts. Removed ~80 lines from FileViewPanel, enhanced test coverage.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `55c497de` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
