@@ -1843,3 +1843,36 @@ Increased commit input min-height to 80px, refactored resizer styles to use tran
 ### Next Steps
 
 - None - task complete
+
+
+## Session 49: style: normalize font weights, switch markdown to UI font, refine sidebar
+
+**Date**: 2026-06-18
+**Task**: style: normalize font weights, switch markdown to UI font, refine sidebar
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Bumped sidebar font-weights to 400, increased line-height to 1.45, switched markdown code blocks to UI font, removed inline code border, added CSS variable for diff-viewer background.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0b424e5f` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

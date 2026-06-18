@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 48
+- **Total Sessions**: 49
 - **Last Active**: 2026-06-18
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~1845 | Active |
+| `journal-1.md` | ~1878 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 49 | 2026-06-18 | style: normalize font weights, switch markdown to UI font, refine sidebar | `0b424e5f` | `refactor/liquid-precision-ui` |
 | 48 | 2026-06-18 | style: refine resizer visuals and commit input sizing | `2909b4d6` | `refactor/liquid-precision-ui` |
 | 47 | 2026-06-18 | style(diff): always show git actions, bump font sizes, improve commit input | `45e3a17f` | `refactor/liquid-precision-ui` |
 | 46 | 2026-06-18 | feat(git-history): add flat/tree view toggle for details changed files | `f97694a5` | `refactor/liquid-precision-ui` |
