@@ -203,3 +203,36 @@ Added onAuxClick middle mouse button (button === 1) handlers to close session ta
 ### Next Steps
 
 - None - task complete
+
+
+## Session 59: style(git-history): add explicit grid columns for resizer mode
+
+**Date**: 2026-06-19
+**Task**: style(git-history): add explicit grid columns for resizer mode
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added explicit grid-template-columns for git-history grids with vertical resizers, updated resizer divider color to border-muted.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `55e188f3` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

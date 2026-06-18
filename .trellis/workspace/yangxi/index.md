@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 58
+- **Total Sessions**: 59
 - **Last Active**: 2026-06-19
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~205 | Active |
+| `journal-2.md` | ~238 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 59 | 2026-06-19 | style(git-history): add explicit grid columns for resizer mode | `55e188f3` | `refactor/liquid-precision-ui` |
 | 58 | 2026-06-19 | feat: middle-click to close session tabs and file view tabs | `bce419b4` | `refactor/liquid-precision-ui` |
 | 57 | 2026-06-19 | refactor(search): extract search query logic from FileViewPanel to search-panel | `55c497de` | `refactor/liquid-precision-ui` |
 | 56 | 2026-06-19 | fix(search): remove close button, improve search panel layout | `3657af12` | `refactor/liquid-precision-ui` |
