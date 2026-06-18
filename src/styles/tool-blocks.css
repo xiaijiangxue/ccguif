@@ -1291,6 +1291,43 @@
   padding: 8px 10px;
 }
 
+.tool-output-markdown-shell {
+  border-color: color-mix(in srgb, var(--border-subtle) 36%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--surface-card) 42%, transparent);
+  padding: 0;
+  white-space: normal;
+}
+
+.tool-output-markdown-shell .tool-output-toolbar {
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 6px 8px 5px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-subtle) 34%, transparent);
+}
+
+.tool-output-label {
+  color: var(--text-tertiary, var(--text-muted));
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tool-output-markdown-shell .bash-command-copy-btn {
+  height: 20px;
+  padding: 0 7px;
+  border-color: color-mix(in srgb, var(--border-subtle) 58%, transparent);
+  background: transparent;
+  color: var(--text-faint);
+}
+
+.tool-output-markdown-shell .bash-command-copy-btn:hover {
+  background: color-mix(in srgb, var(--surface-hover) 70%, transparent);
+  color: var(--text-primary);
+}
+
 .tool-output-raw-pre {
   margin: 0;
   font-family: var(--code-font-family, 'SF Mono', 'SFMono-Regular', Menlo, Monaco, monospace);
@@ -1302,8 +1339,11 @@
 }
 
 .tool-output-markdown {
-  min-width: max-content;
   color: var(--text-primary);
+  line-height: 1.58;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding: 10px 12px 12px;
 }
 
 .tool-output-markdown.markdown a,
@@ -1312,6 +1352,10 @@
   font-family: inherit;
   font-size: inherit;
   line-height: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
 }
 
 .tool-output-markdown > :first-child {
@@ -1320,6 +1364,22 @@
 
 .tool-output-markdown > :last-child {
   margin-bottom: 0;
+}
+
+.tool-output-markdown :where(p, ul, ol) {
+  margin: 0 0 9px;
+}
+
+.tool-output-markdown :where(ul, ol) {
+  padding-left: 16px;
+}
+
+.tool-output-markdown li + li {
+  margin-top: 3px;
+}
+
+.tool-output-markdown :where(strong, b) {
+  font-weight: 650;
 }
 
 /* ============================================

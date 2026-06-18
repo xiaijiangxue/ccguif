@@ -1675,9 +1675,10 @@ export const GenericToolBlock = memo(function GenericToolBlock({
       )}
 
       {isExpanded && item.output && !hasChanges && (!isImageViewTool || !imageViewPreviewSrc) && (
-        <div className="task-details" style={{ padding: '12px', border: 'none' }}>
-          <div className="task-field-content tool-output-raw-shell" style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'auto' }}>
+        <div className="task-details tool-output-details" style={{ border: 'none' }}>
+          <div className="task-field-content tool-output-raw-shell tool-output-markdown-shell" style={{ maxHeight: '300px', overflowY: 'auto', overflowX: 'hidden' }}>
             <div className="tool-output-toolbar">
+              <span className="tool-output-label">Result</span>
               <button
                 type="button"
                 className="bash-command-copy-btn"

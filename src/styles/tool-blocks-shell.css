@@ -293,6 +293,21 @@
   padding: 0;
 }
 
+.tool-operation-timeline-detail--other .task-field {
+  margin-bottom: 8px;
+}
+
+.tool-operation-timeline-detail--other .task-field-label {
+  margin-bottom: 3px;
+  color: var(--text-faint);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.tool-operation-timeline-detail--other .tool-output-details {
+  padding: 4px 0 0;
+}
+
 @keyframes tool-operation-node-pulse {
   0%,
   100% {
@@ -444,12 +459,16 @@
   font-family: var(--ui-font-family);
   font-size: 12px;
   line-height: 1.46;
+  background: color-mix(in srgb, var(--surface-command) 46%, transparent);
+  border-color: color-mix(in srgb, var(--border-subtle) 58%, transparent);
+  border-radius: 5px;
+  padding: 7px 8px;
 }
 
 .tool-operation-timeline-detail--other .tool-output-markdown {
   font-family: var(--ui-font-family);
   font-size: 12px;
-  line-height: 1.46;
+  line-height: 1.58;
 }
 
 .read-tool-code-preview {
