@@ -236,3 +236,36 @@ Added explicit grid-template-columns for git-history grids with vertical resizer
 ### Next Steps
 
 - None - task complete
+
+
+## Session 60: style(git-history): soften borders from border-default to border-muted
+
+**Date**: 2026-06-19
+**Task**: style(git-history): soften borders from border-default to border-muted
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Changed git-history shell borders from border-default to border-muted for softer appearance.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `232fc442` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
