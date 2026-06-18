@@ -364,7 +364,7 @@
   position: relative;
   cursor: col-resize;
   touch-action: none;
-  background: color-mix(in srgb, var(--surface-control, #1a2230) 58%, transparent);
+  background: transparent;
 }
 
 .git-history-vertical-resizer::after {
@@ -374,13 +374,15 @@
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: color-mix(in srgb, var(--border-default) 88%, transparent);
+  background: var(--border-default);
   transform: translateX(-0.5px);
+  opacity: 0.6;
 }
 
 .git-history-vertical-resizer:hover::after,
 body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::after {
-  background: color-mix(in srgb, var(--accent-primary, #2563eb) 72%, transparent);
+  background: var(--accent-primary, #2563eb);
+  opacity: 1;
 }
 
 .git-history-overview {

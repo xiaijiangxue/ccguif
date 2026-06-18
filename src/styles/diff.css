@@ -1738,7 +1738,7 @@
   border-radius: 8px;
   padding: 10px 36px 10px 12px;
   resize: vertical;
-  min-height: 64px;
+  min-height: 80px;
   max-height: 160px;
   transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
