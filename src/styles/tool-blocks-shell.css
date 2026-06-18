@@ -434,6 +434,10 @@
   border: 1px solid var(--border-primary, var(--border-subtle));
 }
 
+.read-tool-details .task-field-content {
+  font-family: var(--ui-font-family);
+}
+
 .read-tool-rendered-content {
   max-height: 300px;
   overflow: auto;

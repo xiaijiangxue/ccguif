@@ -21,7 +21,7 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
-  background: color-mix(in srgb, var(--surface-messages) 92%, #000);
+  background: var(--diff-surface-bg, #fff);
 }
 
 .main .diff-viewer {

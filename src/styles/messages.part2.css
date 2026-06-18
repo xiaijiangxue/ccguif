@@ -301,6 +301,7 @@
 }
 
 .markdown {
+  font-family: var(--ui-font-family);
   white-space: normal;
   overflow-wrap: break-word;
   word-break: break-word;
@@ -334,9 +335,10 @@
 .message .markdown :not(pre) > code {
   color: var(--text-stronger);
   background: color-mix(in srgb, var(--surface-command) 82%, transparent);
-  border: 1px solid var(--border-subtle);
+  border: none;
   padding: 1px 5px;
   border-radius: 6px;
+  font-family: inherit;
   font-size: 0.97em;
 }
 
@@ -444,7 +446,7 @@
   padding: 10px 0 12px;
   white-space: pre;
   overflow-x: auto;
-  font-family: var(--code-font-family);
+  font-family: var(--ui-font-family);
   font-size: var(--code-font-size, 11px);
   font-weight: var(--code-font-weight, 400);
   line-height: var(--code-line-height, 1.28);
@@ -457,6 +459,7 @@
 
 .message .markdown-codeblock code {
   display: block;
+  font-family: var(--ui-font-family);
   min-width: max-content;
 }
 
@@ -514,7 +517,7 @@
   background: var(--message-codeblock-bg);
   white-space: pre;
   overflow-x: auto;
-  font-family: var(--code-font-family);
+  font-family: var(--ui-font-family);
   font-size: var(--code-font-size, 11px);
   font-weight: var(--code-font-weight, 400);
   line-height: var(--code-line-height, 1.28);
@@ -545,7 +548,7 @@
 
 .message .markdown-codeblock-single code {
   display: block;
-  font-family: var(--code-font-family);
+  font-family: var(--ui-font-family);
   font-weight: var(--code-font-weight, 400);
   line-height: var(--code-line-height, 1.28);
 }
