@@ -1695,7 +1695,12 @@ export const GenericToolBlock = memo(function GenericToolBlock({
                 {copiedOutput ? t("messages.copied") : t("messages.copy")}
               </button>
             </div>
-            <pre className="tool-output-raw-pre">{item.output}</pre>
+            <Markdown
+              value={item.output}
+              className="markdown tool-output-markdown"
+              workspaceId={workspaceId}
+              codeBlockStyle="message"
+            />
           </div>
         </div>
       )}

@@ -15,6 +15,7 @@ import {
 } from './toolConstants';
 import { FileIcon } from './FileIcon';
 import { Markdown } from '../Markdown';
+import { highlightLine, languageFromPath } from '../../../../utils/syntax';
 
 interface ReadToolBlockProps {
   item: Extract<ConversationItem, { kind: 'tool' }>;
@@ -25,6 +26,58 @@ interface ReadToolBlockProps {
 const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdx']);
 const PATH_KEYS = ['file_path', 'filePath', 'path', 'target_file', 'targetFile', 'filename', 'file'];
 const OUTPUT_KEYS = ['output', 'result', 'content', 'text'];
+
+function parseNumberedReadLine(line: string): { lineNumber: string | null; code: string } {
+  const match = line.match(/^(\s*)(\d+)(\s+)(.*)$/);
+  if (!match) {
+    return { lineNumber: null, code: line };
+  }
+  const separator = match[3] ?? '';
+  const readToolSeparatorWidth = 1;
+  const preservedIndent = separator.length > readToolSeparatorWidth
+    ? separator.slice(readToolSeparatorWidth)
+    : '';
+  return {
+    lineNumber: match[2] ?? null,
+    code: `${preservedIndent}${match[4] ?? ''}`,
+  };
+}
+
+function HighlightedReadCodePreview({
+  value,
+  filePath,
+}: {
+  value: string;
+  filePath: string;
+}) {
+  const language = useMemo(() => languageFromPath(filePath), [filePath]);
+  const lines = useMemo(
+    () =>
+      value.split(/\r?\n/).map((line, index) => {
+        const parsed = parseNumberedReadLine(line);
+        return {
+          key: `${index}:${line}`,
+          lineNumber: parsed.lineNumber,
+          html: highlightLine(parsed.code, language) || '&nbsp;',
+        };
+      }),
+    [language, value],
+  );
+
+  return (
+    <div className="read-tool-code-preview">
+      {lines.map((line) => (
+        <div className="read-tool-code-line" key={line.key}>
+          <span className="read-tool-code-line-number">{line.lineNumber}</span>
+          <span
+            className="read-tool-code-line-content"
+            dangerouslySetInnerHTML={{ __html: line.html }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function looksLikeMarkdownOutput(value: string): boolean {
   const trimmed = value.trim();
@@ -153,7 +206,7 @@ export const ReadToolBlock = memo(function ReadToolBlock({
           ) : (
             <div className="task-content-wrapper">
               <div className="task-field-content" style={{ maxHeight: '300px', overflowY: 'auto' }}>
-                {renderedOutput}
+                <HighlightedReadCodePreview value={renderedOutput} filePath={filePath} />
               </div>
             </div>
           )}

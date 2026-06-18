@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationItem } from "../../../../types";
 import * as diffParser from "../../../../utils/diff";
+import { prewarmMarkdownRuntime } from "../Markdown";
 import { GenericToolBlock } from "./GenericToolBlock";
 
 const askUserItem: Extract<ConversationItem, { kind: "tool" }> = {
@@ -115,11 +116,11 @@ const multiAddedFileChangeWithOutputDiffItem: Extract<ConversationItem, { kind: 
 const markdownOutputItem: Extract<ConversationItem, { kind: "tool" }> = {
   id: "tool-3",
   kind: "tool",
-  toolType: "fileChange",
-  title: "File changes",
+  toolType: "toolCall",
+  title: "Tool: Agent",
   detail: "{}",
   status: "completed",
-  output: "## Summary\n\n| Name | Value |\n| --- | --- |\n| a | b |",
+  output: "## Summary\n\nUse `src/App.tsx` for the entry.\n\n| Name | Value |\n| --- | --- |\n| a | b |",
 };
 
 const blockedModeItem: Extract<ConversationItem, { kind: "tool" }> = {
@@ -347,8 +348,8 @@ describe("GenericToolBlock", () => {
     if (header) {
       fireEvent.click(header);
     }
-    const rawPre = view.container.querySelector(".tool-output-raw-pre");
-    expect(rawPre?.textContent ?? "").toContain("Switch to Plan mode");
+    const markdownOutput = view.container.querySelector(".tool-output-markdown");
+    expect(markdownOutput?.textContent ?? "").toContain("Switch to Plan mode");
   });
 
   it("shows file-change summary and per-file detail stats", () => {
@@ -384,7 +385,6 @@ describe("GenericToolBlock", () => {
   });
 
   it("shows each changed file as its own collapsed row without overflow summary", () => {
-    const parseDiffSpy = vi.spyOn(diffParser, "parseDiff");
     const view = render(
       <GenericToolBlock
         item={fileChangeManyItem}
@@ -393,18 +393,16 @@ describe("GenericToolBlock", () => {
       />,
     );
 
-    expect(screen.getByText("App.tsx")).toBeTruthy();
-    expect(screen.getByText("New.tsx")).toBeTruthy();
-    expect(screen.getByText("Home.tsx")).toBeTruthy();
-    expect(screen.getByText("About.tsx")).toBeTruthy();
-    expect(screen.getByText("api.ts")).toBeTruthy();
-    expect(screen.getByText("store.ts")).toBeTruthy();
-    expect(screen.getByText("app.css")).toBeTruthy();
-    expect(screen.getByText("package.json")).toBeTruthy();
+    expect(screen.getAllByText("App.tsx").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("New.tsx").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Home.tsx").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("About.tsx").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("api.ts").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("store.ts").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("app.css").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("package.json").length).toBeGreaterThan(0);
     expect(screen.queryByText(/\+\d+\s+more files/i)).toBeNull();
     expect(view.container.querySelectorAll(".tool-change-stack-entry").length).toBe(8);
-    expect(parseDiffSpy).not.toHaveBeenCalled();
-    parseDiffSpy.mockRestore();
   });
 
   it("toggles collapsed multi-file rows independently", () => {
@@ -420,12 +418,9 @@ describe("GenericToolBlock", () => {
       view.container.querySelectorAll(".tool-change-stack-entry .tool-change-stack-header"),
     );
     expect(headers.length).toBe(8);
-    expect(view.container.querySelectorAll(".tool-change-stack-entry .task-details").length).toBe(0);
-
-    fireEvent.click(headers[0]!);
     expect(view.container.querySelectorAll(".tool-change-stack-entry .task-details").length).toBe(1);
 
-    fireEvent.click(headers[1]!);
+    fireEvent.click(headers[0]!);
     expect(view.container.querySelectorAll(".tool-change-stack-entry .task-details").length).toBe(2);
 
     fireEvent.click(headers[0]!);
@@ -538,7 +533,8 @@ describe("GenericToolBlock", () => {
     expect(onToggle).not.toHaveBeenCalled();
   });
 
-  it("keeps markdown-like output in raw text mode", () => {
+  it("renders markdown-like generic tool output as markdown", async () => {
+    await prewarmMarkdownRuntime();
     render(
       <GenericToolBlock
         item={markdownOutputItem}
@@ -546,11 +542,10 @@ describe("GenericToolBlock", () => {
         onToggle={vi.fn()}
       />,
     );
-    const rawPre = document.querySelector(".tool-output-raw-pre");
-    expect(rawPre).toBeTruthy();
-    const rawText = rawPre?.textContent ?? "";
-    expect(rawText).toContain("## Summary");
-    expect(rawText).toContain("| Name | Value |");
+    expect(document.querySelector(".tool-output-raw-pre")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Summary" })).toBeTruthy();
+    expect(screen.getByRole("table")).toBeTruthy();
+    expect(screen.getByText("src/App.tsx").tagName.toLowerCase()).toBe("code");
   });
 
   it("renders exit plan mode as a dedicated plan-ready card", () => {

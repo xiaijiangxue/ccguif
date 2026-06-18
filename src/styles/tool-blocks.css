@@ -1301,6 +1301,27 @@
   color: var(--text-primary);
 }
 
+.tool-output-markdown {
+  min-width: max-content;
+  color: var(--text-primary);
+}
+
+.tool-output-markdown.markdown a,
+.tool-output-markdown.markdown :not(pre) > code,
+.tool-output-markdown.markdown a code {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.tool-output-markdown > :first-child {
+  margin-top: 0;
+}
+
+.tool-output-markdown > :last-child {
+  margin-bottom: 0;
+}
+
 /* ============================================
    MCP 工具特殊样式
    ============================================ */

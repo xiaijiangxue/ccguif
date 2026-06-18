@@ -57,6 +57,21 @@ describe("ReadToolBlock", () => {
     expect(screen.getByText(/console\.log\(value\);/)).toBeTruthy();
   });
 
+  it("preserves read output indentation after stripping line numbers", () => {
+    const item = createReadItem(
+      "tool-read-code-indented",
+      { file_path: "src/app-shell.tsx" },
+      "46  import {\n47    SidebarCollapseButton,\n48    TitlebarExpandControls,\n49  } from './layout';",
+    );
+
+    const view = render(<ReadToolBlock item={item} isExpanded={true} onToggle={() => {}} />);
+
+    const lines = view.container.querySelectorAll(".read-tool-code-line-content");
+
+    expect(lines[1]?.textContent).toBe("  SidebarCollapseButton,");
+    expect(lines[2]?.textContent).toBe("  TitlebarExpandControls,");
+  });
+
   it("honors external expansion from the operation timeline", () => {
     const item = createReadItem(
       "tool-read-external-expanded",

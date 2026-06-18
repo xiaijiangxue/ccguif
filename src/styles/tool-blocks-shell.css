@@ -436,6 +436,75 @@
 
 .read-tool-details .task-field-content {
   font-family: var(--ui-font-family);
+  font-size: 12px;
+  line-height: 1.46;
+}
+
+.tool-operation-timeline-detail--other .task-field-content {
+  font-family: var(--ui-font-family);
+  font-size: 12px;
+  line-height: 1.46;
+}
+
+.tool-operation-timeline-detail--other .tool-output-markdown {
+  font-family: var(--ui-font-family);
+  font-size: 12px;
+  line-height: 1.46;
+}
+
+.read-tool-code-preview {
+  display: grid;
+  min-width: max-content;
+}
+
+.read-tool-code-line {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 18px;
+}
+
+.read-tool-code-line-number {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  user-select: none;
+}
+
+.read-tool-code-line-content {
+  white-space: pre;
+}
+
+.read-tool-code-line-content :is(.token.comment, .token.prolog, .token.doctype, .token.cdata) {
+  color: var(--message-code-token-comment);
+}
+
+.read-tool-code-line-content .token.punctuation {
+  color: var(--message-code-token-punctuation);
+}
+
+.read-tool-code-line-content :is(.token.property, .token.tag, .token.constant, .token.symbol, .token.deleted) {
+  color: var(--message-code-token-constant);
+}
+
+.read-tool-code-line-content :is(.token.boolean, .token.number) {
+  color: var(--message-code-token-number);
+}
+
+.read-tool-code-line-content :is(.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted) {
+  color: var(--message-code-token-string);
+}
+
+.read-tool-code-line-content :is(.token.operator, .token.entity, .token.url, .token.variable) {
+  color: var(--message-code-token-operator);
+}
+
+.read-tool-code-line-content :is(.token.atrule, .token.attr-value, .token.keyword) {
+  color: var(--message-code-token-keyword);
+}
+
+.read-tool-code-line-content :is(.token.function, .token.class-name) {
+  color: var(--message-code-token-function);
 }
 
 .read-tool-rendered-content {
