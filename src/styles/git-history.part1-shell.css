@@ -9,7 +9,7 @@
   max-height: calc(100vh - var(--main-topbar-height, 44px));
   display: flex;
   flex-direction: column;
-  border-top: 1px solid var(--border-default);
+  border-top: 1px solid var(--border-muted);
   background: color-mix(in srgb, var(--surface-messages, #0d0f14) 94%, transparent);
   box-shadow: none;
   backdrop-filter: none;
@@ -97,7 +97,7 @@ body[data-git-history-resizing="true"] .git-history-dock-resizer::after {
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-muted);
   background: color-mix(in srgb, var(--surface-card-muted, #111725) 95%, transparent);
 }
 
@@ -117,7 +117,7 @@ body[data-git-history-resizing="true"] .git-history-dock-resizer::after {
 }
 
 .git-history-empty-toolbar {
-  border-bottom: 1px solid var(--border-default);
+  border-bottom: 1px solid var(--border-muted);
 }
 
 .git-history-empty-inline-text {
