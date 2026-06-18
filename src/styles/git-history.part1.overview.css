@@ -351,8 +351,16 @@
   overflow: hidden;
 }
 
+.git-history-grid.with-vertical-resizers {
+  grid-template-columns: minmax(200px, 240px) 7px minmax(0, 1fr);
+}
+
 .git-history-grid.with-vertical-resizers .git-history-overview {
   border-right: none;
+}
+
+.git-history-main-grid.with-vertical-resizers {
+  grid-template-columns: minmax(220px, 0.82fr) 7px minmax(420px, 1.35fr) 7px minmax(420px, 1.2fr);
 }
 
 .git-history-main-grid.with-vertical-resizers .git-history-branches,
@@ -374,9 +382,9 @@
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: var(--border-default);
+  background: var(--border-muted);
   transform: translateX(-0.5px);
-  opacity: 0.6;
+  opacity: 1;
 }
 
 .git-history-vertical-resizer:hover::after,
