@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 55
+- **Total Sessions**: 56
 - **Last Active**: 2026-06-19
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~106 | Active |
+| `journal-2.md` | ~139 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 56 | 2026-06-19 | fix(search): remove close button, improve search panel layout | `3657af12` | `refactor/liquid-precision-ui` |
 | 55 | 2026-06-19 | feat(search): add find-and-replace panel with custom search UI | `ee3ce008` | `refactor/liquid-precision-ui` |
 | 54 | 2026-06-19 | style(file-view-panel): switch to UI font, normalize sizes, remove shadows | `39a5d8d7` | `refactor/liquid-precision-ui` |
 | 53 | 2026-06-18 | style: strengthen border visibility with 80% opacity dark mix | `28879b23` | `refactor/liquid-precision-ui` |
