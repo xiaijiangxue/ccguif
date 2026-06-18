@@ -1876,3 +1876,36 @@ Bumped sidebar font-weights to 400, increased line-height to 1.45, switched mark
 ### Next Steps
 
 - None - task complete
+
+
+## Session 50: feat(tool-blocks): add syntax highlighting for read tool output
+
+**Date**: 2026-06-18
+**Task**: feat(tool-blocks): add syntax highlighting for read tool output
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added HighlightedReadCodePreview with line numbers and PrismJS token highlighting, parsed numbered read output lines, switched GenericToolBlock to Markdown rendering, added token color and typography styles.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `edf41fde` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
