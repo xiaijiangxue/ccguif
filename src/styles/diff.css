@@ -507,7 +507,12 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--ui-font-family);
   font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
   color: var(--text-faint);
 }
 
@@ -1388,7 +1393,12 @@
 }
 
 .diff-counts-inline {
-  font-size: var(--git-filetree-badge-font-size);
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -1397,8 +1407,6 @@
   border-radius: var(--git-filetree-badge-radius);
   border: 1px solid color-mix(in srgb, var(--border-default) 58%, transparent);
   background: color-mix(in srgb, var(--surface-control) 62%, transparent);
-  font-family: var(--code-font-family);
-  font-variant-numeric: tabular-nums;
 }
 
 .diff-row:hover .diff-counts-inline {
