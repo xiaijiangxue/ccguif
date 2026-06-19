@@ -1559,12 +1559,6 @@ export function GitDiffPanel({
     getPathLeafName(normalizedWorkspacePath) ||
     (workspaceId?.trim() ?? "");
   const hasAnyChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
-  const commitScopeHint =
-    selectedCommitCount > 0
-      ? t("git.selectedFilesForCommit", { count: selectedCommitCount })
-      : hasAnyChanges
-        ? t("git.selectFilesToCommit")
-        : t("git.noChangesToCommit");
   const useCompactTreeSectionHeaders = gitDiffListView === "tree" && Boolean(repositoryRootName);
   const useUnifiedDiffSummary = mode === "diff" && hasAnyChanges;
   const showApplyWorktree =
@@ -1983,9 +1977,6 @@ export function GitDiffPanel({
                 selectedPaths={selectedCommitPaths}
                 onCommit={onCommit}
               />
-              <div className="commit-message-hint" aria-live="polite">
-                {commitScopeHint}
-              </div>
             </div>
           )}
           {/* Show Push button when there are commits to push */}

@@ -179,8 +179,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 13px;
   letter-spacing: 0;
   line-height: 1;
   cursor: pointer;
@@ -636,7 +635,7 @@
   border-bottom: 2px solid transparent;
   border-radius: 0;
   padding: 4px 2px 5px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
   background: transparent;
   cursor: pointer;
@@ -655,7 +654,6 @@
   color: color-mix(in srgb, var(--accent-primary, #2563eb) 88%, var(--text-emphasis));
   border-bottom-color: var(--accent-primary, #2563eb);
   border-bottom-width: 2px;
-  font-weight: 600;
 }
 
 .diff-list-view-collapse-toggle {
@@ -694,7 +692,7 @@
   border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   min-height: 24px;
