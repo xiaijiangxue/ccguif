@@ -863,3 +863,36 @@ Reduced section gap/padding, row min-height to 24/23px, tightened branch item an
 ### Next Steps
 
 - None - task complete
+
+
+## Session 79: style(git-history): simplify toolbar meta, enlarge commit input
+
+**Date**: 2026-06-20
+**Task**: style(git-history): simplify toolbar meta, enlarge commit input
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Simplified toolbar meta to HEAD pill only, enlarged commit input to 72px min-height, switched to UI font, tightened commit box spacing.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c7bd79db` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
