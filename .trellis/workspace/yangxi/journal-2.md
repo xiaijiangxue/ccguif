@@ -1127,3 +1127,36 @@ Added --diff-code-font-weight CSS custom property (default 600) for diff line co
 ### Next Steps
 
 - None - task complete
+
+
+## Session 87: style: compact topbar to 34px, reduce tab and titlebar heights
+
+**Date**: 2026-06-20
+**Task**: style: compact topbar to 34px, reduce tab and titlebar heights
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Reduced topbar height from 44px to 34px, tab/button heights to 24px, tightened padding. Includes style refactor brainstorm and plan docs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0e5d334a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
