@@ -1160,3 +1160,36 @@ Reduced topbar height from 44px to 34px, tab/button heights to 24px, tightened p
 ### Next Steps
 
 - None - task complete
+
+
+## Session 88: style: use CSS variable for sidebar font-weight, hide mode selector in diff view
+
+**Date**: 2026-06-20
+**Task**: style: use CSS variable for sidebar font-weight, hide mode selector in diff view
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added --sidebar-tree-label-font-weight variable for sidebar nav items, hid git panel mode selector in diff mode, updated plan doc.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d1193b50` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
