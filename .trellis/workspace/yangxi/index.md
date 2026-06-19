@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 70
+- **Total Sessions**: 71
 - **Last Active**: 2026-06-19
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~601 | Active |
+| `journal-2.md` | ~634 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 71 | 2026-06-19 | i18n(git-history): clarify commit search placeholder to include hash | `ea1fb7be` | `refactor/liquid-precision-ui` |
 | 70 | 2026-06-19 | style(git-history): add CSS hover expansion for truncated author names | `60669746` | `refactor/liquid-precision-ui` |
 | 69 | 2026-06-19 | fix(git-history): prevent redundant scroll-to-selected on same commit | `53cd541b` | `refactor/liquid-precision-ui` |
 | 68 | 2026-06-19 | style: normalize diff count fonts, adjust commit row height to 20px | `2f27b709` | `refactor/liquid-precision-ui` |

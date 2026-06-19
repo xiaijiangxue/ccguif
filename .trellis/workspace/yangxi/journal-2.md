@@ -599,3 +599,36 @@ Added CSS hover expansion for truncated author names in commit rows, widening au
 ### Next Steps
 
 - None - task complete
+
+
+## Session 71: i18n(git-history): clarify commit search placeholder to include hash
+
+**Date**: 2026-06-19
+**Task**: i18n(git-history): clarify commit search placeholder to include hash
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Updated historySearchCommits to mention hash search in en/zh locales.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `ea1fb7be` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
