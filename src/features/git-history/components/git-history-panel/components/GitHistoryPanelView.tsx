@@ -763,22 +763,24 @@ export function renderGitHistoryPanelView(scope: any) {
                     <i className="git-history-graph-dot" />
                   </span>
                   <span className="git-history-commit-content">
-                    <span
-                      className="git-history-commit-summary"
-                      title={entry.summary || t("git.historyNoMessage")}
-                    >
-                      {entry.summary || t("git.historyNoMessage")}
-                    </span>
-                    <span className="git-history-commit-meta">
-                      <code>{entry.shortSha}</code>
-                      <em>{entry.author || t("git.unknown")}</em>
-                      <time>{formatRelativeTime(entry.timestamp, t)}</time>
-                    </span>
-                    {entry.refs.length > 0 && (
-                      <span className="git-history-commit-refs" title={entry.refs.join(", ")}>
-                        {entry.refs.slice(0, 3).join(" · ")}
+                    <span className="git-history-commit-primary-line">
+                      <span
+                        className="git-history-commit-summary"
+                        title={entry.summary || t("git.historyNoMessage")}
+                      >
+                        {entry.summary || t("git.historyNoMessage")}
                       </span>
-                    )}
+                      <span className="git-history-commit-meta">
+                        <code>{entry.shortSha}</code>
+                        <em>{entry.author || t("git.unknown")}</em>
+                        <time>{formatRelativeTime(entry.timestamp, t)}</time>
+                      </span>
+                      {entry.refs.length > 0 && (
+                        <span className="git-history-commit-refs" title={entry.refs.join(", ")}>
+                          {entry.refs.slice(0, 3).join(" · ")}
+                        </span>
+                      )}
+                    </span>
                   </span>
                 </ActionSurface>
               );
@@ -948,13 +950,13 @@ export function renderGitHistoryPanelView(scope: any) {
 
                 <div className="git-history-diff-view">
                   <div className="git-history-message-panel">
-                    <div className="git-history-message-row">
+                    <div className="git-history-message-row git-history-message-row--title">
                       <span className="git-history-message-label">{t("git.historyCommitMetaTitleLabel")}</span>
                       <strong className="git-history-message-title">
                         {details.summary || t("git.historyNoMessage")}
                       </strong>
                     </div>
-                    <div className="git-history-message-row">
+                    <div className="git-history-message-row git-history-message-row--content">
                       <span className="git-history-message-label">{t("git.historyCommitMetaContentLabel")}</span>
                       <div className="git-history-message-content">
                         {detailsMessageContent}
