@@ -139,8 +139,16 @@ describe("GitHistoryWorktreePanel", () => {
     expect(document.querySelector(".git-history-worktree-section.git-filetree-section")).toBeTruthy();
     expect(document.querySelector(".git-history-worktree-section-header.git-filetree-section-header")).toBeTruthy();
     expect(document.querySelector(".git-history-worktree-folder-row.diff-tree-folder-row.git-filetree-folder-row")).toBeTruthy();
-    expect(document.querySelector(".git-history-worktree-file-row.diff-row.git-filetree-row")).toBeTruthy();
-    expect(document.querySelector(".git-history-worktree-file-stats.diff-counts-inline.git-filetree-badge")).toBeTruthy();
+    const fileRow = document.querySelector(".git-history-worktree-file-row.diff-row.git-filetree-row");
+    expect(fileRow).toBeTruthy();
+    expect(
+      fileRow?.querySelector(
+        '.diff-row-meta .git-history-worktree-file-stats.diff-counts-inline[aria-label="+2 -1"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      fileRow?.querySelector(".diff-file .git-history-worktree-file-stats"),
+    ).toBeNull();
     expect(document.querySelector(".git-history-worktree-generate.commit-message-generate-button")).toBeTruthy();
     expect(document.querySelector(".git-history-worktree-engine-icon.commit-message-engine-icon")).toBeTruthy();
   });

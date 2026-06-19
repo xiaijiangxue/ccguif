@@ -774,9 +774,11 @@ export function renderGitHistoryPanelView(scope: any) {
 
         <section className="git-history-details">
           <div className="git-history-column-header">
-            <span>
+            <span className="git-history-column-title">
               {details ? <FolderTree size={14} /> : <FileText size={14} />}
-              {details ? t("git.historyChangedFiles") : t("git.historyCommitDetails")}
+              <span className="git-history-column-title-text">
+                {details ? t("git.historyChangedFiles") : t("git.historyCommitDetails")}
+              </span>
             </span>
             {details && (
               <span className="git-history-details-view-toggle" role="group" aria-label={t("git.listView")}>
@@ -886,7 +888,9 @@ export function renderGitHistoryPanelView(scope: any) {
                         <span className="git-history-tree-icon is-file" aria-hidden>
                           <FileIcon filePath={file.path} />
                         </span>
-                        <span className="git-history-file-path">{detailsListView === "flat" ? item.path : item.label}</span>
+                        <span className="git-history-file-path" title={statusLabel(file)}>
+                          {item.label}
+                        </span>
                         <span className="git-history-file-stats git-filetree-badge">
                           <span className="is-add">+{file.additions}</span>
                           <span className="is-sep">/</span>

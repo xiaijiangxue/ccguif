@@ -124,17 +124,17 @@ function getPathLeafName(path: string | null | undefined): string {
 function statusSymbol(status: string) {
   switch (status) {
     case "A":
-      return "(A)";
+      return "A";
     case "M":
-      return "(U)";
+      return "M";
     case "D":
-      return "(D)";
+      return "D";
     case "R":
-      return "(R)";
+      return "R";
     case "T":
-      return "(T)";
+      return "T";
     default:
-      return "(?)";
+      return "?";
   }
 }
 

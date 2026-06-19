@@ -294,6 +294,27 @@ describe("GitHistoryPanel helpers", () => {
     expect(items.map((item) => item.label)).toEqual(["a", "b", "c", "d.txt"]);
   });
 
+  it("keeps changed file display labels as leaf names while retaining full paths", () => {
+    const items = buildFileTreeItems(
+      [
+        {
+          path: "src/features/git-history/components/GitHistoryPanel.tsx",
+          status: "M",
+          additions: 12,
+          deletions: 3,
+          diff: "",
+          lineCount: 0,
+          truncated: false,
+        },
+      ],
+      new Set(["src", "src/features", "src/features/git-history", "src/features/git-history/components"]),
+    );
+    const fileItem = items.find((item) => item.type === "file");
+
+    expect(fileItem?.label).toBe("GitHistoryPanel.tsx");
+    expect(fileItem?.path).toBe("src/features/git-history/components/GitHistoryPanel.tsx");
+  });
+
   it("returns sane default widths for 3:2:3:2 layout", () => {
     const widths = getDefaultColumnWidths(1600);
     expect(widths.overviewWidth).toBeGreaterThan(0);
