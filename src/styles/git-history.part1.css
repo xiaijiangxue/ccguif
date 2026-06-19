@@ -23,7 +23,7 @@
   gap: 8px;
   padding: 7px 10px;
   border-bottom: 1px solid var(--border-default);
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--surface-card-muted, #111725) 72%, transparent);
 }
@@ -108,7 +108,7 @@
   min-width: 0;
   color: inherit;
   outline: none;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .git-history-branch-list,
@@ -179,7 +179,7 @@
   justify-content: center;
   height: 24px;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 500;
   line-height: 1;
   border-radius: 999px;
@@ -227,7 +227,7 @@
 .git-history-mini-chip {
   height: 24px;
   padding: 0 8px;
-  font-size: 11px;
+  font-size: 13px;
   border-radius: 999px;
   border-color: color-mix(in srgb, var(--border-default) 72%, transparent);
   background: color-mix(in srgb, var(--surface-control, #1a2230) 72%, transparent);
@@ -285,7 +285,7 @@
   justify-content: space-between;
   gap: 8px;
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: 13px;
   border-radius: 8px;
 }
 
@@ -293,7 +293,7 @@
   margin: 2px 4px 8px;
   padding: 6px 8px;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 13px;
   border-radius: 8px;
 }
 
@@ -307,10 +307,10 @@
   justify-content: flex-start;
   gap: 6px;
   color: var(--text-secondary);
-  font-size: 10px;
+  font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 700;
+  letter-spacing: 0;
+  font-weight: 600;
   border-radius: 8px;
 }
 
@@ -338,8 +338,8 @@
   gap: 6px;
   border-radius: 8px;
   color: var(--text-muted);
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 13px;
+  letter-spacing: 0;
   text-transform: uppercase;
   font-weight: 600;
 }
@@ -365,7 +365,7 @@
   min-height: 28px;
   padding-left: 10px;
   padding-right: 12px;
-  font-size: 12px;
+  font-size: 13px;
   border-left: 2px solid transparent;
 }
 
@@ -377,7 +377,7 @@
   min-height: 28px;
   padding-left: 10px;
   padding-right: 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
@@ -424,7 +424,7 @@
 .git-history-branch-badges em,
 .git-history-branch-badges i {
   font-style: normal;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 999px;
   padding: 0 6px;
@@ -494,7 +494,7 @@
 .git-history-branch-context-tracking-text {
   display: block;
   min-width: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
   color: color-mix(in srgb, var(--text-muted) 86%, var(--text-secondary));
@@ -671,7 +671,7 @@
 .git-history-commit-summary {
   min-width: 0;
   grid-column: 1;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 18px;
   white-space: nowrap;
   overflow: hidden;
@@ -686,7 +686,7 @@
   justify-self: end;
   column-gap: 7px;
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 13px;
   line-height: 18px;
   white-space: nowrap;
 }
@@ -716,7 +716,7 @@
   min-width: 0;
   grid-column: 2;
   color: color-mix(in srgb, var(--accent-primary, #2563eb) 62%, var(--text-muted));
-  font-size: 10px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -735,7 +735,7 @@
   align-items: center;
   gap: 10px;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 13px;
   flex-wrap: wrap;
 }
 
@@ -753,7 +753,7 @@
   flex-wrap: wrap;
   min-height: var(--git-filetree-row-min-height);
   padding: var(--git-filetree-row-pad-y) var(--git-filetree-row-pad-x);
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   border-bottom: 1px solid color-mix(in srgb, var(--border-default) 34%, transparent);
 }
@@ -769,6 +769,11 @@
   align-items: center;
   gap: 0;
   white-space: nowrap;
+  font-family: var(--ui-font-family);
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
 }
 
 .git-history-tree-item {
@@ -834,13 +839,18 @@
   width: 19px;
   height: 19px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   background: color-mix(in srgb, var(--surface-control, #1a2230) 85%, transparent);
 }
 
 .git-history-file-stats {
-  font-size: var(--git-filetree-badge-font-size);
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -849,8 +859,6 @@
   border-radius: var(--git-filetree-badge-radius);
   border: 1px solid color-mix(in srgb, var(--border-default) 58%, transparent);
   background: color-mix(in srgb, var(--surface-control, #1a2230) 64%, transparent);
-  font-family: var(--code-font-family);
-  font-variant-numeric: tabular-nums;
 }
 
 .git-history-file-list .git-history-tree-item:hover,
@@ -915,7 +923,7 @@
   border-radius: 8px;
   background: color-mix(in srgb, #f59e0b 18%, transparent);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .git-history-diff-code {
@@ -923,7 +931,7 @@
   padding: 10px;
   min-height: 100%;
   box-sizing: border-box;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   white-space: pre;
   font-family: var(--code-font-family, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
@@ -943,20 +951,20 @@
 }
 
 .git-history-message-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .git-history-message-title {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.35;
   color: var(--text-stronger);
   font-weight: 350;
 }
 
 .git-history-message-content {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--text-secondary);
   font-weight: inherit;
@@ -985,7 +993,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 350;
   color: var(--text-muted);
 }
@@ -996,14 +1004,14 @@
 }
 
 .git-history-message-meta-item code {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 350;
 }
 
 .git-history-empty {
   padding: 16px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .git-history-diff-modal-overlay {
@@ -1079,7 +1087,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
 }
 
@@ -1093,7 +1101,7 @@
 }
 
 .git-history-diff-modal-stats {
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -1174,7 +1182,7 @@
   border-radius: 0;
   background: transparent;
   padding: 0;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
   font-weight: 400;
   color: var(--text-muted);
@@ -1221,7 +1229,7 @@
   justify-content: center;
   width: 14px;
   height: 14px;
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1;
 }
@@ -1240,7 +1248,7 @@
   margin: 0;
   padding: 12px;
   overflow: auto;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--surface-control, #1a2230) 56%, transparent);
@@ -1344,7 +1352,7 @@
 .git-history-branch-worktree-diff-mode-badge {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -1367,14 +1375,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text-strong);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .git-history-branch-worktree-diff-subtitle {
   min-width: 0;
   max-width: 100%;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: 13px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1383,7 +1391,7 @@
 .git-history-branch-worktree-diff-stats {
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   border: 1px solid color-mix(in srgb, var(--git-history-branch-diff-accent) 34%, transparent);
   background: color-mix(in srgb, var(--git-history-branch-diff-accent) 16%, transparent);
@@ -1414,7 +1422,7 @@
 
 .git-history-branch-worktree-diff-files-title {
   padding: 10px 12px 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   border-bottom: 1px solid color-mix(in srgb, var(--border-default) 38%, transparent);
@@ -1481,7 +1489,7 @@
 .git-history-branch-worktree-diff-file .git-history-file-status {
   width: 21px;
   height: 21px;
-  font-size: 10.5px;
+  font-size: 13px;
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-default) 58%, transparent) inset;
 }
 
@@ -1502,7 +1510,7 @@
 
 .git-history-branch-worktree-diff-file-path {
   min-width: 0;
-  font-size: 12px;
+  font-size: 13px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

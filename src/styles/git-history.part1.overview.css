@@ -34,7 +34,7 @@
   background: color-mix(in srgb, var(--surface-control, #1a2230) 56%, transparent);
   color: var(--text-primary);
   box-sizing: border-box;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
   transition: background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
 }
@@ -130,7 +130,7 @@
 
 .git-history-project-group-label {
   padding: 6px 10px 4px;
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1.2;
   color: var(--text-faint);
   font-weight: 600;
@@ -185,7 +185,7 @@
 .git-history-project-empty {
   padding: 10px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   text-align: center;
 }
 
@@ -205,7 +205,7 @@
   align-items: center;
   gap: 6px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
@@ -217,7 +217,7 @@
   border: 1px solid color-mix(in srgb, var(--border-default) 68%, transparent);
   background: color-mix(in srgb, var(--surface-elevated, #212838) 80%, transparent);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: 13px;
   padding: 0 8px;
 }
 
@@ -233,7 +233,7 @@
   min-width: 0;
   color: var(--text-muted);
   font-family: var(--ui-font-family);
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .git-history-head-pill {
@@ -243,10 +243,10 @@
   height: 18px;
   padding: 0 6px;
   border-radius: 999px;
-  font-family: inherit;
+  font-family: var(--code-font-family);
   font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  font-weight: 600;
+  letter-spacing: 0;
   color: color-mix(in srgb, var(--accent-primary, #2563eb) 86%, #dbeafe);
   border: 1px solid color-mix(in srgb, var(--accent-primary, #2563eb) 58%, transparent);
   background: color-mix(in srgb, var(--accent-primary, #2563eb) 18%, transparent);
@@ -265,9 +265,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: inherit;
+  font-family: var(--code-font-family);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1;
   color: color-mix(in srgb, #10b981 82%, #d1fae5);
 }
@@ -279,7 +279,7 @@
 
 .git-history-toolbar-worktree {
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .git-history-toolbar-worktree.is-dirty {
@@ -295,7 +295,12 @@
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  font-size: 11px;
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
   color: var(--text-muted);
 }
 
@@ -457,7 +462,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-overview-working-tree {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--text-secondary);
 }
@@ -491,7 +496,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -525,7 +530,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-overview-branch {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-stronger);
   white-space: nowrap;
@@ -534,7 +539,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-overview-detail {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -548,7 +553,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-worktree-status {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
   color: var(--text-secondary);
 }
@@ -562,7 +567,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-worktree-branch {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-stronger);
   min-width: 0;
@@ -572,8 +577,13 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-worktree-total-changes {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
+  font-family: var(--ui-font-family);
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
 }
 
 .git-history-worktree-commit-box {
@@ -586,7 +596,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-worktree-commit-hint {
-  font-size: 11px;
+  font-size: 13px;
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -793,7 +803,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-worktree-section-indicator strong {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -886,7 +896,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: inherit;
+  font-size: 13px;
   font-weight: inherit;
   color: var(--text-stronger);
 }
@@ -954,7 +964,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 
 .git-history-worktree-file-path strong {
   color: var(--git-file-status-color);
-  font-size: inherit;
+  font-size: 13px;
   font-weight: var(--git-filetree-name-font-weight);
   white-space: nowrap;
   overflow: hidden;
@@ -972,7 +982,12 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 
 .git-history-worktree-file-stats {
   white-space: nowrap;
-  font-size: var(--git-filetree-badge-font-size);
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  letter-spacing: 0;
+  line-height: normal;
   display: inline-flex;
   align-items: center;
   gap: var(--git-filetree-badge-gap);
@@ -981,8 +996,6 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   border-radius: var(--git-filetree-badge-radius);
   border: 1px solid color-mix(in srgb, var(--border-default) 58%, transparent);
   background: color-mix(in srgb, var(--surface-control, #1a2230) 64%, transparent);
-  font-family: var(--code-font-family);
-  font-variant-numeric: tabular-nums;
 }
 
 .git-history-worktree-section-list .git-history-worktree-folder-row::before,
@@ -1081,7 +1094,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 }
 
 .git-history-worktree-generate .codicon {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1;
 }
 
