@@ -1061,3 +1061,36 @@ Refined graph line visibility (hidden by default, shown for active row), added s
 ### Next Steps
 
 - None - task complete
+
+
+## Session 85: feat(git-diff): conditionally hide diff header in controls-only mode
+
+**Date**: 2026-06-20
+**Task**: feat(git-diff): conditionally hide diff header in controls-only mode
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added showHeader prop to DiffCard and ImageDiffCard to hide file path header in controls-only sticky mode. Switched diff viewer fonts to UI font at 13px.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0fae3183` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
