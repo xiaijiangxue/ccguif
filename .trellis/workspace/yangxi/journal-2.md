@@ -830,3 +830,36 @@ Reduced file tree row vertical padding from 1px/3px to 0.5px for tighter layout.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 78: style(git-history): further compact spacing across sections and rows
+
+**Date**: 2026-06-20
+**Task**: style(git-history): further compact spacing across sections and rows
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Reduced section gap/padding, row min-height to 24/23px, tightened branch item and tree section spacing.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5ad8812d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

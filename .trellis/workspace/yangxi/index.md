@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 77
+- **Total Sessions**: 78
 - **Last Active**: 2026-06-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~832 | Active |
+| `journal-2.md` | ~865 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 78 | 2026-06-20 | style(git-history): further compact spacing across sections and rows | `5ad8812d` | `refactor/liquid-precision-ui` |
 | 77 | 2026-06-20 | style: reduce file tree row vertical padding to 0.5px | `b40d7f23` | `refactor/liquid-precision-ui` |
 | 76 | 2026-06-19 | refactor(git-history): simplify worktree tree by removing root folder wrapper | `0ab5faea` | `refactor/liquid-precision-ui` |
 | 75 | 2026-06-19 | refactor(git-history): move section actions to root folder row | `d8a9db62` | `refactor/liquid-precision-ui` |
