@@ -18,10 +18,13 @@
 }
 
 .git-history-dock-resizer {
-  position: relative;
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  z-index: 2;
   height: 8px;
   cursor: row-resize;
-  flex: 0 0 auto;
   touch-action: none;
   background: transparent;
 }

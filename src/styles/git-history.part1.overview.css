@@ -314,7 +314,7 @@
 
 .git-history-toolbar-actions {
   display: inline-flex;
-  align-items: stretch;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -325,10 +325,12 @@
   align-items: center;
   align-content: center;
   gap: 4px;
+  min-height: 28px;
   padding: 2px 4px;
   border: 1px solid color-mix(in srgb, var(--border-muted) 78%, transparent);
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface-control, #1a2230) 42%, transparent);
+  box-sizing: border-box;
 }
 
 .git-history-toolbar--hover-actions .git-history-toolbar-action-group {
