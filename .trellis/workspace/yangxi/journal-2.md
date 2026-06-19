@@ -896,3 +896,36 @@ Simplified toolbar meta to HEAD pill only, enlarged commit input to 72px min-hei
 ### Next Steps
 
 - None - task complete
+
+
+## Session 80: feat(git): add commit-and-push button and improve diff panel layout
+
+**Date**: 2026-06-20
+**Task**: feat(git): add commit-and-push button and improve diff panel layout
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added Commit & Push button with i18n, improved diff panel layout with selection slot, overflow handling, scrollbar-gutter, and absolute trailing selection positioning.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2967f952` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
