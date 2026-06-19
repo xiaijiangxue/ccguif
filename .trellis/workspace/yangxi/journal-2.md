@@ -434,3 +434,36 @@ Switched commit row to 3-column grid layout, reordered to summary→refs→meta,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 66: style(git-history): ultra-compact 18px commit rows
+
+**Date**: 2026-06-19
+**Task**: style(git-history): ultra-compact 18px commit rows
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Reduced commit rows to fixed 18px height, removed border-bottom, tightened graph and content spacing, matched line-height to row height.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `f13bd671` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
