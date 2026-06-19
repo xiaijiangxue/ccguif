@@ -271,7 +271,7 @@ const zhPart5 = {
     historyWillNotHappenTitle: "Will NOT Happen",
     historyExampleTitle: "Example",
     historySearchBranches: "搜索分支",
-    historySearchCommits: "搜索提交",
+    historySearchCommits: "搜索提交信息或 hash",
     historyLoadingCommits: "正在加载提交...",
     historyNoCommitsFound: "未找到提交。",
     historyLoadMore: "加载更多",

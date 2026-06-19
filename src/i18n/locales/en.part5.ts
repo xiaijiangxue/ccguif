@@ -272,7 +272,7 @@ const enPart5 = {
     historyWillNotHappenTitle: "Will NOT Happen",
     historyExampleTitle: "Example",
     historySearchBranches: "Search branches",
-    historySearchCommits: "Search commits",
+    historySearchCommits: "Search commits or hash",
     historyLoadingCommits: "Loading commits...",
     historyNoCommitsFound: "No commits found.",
     historyLoadMore: "Load more",
