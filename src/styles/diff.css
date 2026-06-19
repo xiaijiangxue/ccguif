@@ -921,6 +921,11 @@
   font-size: var(--git-filetree-name-font-size);
   position: relative;
   --git-file-status-color: var(--text-emphasis);
+  --git-filetree-row-foreground: var(--text-emphasis);
+  --git-filetree-row-path-color: var(--text-faint);
+  --git-filetree-row-badge-bg: color-mix(in srgb, var(--surface-control) 62%, transparent);
+  --git-filetree-row-badge-border: color-mix(in srgb, var(--border-default) 58%, transparent);
+  --git-filetree-row-separator-color: var(--text-dim);
 }
 
 .git-commit-scope-toggle {
@@ -1112,7 +1117,33 @@
   border-color: color-mix(in srgb, var(--border-default) 56%, transparent);
 }
 
-.diff-row.active {
+.diff-row.active,
+.diff-row.is-active {
+  --git-filetree-row-foreground: color-mix(
+    in srgb,
+    var(--text-emphasis, #111827) 88%,
+    var(--accent-primary, #2563eb) 12%
+  );
+  --git-filetree-row-path-color: color-mix(
+    in srgb,
+    var(--text-muted, #64748b) 78%,
+    var(--accent-primary, #2563eb) 22%
+  );
+  --git-filetree-row-badge-bg: color-mix(
+    in srgb,
+    var(--surface-active) 48%,
+    var(--surface-control) 52%
+  );
+  --git-filetree-row-badge-border: color-mix(
+    in srgb,
+    var(--border-accent-soft) 60%,
+    transparent
+  );
+  --git-filetree-row-separator-color: color-mix(
+    in srgb,
+    var(--text-muted) 72%,
+    var(--accent-primary, #2563eb) 28%
+  );
   background: var(--git-filetree-row-active-bg);
   border-color: color-mix(in srgb, var(--border-accent-soft) 75%, transparent);
 }
@@ -1122,7 +1153,8 @@
   border-color: color-mix(in srgb, var(--border-default) 62%, transparent);
 }
 
-.diff-row.selected.active {
+.diff-row.selected.active,
+.diff-row.selected.is-active {
   background: var(--git-filetree-row-active-bg);
 }
 
@@ -1322,23 +1354,23 @@
 }
 
 .diff-icon-added {
-  color: var(--git-file-status-color);
+  color: color-mix(in srgb, var(--status-success, #78ebbe) 88%, var(--text-emphasis) 12%);
 }
 
 .diff-icon-modified {
-  color: var(--git-file-status-color);
+  color: color-mix(in srgb, var(--text-accent, #7a9dcc) 92%, var(--text-strong, #ffffff) 8%);
 }
 
 .diff-icon-deleted {
-  color: var(--git-file-status-color);
+  color: color-mix(in srgb, var(--status-error, #ff6e6e) 88%, var(--text-emphasis) 12%);
 }
 
 .diff-icon-renamed {
-  color: var(--git-file-status-color);
+  color: color-mix(in srgb, var(--status-warning, #ffaf55) 82%, var(--text-emphasis) 18%);
 }
 
 .diff-icon-typechange {
-  color: var(--git-file-status-color);
+  color: color-mix(in srgb, var(--status-warning, #ffaf55) 78%, var(--text-emphasis) 22%);
 }
 
 .diff-icon-unknown {
@@ -1394,7 +1426,7 @@
 
 .diff-dir {
   font-size: var(--git-filetree-path-font-size);
-  color: var(--text-faint);
+  color: var(--git-filetree-row-path-color);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1425,8 +1457,8 @@
   gap: var(--git-filetree-badge-gap);
   padding: var(--git-filetree-badge-pad-y) var(--git-filetree-badge-pad-x);
   border-radius: var(--git-filetree-badge-radius);
-  border: 1px solid color-mix(in srgb, var(--border-default) 58%, transparent);
-  background: color-mix(in srgb, var(--surface-control) 62%, transparent);
+  border: 1px solid var(--git-filetree-row-badge-border);
+  background: var(--git-filetree-row-badge-bg);
 }
 
 .diff-row:hover .diff-counts-inline {
@@ -1441,7 +1473,7 @@
 
 .diff-dir {
   font-size: var(--git-filetree-path-font-size);
-  color: var(--text-faint);
+  color: var(--git-filetree-row-path-color);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1456,7 +1488,7 @@
 }
 
 .diff-sep {
-  color: var(--text-dim);
+  color: var(--git-filetree-row-separator-color);
   opacity: 0.5;
   font-size: 9px;
 }

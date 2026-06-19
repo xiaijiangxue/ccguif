@@ -13,6 +13,7 @@ type ActionSurfaceProps = {
   children: ReactNode;
   disabled?: boolean;
   active?: boolean;
+  [dataAttribute: `data-${string}`]: string | number | boolean | undefined;
   onActivate?: () => void;
   onContextMenu?: (event: MouseEvent<HTMLDivElement>) => void;
   title?: string;
@@ -30,6 +31,7 @@ export function ActionSurface({
   title,
   ariaLabel,
   style,
+  ...surfaceProps
 }: ActionSurfaceProps) {
   const mergedClassName = [
     "git-history-action",
@@ -49,6 +51,7 @@ export function ActionSurface({
       className={mergedClassName}
       title={title}
       style={style}
+      {...surfaceProps}
       onClick={() => {
         if (!disabled) {
           onActivate?.();

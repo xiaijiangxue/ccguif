@@ -859,6 +859,51 @@
   background: transparent;
   font-size: 13px;
   position: relative;
+  --git-filetree-row-foreground: var(--text-emphasis);
+  --git-filetree-row-path-color: var(--text-secondary);
+  --git-filetree-row-badge-bg: color-mix(in srgb, var(--surface-control, #1a2230) 64%, transparent);
+  --git-filetree-row-badge-border: color-mix(in srgb, var(--border-default) 58%, transparent);
+  --git-filetree-row-separator-color: var(--text-muted);
+}
+
+.git-history-file-item[data-status="A"] {
+  --git-file-status-color: color-mix(
+    in srgb,
+    var(--status-success, #78ebbe) 88%,
+    var(--text-emphasis) 12%
+  );
+}
+
+.git-history-file-item[data-status="M"] {
+  --git-file-status-color: color-mix(
+    in srgb,
+    var(--text-accent, #7a9dcc) 92%,
+    var(--text-strong, #ffffff) 8%
+  );
+}
+
+.git-history-file-item[data-status="D"] {
+  --git-file-status-color: color-mix(
+    in srgb,
+    var(--status-error, #ff6e6e) 88%,
+    var(--text-emphasis) 12%
+  );
+}
+
+.git-history-file-item[data-status="R"] {
+  --git-file-status-color: color-mix(
+    in srgb,
+    var(--status-warning, #ffaf55) 82%,
+    var(--text-emphasis) 18%
+  );
+}
+
+.git-history-file-item[data-status="T"] {
+  --git-file-status-color: color-mix(
+    in srgb,
+    var(--status-warning, #ffaf55) 78%,
+    var(--text-emphasis) 22%
+  );
 }
 
 .git-history-tree-dir {
@@ -901,6 +946,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  color: var(--git-file-status-color);
 }
 
 .git-history-file-status {
@@ -919,6 +965,26 @@
   padding: 0;
 }
 
+.git-history-file-status.git-status-a {
+  color: color-mix(in srgb, var(--status-success, #78ebbe) 88%, var(--text-emphasis) 12%);
+}
+
+.git-history-file-status.git-status-m {
+  color: color-mix(in srgb, var(--text-accent, #7a9dcc) 92%, var(--text-strong, #ffffff) 8%);
+}
+
+.git-history-file-status.git-status-d {
+  color: color-mix(in srgb, var(--status-error, #ff6e6e) 88%, var(--text-emphasis) 12%);
+}
+
+.git-history-file-status.git-status-r {
+  color: color-mix(in srgb, var(--status-warning, #ffaf55) 82%, var(--text-emphasis) 18%);
+}
+
+.git-history-file-status.git-status-t {
+  color: color-mix(in srgb, var(--status-warning, #ffaf55) 78%, var(--text-emphasis) 22%);
+}
+
 .git-history-file-stats {
   font-family: var(--ui-font-family);
   font-size: 13px;
@@ -932,8 +998,8 @@
   gap: var(--git-filetree-badge-gap);
   padding: var(--git-filetree-badge-pad-y) var(--git-filetree-badge-pad-x);
   border-radius: var(--git-filetree-badge-radius);
-  border: 1px solid color-mix(in srgb, var(--border-default) 58%, transparent);
-  background: color-mix(in srgb, var(--surface-control, #1a2230) 64%, transparent);
+  border: 1px solid var(--git-filetree-row-badge-border);
+  background: var(--git-filetree-row-badge-bg);
 }
 
 .git-history-file-list .git-history-tree-item:hover,
@@ -943,6 +1009,26 @@
 
 .git-history-file-list .git-history-tree-item.is-active,
 .git-history-push-preview-file-tree .git-history-tree-item.is-active {
+  --git-filetree-row-foreground: color-mix(
+    in srgb,
+    var(--text-emphasis, #111827) 88%,
+    var(--accent-primary, #2563eb) 12%
+  );
+  --git-filetree-row-badge-bg: color-mix(
+    in srgb,
+    var(--surface-active) 48%,
+    var(--surface-control, #1a2230) 52%
+  );
+  --git-filetree-row-badge-border: color-mix(
+    in srgb,
+    var(--border-accent-soft) 60%,
+    transparent
+  );
+  --git-filetree-row-separator-color: color-mix(
+    in srgb,
+    var(--text-muted) 72%,
+    var(--accent-primary, #2563eb) 28%
+  );
   background: var(--git-filetree-row-active-bg);
 }
 
@@ -968,7 +1054,7 @@
 }
 
 .git-history-file-stats .is-sep {
-  color: var(--text-muted);
+  color: var(--git-filetree-row-separator-color);
 }
 
 .git-history-details-resizer {

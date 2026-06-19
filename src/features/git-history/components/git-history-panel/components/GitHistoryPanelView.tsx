@@ -872,6 +872,7 @@ export function renderGitHistoryPanelView(scope: any) {
                         key={item.id}
                         className="git-history-tree-item git-history-file-item git-filetree-row"
                         active={active}
+                        data-status={file.status}
                         onActivate={() => {
                           const fileKey = buildFileKey(file);
                           setSelectedFileKey(fileKey);
