@@ -947,6 +947,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--git-file-status-color);
+  font-weight: var(--git-filetree-name-font-weight);
 }
 
 .git-history-file-status {

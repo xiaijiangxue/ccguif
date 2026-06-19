@@ -336,7 +336,7 @@ const enPart5 = {
     historyLoadingCommitDetails: "Loading commit details...",
     historySelectCommitToViewDetails: "Select a commit to view details.",
     historyChangedFiles: "Changed Files",
-    historyChangedFilesSummary: "{{count}} files · +{{additions}} / -{{deletions}}",
+    historyChangedFilesSummary: "{{count}} files · {{additions}} / {{deletions}}",
     historyNoFileChangesInCommit: "No file changes in this commit.",
     historyResizeFileListAndDiff: "Resize file list and diff",
     historySelectFileToViewDiff: "Select a file to view diff.",

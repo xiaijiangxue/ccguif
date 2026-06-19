@@ -334,7 +334,7 @@ const zhPart5 = {
     historyLoadingCommitDetails: "正在加载提交详情...",
     historySelectCommitToViewDetails: "请选择一个提交查看详情。",
     historyChangedFiles: "变更文件",
-    historyChangedFilesSummary: "{{count}} 个文件 · +{{additions}} / -{{deletions}}",
+    historyChangedFilesSummary: "{{count}} 个文件 · {{additions}} / {{deletions}}",
     historyNoFileChangesInCommit: "该提交没有文件变更。",
     historyResizeFileListAndDiff: "调整文件列表与 Diff 区域大小",
     historySelectFileToViewDiff: "请选择一个文件查看 Diff。",
