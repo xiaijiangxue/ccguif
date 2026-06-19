@@ -63,9 +63,9 @@
   --message-link-color: #c49aff;
   --shadow-accent: #2a5080;
   --titlebar-inset-left: 72px;
-  --titlebar-height: 44px;
-  --titlebar-toggle-size: 28px;
-  --titlebar-toggle-offset: 4px;
+  --titlebar-height: 34px;
+  --titlebar-toggle-size: 24px;
+  --titlebar-toggle-offset: 1px;
   --titlebar-toggle-title-offset: -6px;
   --titlebar-toggle-side-gap: 12px;
   --topbar-compact-padding: 16px;

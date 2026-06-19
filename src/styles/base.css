@@ -134,7 +134,9 @@ body {
   border-radius: 0;
   overflow: hidden;
   position: relative;
-  --main-topbar-height: 44px;
+  --main-topbar-height: 34px;
+  --titlebar-height: 34px;
+  --titlebar-toggle-size: 24px;
   transition: grid-template-columns 220ms ease;
   font-family: var(--ui-font-family);
 }
