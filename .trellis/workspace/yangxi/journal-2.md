@@ -698,3 +698,36 @@ Removed commit section collapse toggle buttons from both diff panel and git hist
 ### Next Steps
 
 - None - task complete
+
+
+## Session 74: style(diff): remove commit scope hint, normalize tab font sizes to 13px
+
+**Date**: 2026-06-19
+**Task**: style(diff): remove commit scope hint, normalize tab font sizes to 13px
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed commit scope hint from diff panel, bumped tab font sizes to 13px, removed font-weight 600 from tabs.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6c9e5aed` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
