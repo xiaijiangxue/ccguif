@@ -1193,3 +1193,36 @@ Added --sidebar-tree-label-font-weight variable for sidebar nav items, hid git p
 ### Next Steps
 
 - None - task complete
+
+
+## Session 89: refactor(composer): remove shortcut chip click handler and related actions
+
+**Date**: 2026-06-20
+**Task**: refactor(composer): remove shortcut chip click handler and related actions
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed handleShortcutChipClick and settingsShortcutActions (~70 lines), compacted diff panel floating actions and tab padding, used sidebar font-weight variable.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a39c3947` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
