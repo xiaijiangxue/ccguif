@@ -272,11 +272,6 @@
   color: color-mix(in srgb, #10b981 82%, #d1fae5);
 }
 
-.git-history-toolbar-count {
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
 .git-history-toolbar-worktree {
   white-space: nowrap;
   font-size: 13px;
@@ -586,13 +581,14 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   line-height: normal;
 }
 
-.git-history-worktree-commit-box {
+.git-history-worktree-commit-box,
+.git-history-worktree-commit-box.commit-message-section {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
   margin-bottom: 0;
-  padding-bottom: 12px;
-  border-bottom: 1px solid color-mix(in srgb, var(--border-muted) 50%, transparent);
+  padding-bottom: 4px;
+  border-bottom: none;
 }
 
 .git-history-worktree-commit-hint {
@@ -743,9 +739,17 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   gap: 8px;
   min-height: var(--git-filetree-row-min-height);
   padding: 0 var(--git-filetree-row-pad-x);
+  /* Compensate for outer section-list(2px) + section border(1px) + inner
+     section-list(2px) − summary-bar border(1px) = 4px so that right-edge
+     icons align with per-file rows inside nested sections. */
+  padding-right: calc(var(--git-filetree-row-pad-x) + 4px);
   border: 1px solid color-mix(in srgb, var(--border-default) 34%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface-control, #1a2230) 32%, transparent);
+}
+
+.git-history-worktree-summary-bar .diff-section-actions {
+  margin-left: 0;
 }
 
 .git-history-worktree-summary-lines {

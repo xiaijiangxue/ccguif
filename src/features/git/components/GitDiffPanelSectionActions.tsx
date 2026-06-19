@@ -52,19 +52,6 @@ export function GitDiffPanelSectionActions({
       role="group"
       aria-label={t("git.sectionActions", { title })}
     >
-      {canToggleSection ? (
-        <InclusionToggle
-          state={sectionInclusionState}
-          label={t("git.commitSelectionToggleScope", { path: title })}
-          className="git-commit-scope-toggle--section"
-          onToggle={() =>
-            onSetCommitSelection?.(
-              toggleableFilePaths,
-              sectionInclusionState !== "all",
-            )
-          }
-        />
-      ) : null}
       {canStageAll ? (
         <button
           type="button"
@@ -107,6 +94,19 @@ export function GitDiffPanelSectionActions({
         >
           <Undo2 size={12} aria-hidden />
         </button>
+      ) : null}
+      {canToggleSection ? (
+        <InclusionToggle
+          state={sectionInclusionState}
+          label={t("git.commitSelectionToggleScope", { path: title })}
+          className="git-commit-scope-toggle--section"
+          onToggle={() =>
+            onSetCommitSelection?.(
+              toggleableFilePaths,
+              sectionInclusionState !== "all",
+            )
+          }
+        />
       ) : null}
     </div>
   );

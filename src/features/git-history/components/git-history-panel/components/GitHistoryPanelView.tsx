@@ -310,9 +310,6 @@ export function renderGitHistoryPanelView(scope: any) {
                 <span className="git-history-diff-del">-{workingTreeTotalDeletions}</span>
               </span>
             ) : null}
-            <span className="git-history-toolbar-count">
-              {t("git.historyCommitCount", { count: historyTotal })}
-            </span>
           </div>
         </div>
         <div className="git-history-toolbar-actions">
@@ -701,6 +698,9 @@ export function renderGitHistoryPanelView(scope: any) {
           <div className="git-history-column-header">
             <span>
               <GitCommit size={14} /> {t("git.historyCommits")}
+            </span>
+            <span className="git-history-column-count">
+              {t("git.historyCommitCount", { count: historyTotal })}
             </span>
           </div>
           <label className="git-history-search">

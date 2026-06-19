@@ -35,6 +35,12 @@
   font-weight: 600;
 }
 
+.git-history-column-count {
+  font-weight: 400;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .git-history-branches .git-history-column-header,
 .git-history-commits .git-history-column-header,
 .git-history-details .git-history-column-header {

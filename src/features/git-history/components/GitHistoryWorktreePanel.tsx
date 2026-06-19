@@ -671,7 +671,7 @@ export function GitHistoryWorktreePanel({
   const commitStatusHint = selectedCommitCount > 0
     ? t("git.selectedFilesForCommit", { count: selectedCommitCount })
     : hasWorktreeChanges
-      ? t("git.selectFilesToCommit")
+      ? null
       : t("git.noChangesToCommit");
 
   const toggleFolder = useCallback((key: string) => {
