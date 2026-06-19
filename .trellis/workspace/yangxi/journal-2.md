@@ -335,3 +335,36 @@ Made dock resizer absolute-positioned, added flex alignment to git-history-chip,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 63: style(git-history): compact commit rows, refine message panel typography
+
+**Date**: 2026-06-19
+**Task**: style(git-history): compact commit rows, refine message panel typography
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Compact commit rows (56→32px), added flex primary-line container, refined message panel to 12px with lighter weights, added row modifier classes and geometry test.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `399b3a8a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
