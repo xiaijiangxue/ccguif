@@ -533,3 +533,36 @@ Normalized diff count badge fonts to ui-font-family, adjusted COMMIT_ROW_ESTIMAT
 ### Next Steps
 
 - None - task complete
+
+
+## Session 69: fix(git-history): prevent redundant scroll-to-selected on same commit
+
+**Date**: 2026-06-19
+**Task**: fix(git-history): prevent redundant scroll-to-selected on same commit
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added selectedCommitScrollKeyRef to track last scrolled commit key, preventing redundant scrollIntoView calls when the same commit is already selected.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `53cd541b` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
