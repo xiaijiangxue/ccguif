@@ -770,16 +770,16 @@ export function renderGitHistoryPanelView(scope: any) {
                       >
                         {entry.summary || t("git.historyNoMessage")}
                       </span>
-                      <span className="git-history-commit-meta">
-                        <code>{entry.shortSha}</code>
-                        <em>{entry.author || t("git.unknown")}</em>
-                        <time>{formatRelativeTime(entry.timestamp, t)}</time>
-                      </span>
                       {entry.refs.length > 0 && (
                         <span className="git-history-commit-refs" title={entry.refs.join(", ")}>
                           {entry.refs.slice(0, 3).join(" · ")}
                         </span>
                       )}
+                      <span className="git-history-commit-meta">
+                        <code>{entry.shortSha}</code>
+                        <em>{entry.author || t("git.unknown")}</em>
+                        <time>{formatRelativeTime(entry.timestamp, t)}</time>
+                      </span>
                     </span>
                   </span>
                 </ActionSurface>
@@ -788,17 +788,6 @@ export function renderGitHistoryPanelView(scope: any) {
             </div>
           </div>
 
-          {historyHasMore && (
-            <div className="git-history-load-more">
-              <ActionSurface
-                className="git-history-load-more-chip"
-                disabled={historyLoadingMore}
-                onActivate={() => void loadHistory(true, commits.length)}
-              >
-                {historyLoadingMore ? t("common.loading") : t("git.historyLoadMore")}
-              </ActionSurface>
-            </div>
-          )}
         </section>
 
         {desktopSplitLayout && (
