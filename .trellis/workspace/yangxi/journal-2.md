@@ -632,3 +632,36 @@ Updated historySearchCommits to mention hash search in en/zh locales.
 ### Next Steps
 
 - None - task complete
+
+
+## Session 72: style(git-history): move commit count to column header, refine worktree UI
+
+**Date**: 2026-06-19
+**Task**: style(git-history): move commit count to column header, refine worktree UI
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Moved commit count to column header, reordered section actions, refined worktree commit box and summary bar alignment.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c74aedbd` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
