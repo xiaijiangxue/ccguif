@@ -682,6 +682,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 
 .git-history-worktree-sections.is-single {
   overflow: hidden;
+  gap: 0;
 }
 
 .git-history-worktree-section {
@@ -697,6 +698,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   flex: 1;
   display: flex;
   flex-direction: column;
+  border: none;
 }
 
 .git-history-worktree-section-header {
@@ -731,6 +733,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   min-height: 0;
   max-height: none;
   flex: 1;
+  padding: 0;
 }
 
 .git-history-worktree-summary-bar {

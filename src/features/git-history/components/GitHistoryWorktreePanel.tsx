@@ -839,11 +839,18 @@ export function GitHistoryWorktreePanel({
     ],
   );
 
+  const rootFolderKey = `unstaged:__repo_root__/`;
+  const rootCollapsed = collapsedFolders.has(rootFolderKey);
+  const rootChildrenStyle = {
+    ["--git-tree-branch-x" as string]: `${Math.max(1 * 16 - 7, 0)}px`,
+    ["--git-tree-branch-opacity" as string]: getTreeLineOpacity(1),
+  } as CSSProperties;
+
   const renderTreeRows = useCallback(
     (files: GitFileStatus[], section: DiffSection) => {
       const tree = compactDiffTree(buildDiffTree(files, section));
-      const rootFolderKey = `${section}:__repo_root__/`;
-      const rootCollapsed = collapsedFolders.has(rootFolderKey);
+
+
       const walk = (node: DiffTreeNode, depth: number): ReactNode[] => {
         const rows: ReactNode[] = [];
         const folders = Array.from(node.folders.values()).sort((a, b) => a.name.localeCompare(b.name));
@@ -910,99 +917,16 @@ export function GitHistoryWorktreePanel({
         return rows;
       };
 
-      const rootChildrenStyle = {
-        ["--git-tree-branch-x" as string]: `${Math.max(1 * 16 - 7, 0)}px`,
-        ["--git-tree-branch-opacity" as string]: getTreeLineOpacity(1),
-      } as CSSProperties;
-
-      return [
-        <div key={rootFolderKey} className="git-history-worktree-folder-group">
-          <div
-            className="git-history-worktree-folder-row diff-tree-folder-row git-filetree-folder-row"
-            style={{ paddingLeft: "0px" }}
-            role="button"
-            tabIndex={0}
-            onClick={() => toggleFolder(rootFolderKey)}
-            onKeyDown={(event) => {
-              const target = event.target as HTMLElement | null;
-              if (target?.closest("button")) {
-                return;
-              }
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                toggleFolder(rootFolderKey);
-              }
-            }}
-          >
-            <span className="git-history-worktree-folder-caret diff-tree-folder-toggle" aria-hidden>
-              {rootCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-            </span>
-            <FileIcon
-              filePath={resolvedRootFolderName}
-              isFolder
-              isOpen={!rootCollapsed}
-              className="git-history-worktree-folder-icon diff-tree-folder-icon"
-            />
-            <span className="git-history-worktree-folder-name diff-tree-folder-name">{resolvedRootFolderName}</span>
-            {compactSection ? (
-              <span className="git-history-worktree-root-section-indicator">
-                {renderSectionIndicator(
-                  compactSection,
-                  compactSection === "staged" ? stagedFiles.length : unstagedFiles.length,
-                  t,
-                )}
-              </span>
+      return <>
+            {!rootCollapsed ? (
+              <div
+                className="git-history-worktree-folder-children diff-tree-folder-children"
+                style={rootChildrenStyle}
+              >
+                {walk(tree, 1)}
+              </div>
             ) : null}
-            <span style={{ flex: "1 1 auto" }} />
-            <span
-              className="git-history-worktree-root-actions"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GitDiffPanelSectionActions
-                title={compactSection === "staged" ? t("git.staged") : t("git.unstaged")}
-                section={compactSection}
-                sectionInclusionState={
-                  compactSection === "staged"
-                    ? stagedSectionInclusionState
-                    : unstagedSectionInclusionState
-                }
-                toggleableFilePaths={
-                  compactSection === "staged"
-                    ? stagedToggleablePaths
-                    : unstagedToggleablePaths
-                }
-                filePaths={compactSection === "staged" ? stagedFilePaths : unstagedFilePaths}
-                onSetCommitSelection={setCommitSelection}
-                onStageAllChanges={
-                  compactSection === "unstaged"
-                    ? () => handleMutation(() => stageGitAll(workspaceId))
-                    : undefined
-                }
-                onUnstageFile={
-                  compactSection === "staged"
-                    ? (path) => handleMutation(() => unstageGitFile(workspaceId, path))
-                    : undefined
-                }
-                onDiscardFiles={
-                  compactSection === "unstaged"
-                    ? () => {
-                        handleDiscardAll();
-                      }
-                    : undefined
-                }
-              />
-            </span>
-          </div>
-          {!rootCollapsed ? (
-            <div
-              className="git-history-worktree-folder-children diff-tree-folder-children"
-              style={rootChildrenStyle}
-            >
-              {walk(tree, 1)}
-            </div>
-          ) : null}
-        </div>,
-      ];
+          </>;
     },
     [
       collapsedFolders,
@@ -1085,6 +1009,60 @@ export function GitHistoryWorktreePanel({
 
       {shouldShowFileSections ? (
         <div className={worktreeSectionsClassName}>
+          {compactSection ? (
+            <div
+              className="git-history-worktree-folder-row diff-tree-folder-row git-filetree-folder-row git-history-worktree-root-row"
+              style={{ paddingLeft: "0px" }}
+              role="button"
+              tabIndex={0}
+              onClick={() => toggleFolder(rootFolderKey)}
+              onKeyDown={(event) => {
+                const target = event.target as HTMLElement | null;
+                if (target?.closest("button")) { return; }
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  toggleFolder(rootFolderKey);
+                }
+              }}
+            >
+              <span className="git-history-worktree-folder-caret diff-tree-folder-toggle" aria-hidden>
+                {rootCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+              </span>
+              <FileIcon
+                filePath={resolvedRootFolderName}
+                isFolder
+                isOpen={!rootCollapsed}
+                className="git-history-worktree-folder-icon diff-tree-folder-icon"
+              />
+              <span className="git-history-worktree-folder-name diff-tree-folder-name">{resolvedRootFolderName}</span>
+              <span style={{ flex: "1 1 auto" }} />
+              <span className="git-history-worktree-root-section-indicator">
+                {renderSectionIndicator(
+                  compactSection,
+                  compactSection === "staged" ? stagedFiles.length : unstagedFiles.length,
+                  t,
+                )}
+              </span>
+              <span className="git-history-worktree-root-stats">
+                <span className="git-history-diff-add">+{status.totalAdditions}</span>
+                <span className="git-history-diff-sep" aria-hidden>/</span>
+                <span className="git-history-diff-del">-{status.totalDeletions}</span>
+              </span>
+              <span className="git-history-worktree-root-actions" onClick={(e) => e.stopPropagation()}>
+                <GitDiffPanelSectionActions
+                  title={compactSection === "staged" ? t("git.staged") : t("git.unstaged")}
+                  section={compactSection}
+                  sectionInclusionState={compactSection === "staged" ? stagedSectionInclusionState : unstagedSectionInclusionState}
+                  toggleableFilePaths={compactSection === "staged" ? stagedToggleablePaths : unstagedToggleablePaths}
+                  filePaths={compactSection === "staged" ? stagedFilePaths : unstagedFilePaths}
+                  onSetCommitSelection={setCommitSelection}
+                  onStageAllChanges={compactSection === "unstaged" ? () => handleMutation(() => stageGitAll(workspaceId)) : undefined}
+                  onUnstageFile={compactSection === "staged" ? (path) => handleMutation(() => unstageGitFile(workspaceId, path)) : undefined}
+                  onDiscardFiles={compactSection === "unstaged" ? () => { handleDiscardAll(); } : undefined}
+                />
+              </span>
+            </div>
+          ) : null}
           {hasStagedFiles ? (
             <div className="git-history-worktree-section git-filetree-section">
               <div
