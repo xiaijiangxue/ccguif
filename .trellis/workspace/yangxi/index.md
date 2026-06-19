@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 82
+- **Total Sessions**: 83
 - **Last Active**: 2026-06-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~997 | Active |
+| `journal-2.md` | ~1030 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 83 | 2026-06-20 | i18n(git-history): remove +/- prefixes from file changes summary | `555e6508` | `refactor/liquid-precision-ui` |
 | 82 | 2026-06-20 | style(git-history): add color-coded file status indicators | `9948d32c` | `refactor/liquid-precision-ui` |
 | 81 | 2026-06-20 | style(git-history): improve column title truncation and file list overflow | `48e0a95d` | `refactor/liquid-precision-ui` |
 | 80 | 2026-06-20 | feat(git): add commit-and-push button and improve diff panel layout | `2967f952` | `refactor/liquid-precision-ui` |

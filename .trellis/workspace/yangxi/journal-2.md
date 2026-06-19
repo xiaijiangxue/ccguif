@@ -995,3 +995,36 @@ Added color-coded file status indicators via CSS custom properties: green (A), b
 ### Next Steps
 
 - None - task complete
+
+
+## Session 83: i18n(git-history): remove +/- prefixes from file changes summary
+
+**Date**: 2026-06-20
+**Task**: i18n(git-history): remove +/- prefixes from file changes summary
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed +/- prefixes from historyChangedFilesSummary (en/zh), added font-weight to file name.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `555e6508` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
