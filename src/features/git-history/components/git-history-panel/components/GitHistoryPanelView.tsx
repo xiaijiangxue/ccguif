@@ -777,8 +777,8 @@ export function renderGitHistoryPanelView(scope: any) {
                       )}
                       <span className="git-history-commit-meta">
                         <code>{entry.shortSha}</code>
-                        <em>{entry.author || t("git.unknown")}</em>
-                        <time>{formatRelativeTime(entry.timestamp, t)}</time>
+                        <em data-author={entry.author || t("git.unknown")}>{entry.author || t("git.unknown")}</em>
+                        <time data-author={entry.author || t("git.unknown")}>{formatRelativeTime(entry.timestamp, t)}</time>
                       </span>
                     </span>
                   </span>
@@ -1338,7 +1338,7 @@ export function renderGitHistoryPanelView(scope: any) {
                               <span className="git-history-branch-compare-commit-meta">
                                 <code>{entry.shortSha}</code>
                                 <span>{entry.author}</span>
-                                <time>{formatRelativeTime(entry.timestamp, t)}</time>
+                                <time data-author={entry.author || t("git.unknown")}>{formatRelativeTime(entry.timestamp, t)}</time>
                               </span>
                             </button>
                           ))}
@@ -1392,7 +1392,7 @@ export function renderGitHistoryPanelView(scope: any) {
                               <span className="git-history-branch-compare-commit-meta">
                                 <code>{entry.shortSha}</code>
                                 <span>{entry.author}</span>
-                                <time>{formatRelativeTime(entry.timestamp, t)}</time>
+                                <time data-author={entry.author || t("git.unknown")}>{formatRelativeTime(entry.timestamp, t)}</time>
                               </span>
                             </button>
                           ))}
@@ -1944,8 +1944,8 @@ export function renderGitHistoryPanelView(scope: any) {
                                 </span>
                                 <span className="git-history-push-preview-commit-meta">
                                   <code>{entry.shortSha}</code>
-                                  <em>{entry.author || t("git.unknown")}</em>
-                                  <time>{formatRelativeTime(entry.timestamp, t)}</time>
+                                  <em data-author={entry.author || t("git.unknown")}>{entry.author || t("git.unknown")}</em>
+                                  <time data-author={entry.author || t("git.unknown")}>{formatRelativeTime(entry.timestamp, t)}</time>
                                 </span>
                               </button>
                             );

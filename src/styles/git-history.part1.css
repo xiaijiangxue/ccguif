@@ -680,7 +680,7 @@
 
 .git-history-commit-meta {
   display: grid;
-  grid-template-columns: 52px 44px 50px;
+  grid-template-columns: 52px 80px 50px;
   align-items: center;
   grid-column: 3;
   justify-self: end;
@@ -689,6 +689,7 @@
   font-size: 13px;
   line-height: 18px;
   white-space: nowrap;
+  position: relative;
 }
 
 .git-history-commit-meta code,
@@ -706,6 +707,28 @@
 .git-history-commit-meta em {
   justify-self: start;
   font-style: italic;
+  min-width: 0;
+  width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.git-history-commit-meta em:hover {
+  position: absolute;
+  width: max-content;
+  max-width: none;
+  left: 59px;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  z-index: 3;
+}
+
+.git-history-commit-meta em:hover ~ time {
+  visibility: hidden;
 }
 
 .git-history-commit-meta time {
