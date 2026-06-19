@@ -740,6 +740,7 @@
   --diffs-font-family: var(--ui-font-family);
   --diffs-font-size: 13px;
   --diffs-line-height: var(--code-line-height, 1.28);
+  --diff-code-font-weight: 600;
   --diffs-tab-size: 2;
   --diff-surface-bg: var(--surface-command);
   --diff-line-add-bg: color-mix(in srgb, #3fb950 20%, var(--diff-surface-bg));
@@ -917,6 +918,11 @@
   white-space: pre;
   overflow-wrap: normal;
   word-break: normal;
+  font-weight: var(--diff-code-font-weight, 600);
+}
+
+.diff-line-content .token {
+  font-weight: inherit;
 }
 
 .diff-line-extension {
