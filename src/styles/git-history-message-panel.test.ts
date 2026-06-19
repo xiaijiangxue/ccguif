@@ -7,6 +7,11 @@ const gitHistoryCss = readFileSync(
   "utf8",
 );
 
+const gitHistoryOverviewCss = readFileSync(
+  fileURLToPath(new URL("./git-history.part1.overview.css", import.meta.url)),
+  "utf8",
+);
+
 const gitHistoryPanelViewSource = readFileSync(
   fileURLToPath(
     new URL(
@@ -55,7 +60,7 @@ describe("git history message panel typography", () => {
 
   it("separates the commit message panel from the file diff area", () => {
     expect(gitHistoryCss).toMatch(
-      /\.git-history-details-resizer\s*\{[^}]*background:\s*var\(--border-strong,\s*rgba\(15,\s*23,\s*36,\s*0\.14\)\)/s,
+      /\.git-history-details-resizer::after\s*\{[^}]*background:\s*var\(--border-strong,\s*rgba\(15,\s*23,\s*36,\s*0\.14\)\)/s,
     );
     expect(gitHistoryCss).toMatch(
       /\.git-history-details-resizer::after\s*\{[^}]*top:\s*0/s,
@@ -65,6 +70,17 @@ describe("git history message panel typography", () => {
     );
     expect(gitHistoryCss).not.toMatch(
       /\.git-history-details-resizer(?:\s*|::after)\s*\{[^}]*var\(--border-default\)/s,
+    );
+  });
+
+  it("bridges the file-message split line across the details column divider", () => {
+    expect(gitHistoryPanelViewSource).toContain("is-details-split-bridge");
+    expect(gitHistoryPanelViewSource).toContain("--git-history-details-split-y");
+    expect(gitHistoryOverviewCss).toMatch(
+      /\.git-history-vertical-resizer\.is-details-split-bridge::before\s*\{[^}]*top:\s*var\(--git-history-details-split-y,\s*-999px\)/s,
+    );
+    expect(gitHistoryOverviewCss).toMatch(
+      /\.git-history-vertical-resizer\.is-details-split-bridge::before\s*\{[^}]*background:\s*var\(--border-strong,\s*rgba\(15,\s*23,\s*36,\s*0\.14\)\)/s,
     );
   });
 });

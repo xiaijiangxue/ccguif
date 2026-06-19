@@ -393,6 +393,19 @@
   opacity: 1;
 }
 
+.git-history-vertical-resizer.is-details-split-bridge::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  right: 0;
+  top: var(--git-history-details-split-y, -999px);
+  height: 1px;
+  background: var(--border-strong, rgba(15, 23, 36, 0.14));
+  transform: translateY(-0.5px);
+  opacity: 1;
+  pointer-events: none;
+}
+
 .git-history-vertical-resizer:hover::after,
 body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::after {
   background: var(--accent-primary, #2563eb);
