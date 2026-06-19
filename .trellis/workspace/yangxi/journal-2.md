@@ -368,3 +368,36 @@ Compact commit rows (56→32px), added flex primary-line container, refined mess
 ### Next Steps
 
 - None - task complete
+
+
+## Session 64: style(git-history): add details split connector line on vertical resizer
+
+**Date**: 2026-06-19
+**Task**: style(git-history): add details split connector line on vertical resizer
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added detailsSplitConnectorTop state and CSS-driven ::before connector line on vertical resizer to visually bridge the details split position.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `afddaad7` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
