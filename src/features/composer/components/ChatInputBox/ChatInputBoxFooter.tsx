@@ -18,7 +18,6 @@ import type {
   ProviderId,
   ReasoningEffort,
   SelectedAgent,
-  ShortcutAction,
   StreamActivityPhase,
   TriggerQuery,
 } from './types.js';
@@ -185,7 +184,6 @@ export function ChatInputBoxFooter({
   agentCompletion,
   promptCompletion,
   selectedNoteCardIds = [],
-  shortcutActions,
   mainSurface,
   toolSurface,
   panelToggleSurface,
@@ -255,7 +253,6 @@ export function ChatInputBoxFooter({
   promptCompletion: CompletionController;
   selectedManualMemoryIds?: string[];
   selectedNoteCardIds?: string[];
-  shortcutActions?: ShortcutAction[];
   mainSurface?: React.ReactNode;
   toolSurface?: React.ReactNode;
   panelToggleSurface?: React.ReactNode;
@@ -431,7 +428,6 @@ export function ChatInputBoxFooter({
         modelGroups={modelGroups}
         onProviderModelSelect={onProviderModelSelect}
         onClearAgent={onClearAgent}
-        shortcutActions={shortcutActions}
         mainSurface={mainSurface}
         toolSurface={toolSurface}
         panelToggleSurface={panelToggleSurface}

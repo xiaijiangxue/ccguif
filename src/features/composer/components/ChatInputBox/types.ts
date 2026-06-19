@@ -829,8 +829,6 @@ export interface ButtonAreaProps {
   onRefreshModelConfig?: (providerId?: string) => Promise<void> | void;
   /** Whether current provider model/config refresh is in progress */
   isModelConfigRefreshing?: boolean;
-  /** Quick shortcut actions rendered in config panel */
-  shortcutActions?: ShortcutAction[];
   /** High-signal status controls rendered on the main toolbar row */
   mainSurface?: ReactNode;
   /** Additional low-frequency tools rendered inside the tool popover */

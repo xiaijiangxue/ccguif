@@ -32,7 +32,6 @@ vi.mock("./selectors", () => ({
       </button>
     </div>
   ),
-  ShortcutActionsSelect: () => <div data-testid="shortcut-actions-select" />,
 }));
 
 describe("ButtonArea custom model storage refresh", () => {
@@ -56,7 +55,6 @@ describe("ButtonArea custom model storage refresh", () => {
         hasInputContent
         onSubmit={vi.fn()}
         onReasoningChange={vi.fn()}
-        shortcutActions={[]}
       />,
     );
 
@@ -75,7 +73,6 @@ describe("ButtonArea custom model storage refresh", () => {
         hasInputContent
         onSubmit={vi.fn()}
         onReasoningChange={vi.fn()}
-        shortcutActions={[]}
       />,
     );
 
@@ -93,7 +90,6 @@ describe("ButtonArea custom model storage refresh", () => {
         hasInputContent
         onSubmit={vi.fn()}
         onReasoningChange={vi.fn()}
-        shortcutActions={[]}
       />,
     );
 
@@ -113,7 +109,6 @@ describe("ButtonArea custom model storage refresh", () => {
         onSubmit={vi.fn()}
         onProviderSelect={vi.fn()}
         onReasoningChange={vi.fn()}
-        shortcutActions={[]}
       />,
     );
 
@@ -142,7 +137,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         panelToggleSurface={(
           <button
             type="button"
@@ -171,7 +165,6 @@ describe("ButtonArea custom model storage refresh", () => {
         onSubmit={vi.fn()}
         onProviderSelect={vi.fn()}
         onReasoningChange={vi.fn()}
-        shortcutActions={[]}
       />,
     );
 
@@ -200,7 +193,6 @@ describe("ButtonArea custom model storage refresh", () => {
         hasInputContent
         onSubmit={vi.fn()}
         onReasoningChange={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="off"
         onSetMemoryReferenceMode={vi.fn()}
         mainSurface={<span data-testid="main-surface">token</span>}
@@ -225,7 +217,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="off"
         onSetMemoryReferenceMode={onSetMemoryReferenceMode}
       />,
@@ -253,7 +244,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="off"
         onSetMemoryReferenceMode={vi.fn()}
       />,
@@ -277,7 +267,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="off"
         onSetMemoryReferenceMode={onSetMemoryReferenceMode}
       />,
@@ -304,7 +293,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="off"
         onSetMemoryReferenceMode={vi.fn()}
       />,
@@ -333,7 +321,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="off"
         onSetMemoryReferenceMode={onSetMemoryReferenceMode}
       />,
@@ -356,7 +343,6 @@ describe("ButtonArea custom model storage refresh", () => {
         selectedModel=""
         hasInputContent
         onSubmit={vi.fn()}
-        shortcutActions={[]}
         memoryReferenceMode="always"
         onSetMemoryReferenceMode={onSetMemoryReferenceMode}
       />,
@@ -380,7 +366,6 @@ describe("ButtonArea custom model storage refresh", () => {
         streamActivityPhase="waiting"
         hasInputContent={false}
         onStop={onStop}
-        shortcutActions={[]}
       />,
     );
 
@@ -398,7 +383,6 @@ describe("ButtonArea custom model storage refresh", () => {
         streamActivityPhase="ingress"
         hasInputContent={false}
         onStop={onStop}
-        shortcutActions={[]}
       />,
     );
 

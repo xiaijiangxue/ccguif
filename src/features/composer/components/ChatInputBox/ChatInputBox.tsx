@@ -61,7 +61,7 @@ import {
   type AgentItem,
 } from './providers/index.js';
 import { debounce } from './utils/debounce.js';
-import { insertTextAtCursor, setCursorOffset } from './utils/selectionUtils.js';
+import { setCursorOffset } from './utils/selectionUtils.js';
 import { getVirtualSelectionRange, setVirtualSelectionRange } from './utils/virtualCursorUtils.js';
 import {
   resolveShortcutPlatform,
@@ -1421,76 +1421,6 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
       });
     }, [focusInput, nudge]);
 
-    const handleShortcutChipClick = useCallback((trigger: '@' | '@@' | '/' | '$' | '#' | '!') => {
-      const editableElement = editableRef.current;
-      if (!editableElement || disabled) {
-        return;
-      }
-
-      editableElement.focus();
-      const inserted = insertTextAtCursor(trigger, editableElement);
-      if (!inserted) {
-        const currentText = getTextContent();
-        const nextText = `${currentText}${trigger}`;
-        editableElement.innerText = nextText;
-        setCursorOffset(editableElement, nextText.length);
-      }
-
-      stageNextCommitOptions({
-        source: 'programmatic',
-        forceNewTransaction: true,
-        inputType: 'shortcut:chip',
-      });
-      handleInput();
-    }, [disabled, getTextContent, handleInput, stageNextCommitOptions]);
-
-    const settingsShortcutActions = useMemo(
-      () => ([
-        {
-          key: 'file',
-          trigger: '@' as const,
-          label: t('chat.shortcutActionFile'),
-          onClick: () => handleShortcutChipClick('@'),
-        },
-        {
-          key: 'memory',
-          trigger: '@@' as const,
-          label: t('chat.shortcutActionMemory'),
-          onClick: () => handleShortcutChipClick('@@'),
-        },
-        {
-          key: 'command',
-          trigger: '/' as const,
-          label: t('chat.shortcutActionCommand'),
-          onClick: () => handleShortcutChipClick('/'),
-        },
-        {
-          key: 'skill',
-          trigger: '$' as const,
-          label: t('chat.shortcutActionSkill'),
-          onClick: () => handleShortcutChipClick('$'),
-        },
-        {
-          key: 'agent',
-          trigger: '#' as const,
-          label: t('chat.shortcutActionAgent'),
-          onClick: () => handleShortcutChipClick('#'),
-        },
-        {
-          key: 'prompt',
-          trigger: '!' as const,
-          label: t('chat.shortcutActionPrompt'),
-          onClick: () => handleShortcutChipClick('!'),
-        },
-        {
-          key: 'enhance',
-          trigger: '⌘/Ctrl+/' as const,
-          label: t('chat.shortcutActionEnhance'),
-          onClick: handleEnhancePrompt,
-        },
-      ]),
-      [handleEnhancePrompt, handleShortcutChipClick, t],
-    );
     const shouldShowMainLegacyTokenIndicator = !(currentProvider === 'codex' && contextDualViewEnabled);
     const shouldShowContextToolbarSurface = Boolean(showHeader);
     const mainToolbarSurface = (
@@ -1779,7 +1709,6 @@ export const ChatInputBox = memo(forwardRef<ChatInputBoxHandle, ChatInputBoxProp
               promptCompletion={promptCompletion}
               selectedManualMemoryIds={selectedManualMemoryIds}
               selectedNoteCardIds={selectedNoteCardIds}
-              shortcutActions={settingsShortcutActions}
               mainSurface={mainToolbarSurface}
               panelToggleSurface={panelToggleSurface}
               toolSurface={(

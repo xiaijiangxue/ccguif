@@ -337,7 +337,7 @@
   max-height: none;
   height: auto;
   overflow-y: auto;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   padding: 0 12px 8px;
 }
 

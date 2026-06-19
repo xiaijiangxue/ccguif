@@ -8,9 +8,9 @@
 }
 
 .diff-panel {
-  --git-panel-floating-actions-top: 8px;
-  --git-panel-floating-actions-height: 30px;
-  --git-panel-floating-actions-gap: 8px;
+  --git-panel-floating-actions-top: 4px;
+  --git-panel-floating-actions-height: 24px;
+  --git-panel-floating-actions-gap: 3px;
   --git-filetree-section-gap: 0px;
   --git-filetree-section-padding: 4px;
   --git-filetree-section-radius: 12px;
@@ -173,8 +173,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 24px;
-  padding: 4px 2px 5px;
+  min-height: 20px;
+  padding: 2px 2px 3px;
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
@@ -637,9 +637,10 @@
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: 0;
-  padding: 4px 2px 5px;
+  min-height: 20px;
+  padding: 2px 2px 3px;
   font-size: 13px;
-  font-weight: 300;
+  font-weight: var(--sidebar-tree-label-font-weight);
   letter-spacing: 0;
   color: var(--text-secondary);
   background: transparent;
@@ -659,7 +660,6 @@
   color: color-mix(in srgb, var(--accent-primary, #2563eb) 88%, var(--text-emphasis));
   border-bottom-color: var(--accent-primary, #2563eb);
   border-bottom-width: 2px;
-  font-weight: 400;
 }
 
 .diff-list-view-collapse-toggle {
@@ -699,10 +699,10 @@
   background: transparent;
   color: var(--text-secondary);
   font-size: 13px;
-  font-weight: 300;
+  font-weight: var(--sidebar-tree-label-font-weight);
   letter-spacing: 0;
-  min-height: 24px;
-  padding: 4px 2px 5px;
+  min-height: 20px;
+  padding: 2px 2px 3px;
   cursor: pointer;
 }
 
@@ -714,7 +714,6 @@
   color: var(--text-accent, #7a9dcc);
   border-bottom-color: var(--text-accent, #7a9dcc);
   border-bottom-width: 2px;
-  font-weight: 400;
 }
 
 .git-panel-history-button:focus-visible {
@@ -735,7 +734,7 @@
   gap: 6px;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   flex: 1;
   padding-right: 2px;
   min-height: 0;

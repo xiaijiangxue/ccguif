@@ -13,7 +13,7 @@ import DatabaseZap from 'lucide-react/dist/esm/icons/database-zap';
 import X from 'lucide-react/dist/esm/icons/x';
 import type { ButtonAreaProps, MemoryReferenceMode, PermissionMode, ReasoningEffort } from './types';
 import { ComposerReadinessBar } from './ComposerReadinessBar';
-import { ConfigSelect, ModeSelect, ReasoningSelect, ShortcutActionsSelect } from './selectors';
+import { ConfigSelect, ModeSelect, ReasoningSelect } from './selectors';
 
 // Stable no-op callbacks to avoid re-renders when optional handlers are not provided
 const NOOP_MODE = (_mode: PermissionMode) => {};
@@ -73,7 +73,6 @@ export const ButtonArea = ({
   selectedAgent,
   onAgentSelect,
   onOpenAgentSettings,
-  shortcutActions,
   mainSurface,
   toolSurface,
   panelToggleSurface,
@@ -434,7 +433,6 @@ export const ButtonArea = ({
                 onAgentSelect={onAgentSelect}
                 onOpenAgentSettings={onOpenAgentSettings}
               />
-              <ShortcutActionsSelect actions={shortcutActions} />
               <ModeSelect
                 value={permissionMode}
                 onChange={onModeSelect ?? NOOP_MODE}
