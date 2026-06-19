@@ -10,6 +10,7 @@ type ImageDiffCardProps = {
   oldImageMime?: string | null;
   newImageMime?: string | null;
   isSelected: boolean;
+  showHeader?: boolean;
 };
 
 function getImageMimeType(path: string): string {
@@ -38,6 +39,7 @@ export const ImageDiffCard = memo(function ImageDiffCard({
   oldImageMime,
   newImageMime,
   isSelected,
+  showHeader = true,
 }: ImageDiffCardProps) {
   const { t } = useTranslation();
   const oldDataUri = useMemo(
@@ -86,12 +88,14 @@ export const ImageDiffCard = memo(function ImageDiffCard({
       data-diff-path={path}
       className={`diff-viewer-item diff-viewer-item-image ${isSelected ? "active" : ""}`}
     >
-      <div className="diff-viewer-header">
-        <span className="diff-viewer-status" data-status={status}>
-          {status}
-        </span>
-        <span className="diff-viewer-path">{path}</span>
-      </div>
+      {showHeader && (
+        <div className="diff-viewer-header">
+          <span className="diff-viewer-status" data-status={status}>
+            {status}
+          </span>
+          <span className="diff-viewer-path">{path}</span>
+        </div>
+      )}
       <div className="image-diff-content">
         {isModified && (
           <div className="image-diff-side-by-side">

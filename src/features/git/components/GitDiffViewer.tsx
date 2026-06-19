@@ -78,6 +78,7 @@ type DiffCardProps = {
   entry: GitDiffViewerItem;
   diffText: string;
   isSelected: boolean;
+  showHeader?: boolean;
   diffStyle: "split" | "unified";
   contentMode: "all" | "focused";
   onCreateCodeAnnotation?: (annotation: CodeAnnotationDraftInput) => void;
@@ -93,6 +94,7 @@ const DiffCard = memo(function DiffCard({
   entry,
   diffText,
   isSelected,
+  showHeader = true,
   diffStyle,
   contentMode,
   onCreateCodeAnnotation,
@@ -156,14 +158,16 @@ const DiffCard = memo(function DiffCard({
         data-diff-path={entry.path}
         className={`diff-viewer-item ${isSelected ? "active" : ""}`}
       >
-      <div className="diff-viewer-header">
-        <span className="diff-viewer-status" data-status={entry.status}>
-          {entry.status}
-        </span>
-        <span className="diff-viewer-path">
-          {normalizePatchName(entry.path)}
-        </span>
-      </div>
+      {showHeader && (
+        <div className="diff-viewer-header">
+          <span className="diff-viewer-status" data-status={entry.status}>
+            {entry.status}
+          </span>
+          <span className="diff-viewer-path">
+            {normalizePatchName(entry.path)}
+          </span>
+        </div>
+      )}
       {diffText.trim().length > 0 && hasRenderableDiff ? (
         <div className="diff-viewer-output diff-viewer-output-flat">
               <div className="diffs-container" data-diffs data-diff-style={diffStyle} data-content-mode={contentMode}>
@@ -1278,6 +1282,7 @@ export function GitDiffViewer({
                       oldImageMime={entry.oldImageMime}
                       newImageMime={entry.newImageMime}
                       isSelected={entry.path === selectedPath}
+                      showHeader={stickyHeaderMode !== "controls-only"}
                     />
                   ) : (
                     (() => {
@@ -1291,6 +1296,7 @@ export function GitDiffViewer({
                       entry={entry}
                       diffText={diffText}
                       isSelected={entry.path === selectedPath}
+                      showHeader={stickyHeaderMode !== "controls-only"}
                       diffStyle={diffStyle}
                       contentMode={contentMode}
                       onCreateCodeAnnotation={onCreateCodeAnnotation}

@@ -726,10 +726,10 @@
   background: var(--diff-surface-bg, var(--surface-command));
   border-radius: 8px;
   padding: 8px;
-  font-size: var(--code-font-size, 11px);
+  font-size: 13px;
   color: var(--text-quiet);
-  font-family: var(--code-font-family);
-  font-weight: var(--code-font-weight, 400);
+  font-family: var(--ui-font-family);
+  font-weight: 500;
   max-width: 100%;
   min-width: 0;
   width: 100%;
@@ -737,8 +737,8 @@
   position: relative;
   contain: layout style;
   isolation: isolate;
-  --diffs-font-family: var(--code-font-family);
-  --diffs-font-size: var(--code-font-size, 11px);
+  --diffs-font-family: var(--ui-font-family);
+  --diffs-font-size: 13px;
   --diffs-line-height: var(--code-line-height, 1.28);
   --diffs-tab-size: 2;
   --diff-surface-bg: var(--surface-command);
