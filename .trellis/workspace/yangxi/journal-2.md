@@ -1094,3 +1094,36 @@ Added showHeader prop to DiffCard and ImageDiffCard to hide file path header in 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 86: style(diff): add diff-code-font-weight variable for diff line content
+
+**Date**: 2026-06-20
+**Task**: style(diff): add diff-code-font-weight variable for diff line content
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added --diff-code-font-weight CSS custom property (default 600) for diff line content, tokens inherit the weight.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fd556c78` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

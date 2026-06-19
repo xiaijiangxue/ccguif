@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 85
+- **Total Sessions**: 86
 - **Last Active**: 2026-06-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1096 | Active |
+| `journal-2.md` | ~1129 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 86 | 2026-06-20 | style(diff): add diff-code-font-weight variable for diff line content | `fd556c78` | `refactor/liquid-precision-ui` |
 | 85 | 2026-06-20 | feat(git-diff): conditionally hide diff header in controls-only mode | `0fae3183` | `refactor/liquid-precision-ui` |
 | 84 | 2026-06-20 | style(git-history): refine graph lines, add commit list vertical line | `7b4fbfff` | `refactor/liquid-precision-ui` |
 | 83 | 2026-06-20 | i18n(git-history): remove +/- prefixes from file changes summary | `555e6508` | `refactor/liquid-precision-ui` |
