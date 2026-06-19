@@ -58,12 +58,12 @@ body[data-git-history-resizing="true"] .git-history-dock-resizer::after {
     var(--surface-messages, #0d0f14) 92%,
     var(--surface-card-muted, #111725)
   );
-  --git-filetree-section-gap: 2px;
-  --git-filetree-section-padding: 6px;
+  --git-filetree-section-gap: 0px;
+  --git-filetree-section-padding: 4px;
   --git-filetree-section-radius: 12px;
   --git-filetree-section-border: color-mix(in srgb, var(--border-default) 48%, transparent);
   --git-filetree-section-bg: color-mix(in srgb, var(--surface-control, #1a2230) 40%, transparent);
-  --git-filetree-row-min-height: 28px;
+  --git-filetree-row-min-height: 24px;
   --git-filetree-row-gap: 8px;
   --git-filetree-row-pad-y: 0.5px;
   --git-filetree-row-pad-x: 8px;

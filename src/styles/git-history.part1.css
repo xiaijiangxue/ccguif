@@ -290,26 +290,26 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 3px 8px;
   font-size: 13px;
   border-radius: 8px;
 }
 
 .git-history-branch-all-item {
-  margin: 2px 4px 8px;
-  padding: 6px 8px;
+  margin: 1px 4px 5px;
+  padding: 3px 8px;
   color: var(--text-secondary);
   font-size: 13px;
   border-radius: 8px;
 }
 
 .git-history-tree-section {
-  margin-bottom: 6px;
+  margin-bottom: 3px;
 }
 
 .git-history-tree-section-toggle {
   margin: 0 4px;
-  padding: 5px 8px;
+  padding: 3px 8px;
   justify-content: flex-start;
   gap: 6px;
   color: var(--text-secondary);
@@ -327,19 +327,19 @@
 .git-history-tree-section-body {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-top: 3px;
+  gap: 0;
+  margin-top: 1px;
 }
 
 .git-history-tree-scope-group {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
 }
 
 .git-history-tree-scope-toggle {
   margin: 0 4px;
-  padding: 5px 8px 5px 22px;
+  padding: 3px 8px 3px 22px;
   justify-content: flex-start;
   gap: 6px;
   border-radius: 8px;
@@ -368,7 +368,7 @@
 }
 
 .git-history-branch-item-tree {
-  min-height: 28px;
+  min-height: 23px;
   padding-left: 10px;
   padding-right: 12px;
   font-size: 13px;
@@ -380,7 +380,7 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  min-height: 28px;
+  min-height: 23px;
   padding-left: 10px;
   padding-right: 12px;
   font-size: 13px;
