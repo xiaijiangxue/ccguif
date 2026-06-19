@@ -21,7 +21,9 @@ origin: docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md
 
 (see origin: `docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md`)
 
-**Divider 连接器：** R1-R5 — split 模式下左右 pane 间渲染梯形/多边形色块连接对应变更区域，颜色与 diff 类型一致，跟随滚动同步。
+**R1-R4** — split 模式下左右 pane 间渲染梯形/多边形色块连接对应变更区域，颜色与 diff 类型一致，跟随滚动同步。
+
+**R5 (partial)** — 基本透明度变化已实现（0.35-0.45 → 0.55），hover 动效优化推迟。
 
 **Gutter 变更标记条：** R6-R7 — 每行右侧 gutter 渲染 2-3px 宽的彩色竖条。
 
@@ -57,7 +59,7 @@ origin: docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md
 ### 连接器梯形计算
 
 每个 `pair` 类型的 row，若 left（del）和 right（add）同时存在，计算：
-- 左侧梯形：从左 pane 边缘 → connector 列左侧（绿色或灰色）
+- 左侧梯形：从左 pane 边缘 → connector 列左侧（删除=灰色，未配对新增=绿色）
 - 右侧梯形：从 connector 列右侧 → 右 pane 边缘（绿色）
 - 未配对行（left=null 或 right=null）：梯形从单侧边缘延伸到 connector 对侧边缘
 
@@ -116,7 +118,8 @@ origin: docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md
 - 添加新的 CSS 变量 `--diff-line-add-marker` 和 `--diff-line-del-marker` 控制颜色
 - 颜色比行背景色更高饱和度（Dark add: `#3fb950`, Dark del: `#8a9199`; Light add: `#16a34a`, Light del: `#767a8a`）
 - 同步更新三主题下的变量值
-- `.diff-line` 已有 `position: relative`（line 1132），需添加 `overflow: hidden` 防止伪元素溢出
+- R6 的修改=蓝色标记暂不实现（与 U3 的 R2 修改连接器一致，待 diff 解析器区分 modified vs added 后补全）
+- `.diff-line` 已有 `position: relative`（line 1132），`::after` 伪元素使用 `right: 0; top: 0; bottom: 0` 自然包含在元素边界内，无需添加 `overflow: hidden`（避免裁剪 annotation button 和长行水平滚动）
 
 **Patterns to follow:** `.diff-line.is-selected::before` 已有类似的伪元素定位模式
 
@@ -156,12 +159,14 @@ origin: docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md
 ```
 
 *连接器数据计算（useMemo）：*
-1. 遍历 `splitPaneEntries`，记录每个变更块的起始/结束行索引
+1. 遍历 **所有** `splitPaneEntries`（包括 header-kind 行），记录每个变更块的起始/结束行索引。header-kind 行贡献 Y 偏移但不产生连接器 polygon
 2. 根据 left.line.type / right.line.type 确定变更类型（add/del；modified 类型当前不存在，待 diff 解析器扩展后补全）
 3. 计算每个变更块在 SVG 中的 Y 坐标（行索引 × 行高）
 4. 输出 `ConnectorPath[]`：`{ type, leftY1, leftY2, rightY1, rightY2 }` 其中 type 决定颜色
 
 *SVG 绘制：*
+SVG 元素尺寸：`position: absolute; top: 0; left: 0; width: 100%; height: 100%`，不使用 viewBox，直接使用像素坐标。SVG 总高度由 grid 自动撑开（匹配两侧 pane 内容高度）。
+
 每个连接器路径使用 `<polygon>` 元素：
 - 颜色根据变更类型映射（add=绿色系，del=灰色系）
 - R2 的修改=蓝色系暂不实现，因当前 split 行数据无 modified 类型，待 diff 解析器扩展后补全
@@ -183,6 +188,16 @@ origin: docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md
 .diff-split-pane-old {
   border-right: none;
 }
+/* connector 列在未变更区域显示细分割线 */
+.diff-split-connector::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--diff-split-divider);
+  z-index: 1;
+}
 ```
 
 *连接器颜色 CSS 变量：*
@@ -194,7 +209,7 @@ origin: docs/brainstorms/2026-06-20-idea-style-diff-visual-requirements.md
 connector 列与两侧 pane 在同一个 `.diff-block-split` grid 内，父容器 `.diff-viewer`（`overflow-y: auto`）提供统一垂直滚动，两 pane 不独立垂直滚动，connector 天然垂直同步。水平滚动由 `.diff-split-pane` 的 `overflow-x: auto` 独立控制，connector 列不参与水平滚动（仅渲染变更区域的连接形状，不影响代码内容滚动）。
 
 *行高同步：*
-使用 CSS 变量 `--code-line-height`（默认 1.28）和 `font-size: 13px` 计算每行高度。SVG 中 polygon 的 Y 坐标使用 `rowIndex * lineHeight` 公式，与 diff-line 的实际渲染高度保持一致。
+每行实际渲染高度 = `fontSize × lineHeightRatio + 4px`（上下 padding 各 2px，参见 `min-height: calc(1em * var(--code-line-height, 1.28) + 4px)`）。推荐通过 `getBoundingClientRect()` 在渲染时测量首行 `.diff-line` 的实际高度并缓存，而非使用固定公式，以应对未来 CSS 变量或 font-size 变化。SVG 中 polygon 的 Y 坐标使用 `rowIndex × measuredRowHeight`。
 
 **Patterns to follow:** `.diff-block-split` 已有的 grid 布局模式
 
@@ -227,3 +242,15 @@ connector 列与两侧 pane 在同一个 `.diff-block-split` grid 内，父容�
 - 当前 diff 组件: `src/features/git/components/DiffBlock.tsx`
 - 当前 split 行配对: `DiffBlock.tsx` → `buildSplitRows()` (line 74-159)
 - 当前 CSS 变量: `src/styles/diff-viewer.css` (line 746-764, 1034-1124)
+
+---
+
+## Deferred / Open Questions
+
+### From 2026-06-20 review
+
+- **12px connector column too narrow for meaningful trapezoid shapes** — KTD1 / 高层技术设计 (P2, adversarial, confidence 75)
+
+  IDEA 的 diff divider 通常 20-40px 宽。在 12px 下，梯形从一侧边缘到中点仅覆盖 6px 水平距离，行高约 20px 时产生高宽比约 3:1 的窄条，可能难以辨识为梯形形状。连接器的视觉辨识度（区别于普通分割线的核心特征）受到影响。建议考虑扩宽到 16-20px，或简化为三角形标记（删除指向左，新增指向右）。
+
+  <!-- dedup-key: section="ktd1 / 高层技术设计" title="12px connector column too narrow for meaningful trapezoid shapes" evidence="grid-template-columns: minmax(0, 1fr) 12px minmax(0, 1fr)" -->

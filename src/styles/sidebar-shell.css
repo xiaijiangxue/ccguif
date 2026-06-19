@@ -6,6 +6,7 @@
   --sidebar-row-radius: 8px;
   --sidebar-row-height-workspace: 28px;
   --sidebar-row-height-thread: 30px;
+  --sidebar-tree-label-font-weight: var(--git-filetree-name-font-weight, 560);
   --sidebar-color-active-primary: var(--surface-hover);
   --sidebar-color-active-secondary: color-mix(
     in srgb,

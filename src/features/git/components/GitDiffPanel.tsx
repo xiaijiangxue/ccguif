@@ -1708,67 +1708,69 @@ export function GitDiffPanel({
             <History size={12} aria-hidden />
             <span>{t("git.historyQuickAction")}</span>
           </button>
-          <div className="git-panel-select">
-            <button
-              ref={modeTriggerRef}
-              type="button"
-              className={`git-panel-select-trigger${isModeMenuOpen ? " is-open" : ""}`}
-              aria-label={t("git.panelView")}
-              aria-haspopup="menu"
-              aria-expanded={isModeMenuOpen}
-              onClick={() => setIsModeMenuOpen((current) => !current)}
-            >
-              {renderModeIcon(currentModeOption.value, "git-panel-select-icon", 13)}
-              <span className="git-panel-select-label">{currentModeOption.label}</span>
-              <ChevronDown className="git-panel-select-caret" size={12} aria-hidden />
-            </button>
-            {isModeMenuOpen && (
-              <div
-                ref={modeMenuRef}
-                className="git-panel-select-menu"
-                role="menu"
+          {mode !== "diff" && (
+            <div className="git-panel-select">
+              <button
+                ref={modeTriggerRef}
+                type="button"
+                className={`git-panel-select-trigger${isModeMenuOpen ? " is-open" : ""}`}
                 aria-label={t("git.panelView")}
-                style={{
-                  left: modeMenuLayout.align === "left" ? 0 : "auto",
-                  right: modeMenuLayout.align === "right" ? 0 : "auto",
-                  width: `${modeMenuLayout.width}px`,
-                }}
+                aria-haspopup="menu"
+                aria-expanded={isModeMenuOpen}
+                onClick={() => setIsModeMenuOpen((current) => !current)}
               >
-                <div className="git-panel-select-menu-title">{currentModeOption.label}</div>
-                {modeOptions.map((option) => {
-                  const isActive = option.value === mode;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`git-panel-select-option${isActive ? " is-active" : ""}`}
-                      role="menuitemradio"
-                      aria-checked={isActive}
-                      onClick={() => handleModeSelect(option.value)}
-                    >
-                      <span className="git-panel-select-option-text">
-                        <span className="git-panel-select-option-icon" aria-hidden>
-                          {renderModeIcon(option.value, "git-panel-select-option-icon-glyph", 13)}
-                        </span>
-                        <span className="git-panel-select-option-copy">
-                          <span className="git-panel-select-option-label">{option.label}</span>
-                          <span className="git-panel-select-option-description">
-                            {option.description}
+                {renderModeIcon(currentModeOption.value, "git-panel-select-icon", 13)}
+                <span className="git-panel-select-label">{currentModeOption.label}</span>
+                <ChevronDown className="git-panel-select-caret" size={12} aria-hidden />
+              </button>
+              {isModeMenuOpen && (
+                <div
+                  ref={modeMenuRef}
+                  className="git-panel-select-menu"
+                  role="menu"
+                  aria-label={t("git.panelView")}
+                  style={{
+                    left: modeMenuLayout.align === "left" ? 0 : "auto",
+                    right: modeMenuLayout.align === "right" ? 0 : "auto",
+                    width: `${modeMenuLayout.width}px`,
+                  }}
+                >
+                  <div className="git-panel-select-menu-title">{currentModeOption.label}</div>
+                  {modeOptions.map((option) => {
+                    const isActive = option.value === mode;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`git-panel-select-option${isActive ? " is-active" : ""}`}
+                        role="menuitemradio"
+                        aria-checked={isActive}
+                        onClick={() => handleModeSelect(option.value)}
+                      >
+                        <span className="git-panel-select-option-text">
+                          <span className="git-panel-select-option-icon" aria-hidden>
+                            {renderModeIcon(option.value, "git-panel-select-option-icon-glyph", 13)}
+                          </span>
+                          <span className="git-panel-select-option-copy">
+                            <span className="git-panel-select-option-label">{option.label}</span>
+                            <span className="git-panel-select-option-description">
+                              {option.description}
+                            </span>
                           </span>
                         </span>
-                      </span>
-                      <span
-                        className={`git-panel-select-option-check${isActive ? " is-active" : ""}`}
-                        aria-hidden
-                      >
-                        ✓
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                        <span
+                          className={`git-panel-select-option-check${isActive ? " is-active" : ""}`}
+                          aria-hidden
+                        >
+                          ✓
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           {showApplyWorktree && (
             <button
               type="button"

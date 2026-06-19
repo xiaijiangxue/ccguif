@@ -12,7 +12,7 @@
   background: transparent;
   color: var(--text-strong);
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--sidebar-tree-label-font-weight);
   text-align: left;
   cursor: pointer;
   transition:
@@ -32,7 +32,7 @@
 
 .sidebar-primary-nav-item.is-active {
   background: var(--surface-hover);
-  font-weight: 500;
+  font-weight: var(--sidebar-tree-label-font-weight);
 }
 
 .sidebar-primary-nav-mode-item.is-active {
@@ -55,7 +55,7 @@
 .sidebar-primary-nav-item-bottom {
   min-height: 32px;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--sidebar-tree-label-font-weight);
 }
 
 .sidebar-primary-nav-item-collapse {
@@ -304,7 +304,7 @@
   font-size: 14px;
   letter-spacing: 0;
   color: inherit;
-  font-weight: 400;
+  font-weight: var(--sidebar-tree-label-font-weight);
   line-height: 1.45;
   min-width: 0;
   overflow: hidden;
@@ -722,7 +722,7 @@
   flex: 1;
   min-width: 0;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: var(--sidebar-tree-label-font-weight);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
