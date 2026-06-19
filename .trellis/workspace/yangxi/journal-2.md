@@ -467,3 +467,36 @@ Reduced commit rows to fixed 18px height, removed border-bottom, tightened graph
 ### Next Steps
 
 - None - task complete
+
+
+## Session 67: style(git-history): normalize all font sizes to 13px
+
+**Date**: 2026-06-19
+**Task**: style(git-history): normalize all font sizes to 13px
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Normalized all git-history font-size declarations to 13px, replaced code-font-family with ui-font-family on stats/badges, adjusted font-weights.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `91ffd700` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
