@@ -566,3 +566,36 @@ Added selectedCommitScrollKeyRef to track last scrolled commit key, preventing r
 ### Next Steps
 
 - None - task complete
+
+
+## Session 70: style(git-history): add CSS hover expansion for truncated author names
+
+**Date**: 2026-06-19
+**Task**: style(git-history): add CSS hover expansion for truncated author names
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added CSS hover expansion for truncated author names in commit rows, widening author column and using absolute positioning to reveal full name on hover.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `60669746` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
