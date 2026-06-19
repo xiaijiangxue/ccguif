@@ -1226,3 +1226,36 @@ Removed handleShortcutChipClick and settingsShortcutActions (~70 lines), compact
 ### Next Steps
 
 - None - task complete
+
+
+## Session 90: refactor(composer): move ModeSelect from ButtonArea to ComposerInput
+
+**Date**: 2026-06-20
+**Task**: refactor(composer): move ModeSelect from ButtonArea to ComposerInput
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Moved ModeSelect from ButtonArea to ComposerInput as badge variant, added triggerVariant/disabled props, removed plan mode toggle from ButtonArea, compacted toolbar CSS, updated tests.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `984c15ec` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 89
+- **Total Sessions**: 90
 - **Last Active**: 2026-06-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1228 | Active |
+| `journal-2.md` | ~1261 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 90 | 2026-06-20 | refactor(composer): move ModeSelect from ButtonArea to ComposerInput | `984c15ec` | `refactor/liquid-precision-ui` |
 | 89 | 2026-06-20 | refactor(composer): remove shortcut chip click handler and related actions | `a39c3947` | `refactor/liquid-precision-ui` |
 | 88 | 2026-06-20 | style: use CSS variable for sidebar font-weight, hide mode selector in diff view | `d1193b50` | `refactor/liquid-precision-ui` |
 | 87 | 2026-06-20 | style: compact topbar to 34px, reduce tab and titlebar heights | `0e5d334a` | `refactor/liquid-precision-ui` |
