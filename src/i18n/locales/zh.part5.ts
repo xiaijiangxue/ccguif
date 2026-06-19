@@ -7,6 +7,7 @@ const zhPart5 = {
     commitMessage: "提交信息...",
     commit: "提交",
     committing: "提交中...",
+    commitAndPush: "提交并推送",
     commitStagedChanges: "提交已暂存的更改",
     commitAllChanges: "提交所有未暂存的更改",
     diffUnavailable: "差异不可用。",

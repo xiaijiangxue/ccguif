@@ -160,7 +160,9 @@ export type CommitButtonProps = {
   selectedCount: number;
   hasAnyChanges: boolean;
   commitLoading: boolean;
+  pushLoading?: boolean;
   onCommit?: (selectedPaths?: string[]) => void | Promise<void>;
+  onCommitAndPush?: (selectedPaths?: string[]) => void | Promise<void>;
   selectedPaths: string[];
 };
 
@@ -169,12 +171,15 @@ export function CommitButton({
   selectedCount,
   hasAnyChanges,
   commitLoading,
+  pushLoading = false,
   onCommit,
+  onCommitAndPush,
   selectedPaths,
 }: CommitButtonProps) {
   const { t } = useTranslation();
   const hasMessage = commitMessage.trim().length > 0;
-  const canCommit = hasMessage && selectedCount > 0 && !commitLoading;
+  const canCommit = hasMessage && selectedCount > 0 && !commitLoading && !pushLoading;
+  const isBusy = commitLoading || pushLoading;
 
   return (
     <div className="commit-button-container">
@@ -215,6 +220,37 @@ export function CommitButton({
           </svg>
         )}
         <span>{commitLoading ? t("git.committing") : t("git.commit")}</span>
+      </button>
+      <button
+        type="button"
+        className="commit-button commit-button-primary"
+        onClick={() => {
+          if (canCommit) {
+            void onCommitAndPush?.(selectedPaths);
+          }
+        }}
+        disabled={!canCommit}
+      >
+        {isBusy ? (
+          <span className="commit-button-spinner" aria-hidden />
+        ) : (
+          <svg
+            width={14}
+            height={14}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M20 6 9 17l-5-5" />
+            <path d="M12 17V3" />
+            <path d="M5 10l7-7 7 7" />
+          </svg>
+        )}
+        <span>{isBusy ? t("git.committing") : t("git.commitAndPush")}</span>
       </button>
     </div>
   );

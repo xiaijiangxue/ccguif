@@ -837,7 +837,7 @@ export function GitDiffPanel({
   onCommitMessageChange,
   onGenerateCommitMessage,
   onCommit,
-  onCommitAndPush: _onCommitAndPush,
+  onCommitAndPush,
   onCommitAndSync: _onCommitAndSync,
   onPush,
   onSync: _onSync,
@@ -1974,8 +1974,10 @@ export function GitDiffPanel({
                 selectedCount={selectedCommitCount}
                 hasAnyChanges={hasAnyChanges}
                 commitLoading={commitLoading}
+                pushLoading={pushLoading}
                 selectedPaths={selectedCommitPaths}
                 onCommit={onCommit}
+                onCommitAndPush={onCommitAndPush}
               />
             </div>
           )}

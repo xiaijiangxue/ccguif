@@ -7,6 +7,7 @@ const enPart5 = {
     commitMessage: "Commit message...",
     commit: "Commit",
     committing: "Committing...",
+    commitAndPush: "Commit & Push",
     commitStagedChanges: "Commit staged changes",
     commitAllChanges: "Commit all unstaged changes",
     diffUnavailable: "Diff unavailable.",

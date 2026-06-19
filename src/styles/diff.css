@@ -31,6 +31,7 @@
   --git-filetree-badge-pad-y: 1px;
   --git-filetree-badge-pad-x: 8px;
   --git-filetree-badge-radius: 999px;
+  --git-filetree-selection-slot-width: 28px;
   background: transparent;
   padding: 8px 8px 0;
   display: flex;
@@ -530,6 +531,8 @@
 
 .git-filetree-section-header.is-compact {
   gap: 8px;
+  justify-content: flex-start;
+  min-width: 0;
   padding-right: 6px;
 }
 
@@ -551,7 +554,7 @@
   background: transparent;
   color: var(--text-primary);
   font: inherit;
-  flex: 1 1 auto;
+  flex: 1 1 0;
 }
 
 .diff-tree-summary-root.is-static {
@@ -573,7 +576,7 @@
 
 .diff-tree-summary-section-label {
   color: var(--text-secondary);
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   line-height: 1;
@@ -727,6 +730,8 @@
   flex-direction: column;
   gap: 6px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   flex: 1;
   padding-right: 2px;
   min-height: 0;
@@ -763,7 +768,9 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: 6px;
+  flex: 0 0 auto;
+  margin-left: 2px;
+  min-width: max-content;
 }
 
 .diff-section-list {
@@ -917,6 +924,7 @@
 }
 
 .git-commit-scope-toggle {
+  box-sizing: border-box;
   width: 16px;
   height: 16px;
   border-radius: 5px;
@@ -976,6 +984,10 @@
 }
 
 .diff-row-selection--trailing {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
   width: 20px;
   height: 20px;
   border-radius: 7px;
@@ -1005,6 +1017,11 @@
 .git-commit-scope-toggle--folder {
   width: 18px;
   height: 18px;
+}
+
+.git-commit-scope-toggle--section {
+  position: static;
+  transform: none;
 }
 
 .diff-row[data-status="A"] {
@@ -1086,6 +1103,8 @@
   min-width: 0;
   grid-column: 4;
   gap: 8px;
+  padding-right: var(--git-filetree-selection-slot-width);
+  position: relative;
 }
 
 .diff-row:hover {
@@ -1111,20 +1130,19 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  flex: 0 1 auto;
+  justify-content: flex-end;
   max-width: 0;
   overflow: hidden;
-  margin-left: 0;
   opacity: 0;
   pointer-events: none;
-  transform: translateX(6px);
-  transition: max-width 180ms ease, opacity 140ms ease, transform 140ms ease,
-    margin-left 180ms ease;
+  transform: translateX(4px);
+  transition: max-width 160ms ease, opacity 140ms ease, transform 140ms ease;
 }
 
 .diff-row:hover .diff-row-actions,
 .diff-row:focus-within .diff-row-actions {
-  max-width: 148px;
-  margin-left: 4px;
+  max-width: 92px;
   opacity: 1;
   pointer-events: auto;
   overflow: visible;
@@ -1132,6 +1150,7 @@
 }
 
 .diff-row-action {
+  box-sizing: border-box;
   width: 22px;
   height: 22px;
   border-radius: 6px;
@@ -1391,15 +1410,18 @@
 }
 
 .diff-counts-inline {
+  box-sizing: border-box;
   font-family: var(--ui-font-family);
   font-size: 13px;
   font-weight: 400;
   font-variant-numeric: normal;
   letter-spacing: 0;
-  line-height: normal;
+  line-height: 1;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  height: 22px;
   gap: var(--git-filetree-badge-gap);
   padding: var(--git-filetree-badge-pad-y) var(--git-filetree-badge-pad-x);
   border-radius: var(--git-filetree-badge-radius);
@@ -1896,15 +1918,17 @@
 /* Commit button */
 .commit-button-container {
   margin-top: 4px;
+  display: flex;
+  gap: 8px;
 }
 
 .commit-button {
-  width: 100%;
-  display: flex;
+  width: auto;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 6px 20px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-muted);
@@ -1924,6 +1948,16 @@
 .commit-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.commit-button-primary {
+  color: var(--text-accent);
+  border-color: var(--text-accent);
+}
+
+.commit-button-primary:hover:not(:disabled) {
+  background: var(--text-accent);
+  color: #fff;
 }
 
 .commit-button-spinner {

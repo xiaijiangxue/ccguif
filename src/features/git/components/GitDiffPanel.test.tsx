@@ -405,12 +405,16 @@ describe("GitDiffPanel", () => {
     const section = document.querySelector(".diff-section.git-filetree-section");
     const folderRow = document.querySelector(".diff-tree-folder-row.git-filetree-folder-row");
     const fileRow = document.querySelector(".diff-row.git-filetree-row");
-    const badge = document.querySelector(".diff-counts-inline.git-filetree-badge");
+    const badge = fileRow?.querySelector(
+      '.diff-row-meta .diff-counts-inline.git-filetree-badge[aria-label="+2 -1"]',
+    );
+    const leftBadge = fileRow?.querySelector(".diff-file .diff-counts-inline");
 
     expect(section).toBeTruthy();
     expect(folderRow).toBeTruthy();
     expect(fileRow).toBeTruthy();
     expect(badge).toBeTruthy();
+    expect(leftBadge).toBeNull();
   });
 
   it("renders single-path diff package folders in a.b.c style", () => {
