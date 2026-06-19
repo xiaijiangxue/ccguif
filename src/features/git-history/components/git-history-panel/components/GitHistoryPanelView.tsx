@@ -444,29 +444,12 @@ export function renderGitHistoryPanelView(scope: any) {
                 <FolderTree size={13} />
                 <span>{t("git.listTree")}</span>
               </button>
-              <button
-                type="button"
-                className={`git-history-overview-list-tab${
-                  !overviewCommitSectionCollapsed ? " is-active" : ""
-                }`}
-                onClick={() => setOverviewCommitSectionCollapsed((value) => !value)}
-                aria-pressed={!overviewCommitSectionCollapsed}
-                aria-label={t("git.toggleCommitSection")}
-                title={
-                  overviewCommitSectionCollapsed
-                    ? t("git.expandCommitSection")
-                    : t("git.collapseCommitSection")
-                }
-              >
-                {!overviewCommitSectionCollapsed ? <ChevronsDownUp size={13} /> : <ChevronsUpDown size={13} />}
-                <span>{t("git.commit")}</span>
-              </button>
             </div>
           </div>
           <GitHistoryWorktreePanel
             workspaceId={workspace.id}
             listView={overviewListView}
-            commitSectionCollapsed={overviewCommitSectionCollapsed}
+            commitSectionCollapsed={false}
             rootFolderName={repositoryRootName}
             onMutated={() => refreshAll()}
             onSummaryChange={handleWorktreeSummaryChange}

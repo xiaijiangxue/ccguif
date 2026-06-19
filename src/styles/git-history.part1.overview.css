@@ -724,7 +724,7 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   display: flex;
   flex-direction: column;
   gap: var(--git-filetree-section-gap);
-  padding: 2px 2px;
+  padding: 2px 0;
 }
 
 .git-history-worktree-sections.is-single .git-history-worktree-section-list {
@@ -739,10 +739,6 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   gap: 8px;
   min-height: var(--git-filetree-row-min-height);
   padding: 0 var(--git-filetree-row-pad-x);
-  /* Compensate for outer section-list(2px) + section border(1px) + inner
-     section-list(2px) − summary-bar border(1px) = 4px so that right-edge
-     icons align with per-file rows inside nested sections. */
-  padding-right: calc(var(--git-filetree-row-pad-x) + 4px);
   border: 1px solid color-mix(in srgb, var(--border-default) 34%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface-control, #1a2230) 32%, transparent);
@@ -1034,6 +1030,10 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   width: 20px;
   height: 20px;
   border-radius: 7px;
+  /* Align with section-header checkbox: compensate for the 1px offset
+     caused by the implicit grid column width (20px + 8px gap). */
+  justify-self: end;
+  margin-right: -1px;
   border-color: color-mix(in srgb, var(--border-default) 72%, var(--text-muted, #64748b));
   background: color-mix(in srgb, var(--surface-control, #1a2230) 82%, var(--surface-card));
   box-shadow:

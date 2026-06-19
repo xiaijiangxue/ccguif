@@ -864,7 +864,7 @@ export function GitDiffPanel({
   const [gitContextMenu, setGitContextMenu] =
     useState<RendererContextMenuState | null>(null);
   const deferredCommitLanguageMenuTimerRef = useRef<number | null>(null);
-  const [isCommitSectionCollapsed, setIsCommitSectionCollapsed] = useState(true);
+  const [isCommitSectionCollapsed, setIsCommitSectionCollapsed] = useState(false);
   const [previewFile, setPreviewFile] = useState<(DiffFile & { section: "staged" | "unstaged" }) | null>(
     null,
   );
@@ -1701,27 +1701,6 @@ export function GitDiffPanel({
                 <FolderTree size={13} aria-hidden />
                 <span>{t("git.listTree")}</span>
               </button>
-              {showGenerateCommitMessage ? (
-                <button
-                  type="button"
-                  className={`diff-list-view-collapse-toggle ${!isCommitSectionCollapsed ? "active" : ""}`}
-                  onClick={() => setIsCommitSectionCollapsed((value) => !value)}
-                  aria-label={t("git.toggleCommitSection")}
-                  aria-expanded={!isCommitSectionCollapsed}
-                  title={
-                    isCommitSectionCollapsed
-                      ? t("git.expandCommitSection")
-                      : t("git.collapseCommitSection")
-                  }
-                >
-                  {isCommitSectionCollapsed ? (
-                    <ChevronsUpDown size={13} aria-hidden />
-                  ) : (
-                    <ChevronsDownUp size={13} aria-hidden />
-                  )}
-                  <span>{t("git.commit")}</span>
-                </button>
-              ) : null}
             </div>
           )}
           <button
@@ -1819,19 +1798,6 @@ export function GitDiffPanel({
             {activeRootPathDisplay}
           </span>
           {rootAlertText ? <span className="git-root-inline-alert">{rootAlertText}</span> : null}
-          {onScanGitRoots && (
-            <button
-              type="button"
-              className="ghost git-root-button git-root-button--toggle"
-              onClick={() => setIsGitRootPanelOpen((open) => !open)}
-              aria-label={t("git.change")}
-              title={t("git.change")}
-              aria-expanded={isGitRootPanelOpen}
-            >
-              <ArrowLeftRight className="git-root-button-icon" aria-hidden />
-              <span>{t("git.change")}</span>
-            </button>
-          )}
         </div>
       )}
       {mode === "diff" ? (
@@ -1964,7 +1930,7 @@ export function GitDiffPanel({
               )}
             </div>
           )}
-          {showGenerateCommitMessage && !isCommitSectionCollapsed && (
+          {showGenerateCommitMessage && (
             <div className="commit-message-section">
               <div className="commit-message-input-wrapper">
                 <textarea
