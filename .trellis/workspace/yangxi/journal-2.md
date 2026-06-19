@@ -929,3 +929,36 @@ Added Commit & Push button with i18n, improved diff panel layout with selection 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 81: style(git-history): improve column title truncation and file list overflow
+
+**Date**: 2026-06-20
+**Task**: style(git-history): improve column title truncation and file list overflow
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Improved column title truncation, fixed details body overflow with flex, added scrollbar-gutter to file list, simplified status symbols, added view toggle truncation.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `48e0a95d` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
