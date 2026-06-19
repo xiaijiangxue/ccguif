@@ -962,3 +962,36 @@ Improved column title truncation, fixed details body overflow with flex, added s
 ### Next Steps
 
 - None - task complete
+
+
+## Session 82: style(git-history): add color-coded file status indicators
+
+**Date**: 2026-06-20
+**Task**: style(git-history): add color-coded file status indicators
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added color-coded file status indicators via CSS custom properties: green (A), blue (M), red (D), orange (R/T). Passed data-status through ActionSurface for CSS targeting.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9948d32c` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
