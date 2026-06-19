@@ -184,6 +184,32 @@ describe("ModeSelect", () => {
     expect(trigger?.textContent).toContain("modes.bypassPermissions.label");
   });
 
+  it("can render as the compact footer badge trigger", () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <ModeSelect
+        value="default"
+        onChange={onChange}
+        provider="claude"
+        triggerVariant="badge"
+      />,
+    );
+
+    const trigger = container.querySelector(".composer-mode-badge");
+    expect(trigger).toBeTruthy();
+    expect(trigger?.classList.contains("selector-button")).toBe(false);
+    expect(trigger?.querySelector(".selector-button-mode-chevron")).toBeNull();
+    fireEvent.click(trigger as HTMLElement);
+
+    const planOption = container.querySelector(
+      '.selector-option[data-mode-id="plan"]',
+    ) as HTMLElement | null;
+    expect(planOption).toBeTruthy();
+    fireEvent.click(planOption as HTMLElement);
+
+    expect(onChange).toHaveBeenCalledWith("plan");
+  });
+
   it("flashes the selector chevron when exit-plan mode requests a mode-sync hint", () => {
     vi.useFakeTimers();
     const onChange = vi.fn();

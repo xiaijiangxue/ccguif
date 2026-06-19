@@ -37,9 +37,10 @@ import ShieldCheck from "lucide-react/dist/esm/icons/shield-check";
 import Cpu from "lucide-react/dist/esm/icons/cpu";
 import FileIcon from "../../../components/FileIcon";
 import { Select, SelectItem, SelectPopup, SelectTrigger } from "../../../components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { EngineSelector } from "../../engine/components/EngineSelector";
 import { Markdown } from "../../messages/components/Markdown";
+import { ModeSelect } from "./ChatInputBox/selectors";
+import type { PermissionMode } from "./ChatInputBox/types";
 import { useComposerImageDrop } from "../hooks/useComposerImageDrop";
 import { ComposerAttachments } from "./ComposerAttachments";
 import { ComposerGhostText } from "./ComposerGhostText";
@@ -141,6 +142,8 @@ type ComposerInputProps = {
   onRefreshAccountRateLimits?: () => Promise<void> | void;
   accessMode?: AccessMode;
   onSelectAccessMode?: (mode: AccessMode) => void;
+  permissionMode?: PermissionMode;
+  onModeSelect?: (mode: PermissionMode) => void;
   ghostTextSuffix?: string;
   openCodeDock?: ReactNode;
   onOpenOpenCodePanel?: () => void;
@@ -351,8 +354,6 @@ export function ComposerInput({
   models,
   selectedModelId,
   onSelectModel,
-  collaborationModes = [],
-  collaborationModesEnabled: _collaborationModesEnabled = true,
   selectedCollaborationModeId,
   onSelectCollaborationMode,
   reasoningOptions = [],
@@ -371,6 +372,8 @@ export function ComposerInput({
   onRefreshAccountRateLimits,
   accessMode,
   onSelectAccessMode,
+  permissionMode = "bypassPermissions",
+  onModeSelect,
   ghostTextSuffix,
   openCodeDock,
   onOpenOpenCodePanel,
@@ -671,14 +674,12 @@ export function ComposerInput({
 
   const isCodexEngine = selectedEngine === "codex";
   const isGeminiEngine = selectedEngine === "gemini";
-  const collaborationModeDisabled = disabled;
-  const planModeId = collaborationModes.find((mode) => mode.id === "plan")?.id ?? "plan";
-  const defaultModeId = collaborationModes.find((mode) => mode.id !== planModeId)?.id ?? "code";
-  const resolvedCollaborationModeId = selectedCollaborationModeId ?? defaultModeId;
-  const isPlanModeEnabled = resolvedCollaborationModeId === planModeId;
-  const collaborationModeBadgeLabel = isPlanModeEnabled
-    ? t("composer.planModeShort")
-    : t("common.default");
+  const modeSelectProvider =
+    selectedEngine === "codex" ||
+    selectedEngine === "claude" ||
+    selectedEngine === "gemini"
+      ? selectedEngine
+      : undefined;
   const accessDisplayLabel = accessMode === "read-only"
     ? t("composer.readOnly")
     : accessMode === "current"
@@ -739,7 +740,7 @@ export function ComposerInput({
     showOpenCodeAgentPicker ||
     showOpenCodeVariantPicker;
   const showAccessPicker = Boolean(accessMode && onSelectAccessMode);
-  const showPlanModeToggle = Boolean(isCodexEngine && onSelectCollaborationMode);
+  const showFooterModeSelect = Boolean(modeSelectProvider && onModeSelect);
   const showEffortPicker = Boolean(reasoningSupported && onSelectEffort);
   const effortDefaultLabel =
     selectedEngine === "claude"
@@ -750,15 +751,6 @@ export function ComposerInput({
     selectedEngine === "opencode" && onOpenOpenCodePanel,
   );
   const hasPolicyCluster = showAccessPicker || showEffortPicker;
-  const handlePlanModeToggle = useCallback(
-    (checked: boolean) => {
-      if (!onSelectCollaborationMode) {
-        return;
-      }
-      onSelectCollaborationMode(checked ? planModeId : defaultModeId);
-    },
-    [defaultModeId, onSelectCollaborationMode, planModeId],
-  );
   const handleOpenCodeModelIndicatorKeyDown = useCallback(
     (event: KeyboardEvent<HTMLDivElement>) => {
       if (!onOpenOpenCodePanel) {
@@ -846,20 +838,6 @@ export function ComposerInput({
               >
                 <ImagePlus size={14} aria-hidden />
               </button>
-              {showPlanModeToggle && (
-                <label className="composer-plan-mode-toggle">
-                  <span className="composer-plan-mode-toggle-label">
-                    {t("composer.planModeToggle")}
-                  </span>
-                  <Switch
-                    aria-label={t("composer.planModeToggle")}
-                    checked={isPlanModeEnabled}
-                    disabled={collaborationModeDisabled}
-                    onCheckedChange={handlePlanModeToggle}
-                    className="composer-plan-mode-switch"
-                  />
-                </label>
-              )}
             </div>
 
             {hasEngineCluster && (
@@ -1170,18 +1148,15 @@ export function ComposerInput({
           </div>
           
           <div className="composer-input-footer-right">
-            {showPlanModeToggle && (
-              <button
-                type="button"
-                className={`composer-mode-badge${isPlanModeEnabled ? " is-plan" : ""}`}
-                onClick={() => handlePlanModeToggle(!isPlanModeEnabled)}
-                disabled={collaborationModeDisabled}
-                aria-label={t("composer.planModeToggle")}
-                title={t("composer.planModeToggle")}
-              >
-                <GitFork size={12} aria-hidden />
-                <span>{collaborationModeBadgeLabel}</span>
-              </button>
+            {showFooterModeSelect && (
+              <ModeSelect
+                value={permissionMode}
+                onChange={onModeSelect}
+                provider={modeSelectProvider}
+                selectedCollaborationModeId={selectedCollaborationModeId}
+                onSelectCollaborationMode={onSelectCollaborationMode}
+                triggerVariant="badge"
+              />
             )}
             {isCodexEngine && (
               <div

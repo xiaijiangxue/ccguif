@@ -326,7 +326,7 @@
     padding: 0 2px;
   }
 
-  .composer-mode-badge span {
+  .composer-mode-badge .composer-mode-badge-label {
     display: none;
   }
 

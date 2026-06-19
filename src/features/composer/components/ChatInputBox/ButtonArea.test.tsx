@@ -2,6 +2,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ButtonArea } from "./ButtonArea";
+import { buildComposerSendReadiness } from "../../utils/composerSendReadiness";
 
 vi.mock("./selectors", () => ({
   ConfigSelect: () => <div data-testid="config-select" />,
@@ -125,6 +126,36 @@ describe("ButtonArea custom model storage refresh", () => {
       toggle.compareDocumentPosition(screen.getByTestId("config-select")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("renders the mode selector in the right readiness surface instead of the tool dock", () => {
+    const readiness = buildComposerSendReadiness({
+      engine: "claude",
+      providerLabel: "Claude",
+      modelLabel: "sonnet",
+      modeLabel: "Auto Mode",
+      draftText: "continue",
+    });
+
+    const { container } = render(
+      <ButtonArea
+        currentProvider="claude"
+        models={[]}
+        selectedModel=""
+        hasInputContent
+        onSubmit={vi.fn()}
+        onProviderSelect={vi.fn()}
+        onReasoningChange={vi.fn()}
+        onModeSelect={vi.fn()}
+        sendReadiness={readiness}
+      />,
+    );
+
+    const toolDock = container.querySelector(".button-area-inline-tools");
+    const readinessSurface = container.querySelector(".button-area-readiness");
+
+    expect(toolDock?.querySelector('[data-testid="mode-select"]')).toBeNull();
+    expect(readinessSurface?.querySelector('[data-testid="mode-select"]')).toBeTruthy();
   });
 
   it("renders the status panel toggle inside the opened tool dock", () => {

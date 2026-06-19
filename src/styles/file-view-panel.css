@@ -1704,15 +1704,15 @@
 }
 
 .fvp-file-markdown code {
-  font-family: var(--code-font-family);
-  font-weight: var(--code-font-weight, 400);
+  font-family: inherit;
+  font-weight: inherit;
 }
 
 .fvp-file-markdown :where(p code, li code, blockquote code, td code, th code) {
   padding: 0.18em 0.4em;
   border-radius: 6px;
   background: var(--fvp-markdown-inline-code-bg);
-  font-size: 0.92em;
+  font-size: 1em;
 }
 
 .fvp-file-markdown-codeblock {
@@ -1750,6 +1750,8 @@
 }
 
 .fvp-file-markdown-codeblock code {
+  font-family: inherit;
+  font-weight: inherit;
   color: var(--fvp-reader-text);
 }
 

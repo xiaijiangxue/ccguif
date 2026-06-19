@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
 import { EngineIcon } from '../../../engine/components/EngineIcon';
 import type { ComposerSendReadiness } from '../../utils/composerSendReadiness';
-import type { ModelInfo, ProviderId } from './types';
+import type { ModelInfo, ProviderId, PermissionMode } from './types';
 import type { ProviderModelGroup } from './modelOptions';
 import { ModelSelect } from './selectors/ModelSelect';
+import { ModeSelect } from './selectors/ModeSelect';
 
 function parseContextChipCount(chip: string, prefix: string) {
   if (!chip.startsWith(prefix)) {
@@ -27,6 +28,11 @@ type ComposerReadinessBarProps = {
   onAddModel?: () => void;
   onRefreshModelConfig?: () => Promise<void> | void;
   isModelConfigRefreshing?: boolean;
+  permissionMode?: PermissionMode;
+  onModeSelect?: (mode: PermissionMode) => void;
+  selectedCollaborationModeId?: string | null;
+  onSelectCollaborationMode?: (id: string | null) => void;
+  disabled?: boolean;
 };
 
 export function ComposerReadinessBar({
@@ -43,6 +49,11 @@ export function ComposerReadinessBar({
   onAddModel,
   onRefreshModelConfig,
   isModelConfigRefreshing,
+  permissionMode,
+  onModeSelect,
+  selectedCollaborationModeId,
+  onSelectCollaborationMode,
+  disabled = false,
 }: ComposerReadinessBarProps) {
   const { t } = useTranslation();
   const modeLabel = readiness.target.modeLabel ?? readiness.target.accessModeLabel;
@@ -80,6 +91,13 @@ export function ComposerReadinessBar({
   const canJumpToRequest =
     Boolean(onJumpToRequest) && readiness.requestPointer?.canJumpToRequest === true;
   const canToggleContextSources = hasContext && Boolean(onToggleContextSources);
+  const modeSelectProvider =
+    currentProvider === 'codex' ||
+    currentProvider === 'claude' ||
+    currentProvider === 'gemini'
+      ? currentProvider
+      : undefined;
+  const showModeSelect = Boolean(modeSelectProvider && permissionMode && onModeSelect);
 
   return (
     <div
@@ -123,10 +141,18 @@ export function ComposerReadinessBar({
             </span>
           </div>
         )}
-        {modeLabel ? (
-          <span className="composer-readiness-chip">
-            {modeLabel}
-          </span>
+        {showModeSelect ? (
+          <ModeSelect
+            value={permissionMode}
+            onChange={onModeSelect}
+            provider={modeSelectProvider}
+            selectedCollaborationModeId={selectedCollaborationModeId}
+            onSelectCollaborationMode={onSelectCollaborationMode}
+            triggerVariant="badge"
+            disabled={disabled}
+          />
+        ) : modeLabel ? (
+          <span className="composer-readiness-chip">{modeLabel}</span>
         ) : null}
         {readiness.target.modeImpactLabel ? (
           <span className="composer-readiness-mode-impact">

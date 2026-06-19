@@ -18,6 +18,8 @@ interface ModeSelectProps {
   provider?: string;
   selectedCollaborationModeId?: string | null;
   onSelectCollaborationMode?: (id: string | null) => void;
+  triggerVariant?: 'toolbar' | 'badge';
+  disabled?: boolean;
 }
 
 type ModeSelectFlashStyle = CSSProperties & {
@@ -35,6 +37,8 @@ export const ModeSelect = ({
   provider,
   selectedCollaborationModeId,
   onSelectCollaborationMode,
+  triggerVariant = 'toolbar',
+  disabled = false,
 }: ModeSelectProps) => {
   const hoverMenuId = 'mode-select';
   const { t } = useTranslation();
@@ -109,8 +113,8 @@ export const ModeSelect = ({
   /**
    * Select mode
    */
-  const handleSelect = useCallback((mode: PermissionMode, disabled?: boolean) => {
-    if (disabled) return; // Disabled options cannot be selected
+  const handleSelect = useCallback((mode: PermissionMode, optionDisabled?: boolean) => {
+    if (disabled || optionDisabled) return; // Disabled options cannot be selected
     if (provider === 'codex') {
       if (mode === 'plan') {
         onSelectCollaborationMode?.('plan');
@@ -123,7 +127,7 @@ export const ModeSelect = ({
     }
     onChange(mode);
     setIsOpen(false);
-  }, [onChange, onSelectCollaborationMode, provider]);
+  }, [disabled, onChange, onSelectCollaborationMode, provider]);
 
   const handlePointerLeave = useCallback((event: ReactPointerEvent) => {
     const nextTarget = event.relatedTarget;
@@ -228,10 +232,20 @@ export const ModeSelect = ({
     >
       <Menu.Trigger
         ref={buttonRef}
-        className={`selector-button selector-button-mode-trigger${isChevronFlashing ? ' is-flashing' : ''}`}
+        className={cn(
+          triggerVariant === 'badge'
+            ? 'composer-mode-badge selector-button-mode-trigger'
+            : 'selector-button selector-button-mode-trigger',
+          currentMode.id === 'plan' && 'is-plan',
+          isChevronFlashing && 'is-flashing',
+        )}
         style={flashingButtonStyle}
+        disabled={disabled}
         title={getModeText(currentMode.id, 'tooltip') || `${t('chat.currentMode', { mode: getModeText(currentMode.id, 'label') })}`}
         onPointerEnter={() => {
+          if (disabled) {
+            return;
+          }
           hoverCloseControllerRef.current.cancel();
           announceHoverMenuOpen(hoverMenuId);
           setIsOpen(true);
@@ -242,11 +256,15 @@ export const ModeSelect = ({
           className={`codicon ${currentMode.icon} selector-button-mode-icon`}
           aria-hidden="true"
         />
-        <span className="selector-button-text">{getModeText(currentMode.id, 'label')}</span>
-        <span
-          className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'} selector-button-mode-chevron${isChevronFlashing ? ' is-flashing' : ''}`}
-          style={flashingChevronStyle}
-        />
+        <span className={triggerVariant === 'badge' ? 'composer-mode-badge-label' : 'selector-button-text'}>
+          {getModeText(currentMode.id, 'label')}
+        </span>
+        {triggerVariant === 'toolbar' ? (
+          <span
+            className={`codicon codicon-chevron-${isOpen ? 'up' : 'down'} selector-button-mode-chevron${isChevronFlashing ? ' is-flashing' : ''}`}
+            style={flashingChevronStyle}
+          />
+        ) : null}
       </Menu.Trigger>
 
       <Portal>

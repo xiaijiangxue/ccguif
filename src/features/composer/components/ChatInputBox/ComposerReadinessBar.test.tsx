@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildComposerSendReadiness } from '../../utils/composerSendReadiness';
 import { ComposerReadinessBar } from './ComposerReadinessBar';
@@ -80,6 +80,35 @@ describe('ComposerReadinessBar', () => {
 
     expect(screen.queryByText('composer.readinessDisabled.runtime-recovering')).toBeNull();
     expect(screen.queryByText('composer.readinessActivity.blocked')).toBeNull();
+  });
+
+  it('uses the mode selector in place of the static mode chip when available', () => {
+    const onModeSelect = vi.fn();
+    const readiness = buildComposerSendReadiness({
+      engine: 'claude',
+      providerLabel: 'Claude',
+      modelLabel: 'sonnet',
+      modeLabel: 'Static mode copy',
+      draftText: 'continue',
+    });
+
+    const { container } = render(
+      <ComposerReadinessBar
+        readiness={readiness}
+        currentProvider="claude"
+        permissionMode="default"
+        onModeSelect={onModeSelect}
+      />,
+    );
+
+    expect(container.querySelector('.composer-readiness-chip')).toBeNull();
+    const trigger = container.querySelector('.composer-mode-badge');
+    expect(trigger).toBeTruthy();
+
+    fireEvent.click(trigger as HTMLElement);
+    fireEvent.click(container.querySelector('.selector-option[data-mode-id="plan"]') as HTMLElement);
+
+    expect(onModeSelect).toHaveBeenCalledWith('plan');
   });
 
   it('hides empty context placeholder copy', () => {

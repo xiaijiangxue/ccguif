@@ -13,7 +13,7 @@ import DatabaseZap from 'lucide-react/dist/esm/icons/database-zap';
 import X from 'lucide-react/dist/esm/icons/x';
 import type { ButtonAreaProps, MemoryReferenceMode, PermissionMode, ReasoningEffort } from './types';
 import { ComposerReadinessBar } from './ComposerReadinessBar';
-import { ConfigSelect, ModeSelect, ReasoningSelect } from './selectors';
+import { ConfigSelect, ReasoningSelect } from './selectors';
 
 // Stable no-op callbacks to avoid re-renders when optional handlers are not provided
 const NOOP_MODE = (_mode: PermissionMode) => {};
@@ -90,7 +90,6 @@ export const ButtonArea = ({
   isModelConfigRefreshing,
 }: ButtonAreaProps) => {
   const { t } = useTranslation();
-  const isPlanModeEnabled = (selectedCollaborationModeId ?? 'code') === 'plan';
   const supportsStreamActivityPhaseFx =
     currentProvider === 'codex' ||
     currentProvider === 'claude' ||
@@ -271,13 +270,6 @@ export const ButtonArea = ({
     onProviderSelect?.(providerId);
   }, [onProviderSelect]);
 
-  const handlePlanModeToggle = useCallback(() => {
-    if (!onSelectCollaborationMode) {
-      return;
-    }
-    onSelectCollaborationMode(isPlanModeEnabled ? 'code' : 'plan');
-  }, [isPlanModeEnabled, onSelectCollaborationMode]);
-
   const handleToolDockToggle = useCallback(() => {
     setIsToolDockOpen((current) => {
       if (current) {
@@ -433,26 +425,6 @@ export const ButtonArea = ({
                 onAgentSelect={onAgentSelect}
                 onOpenAgentSettings={onOpenAgentSettings}
               />
-              <ModeSelect
-                value={permissionMode}
-                onChange={onModeSelect ?? NOOP_MODE}
-                provider={currentProvider}
-                selectedCollaborationModeId={selectedCollaborationModeId}
-                onSelectCollaborationMode={onSelectCollaborationMode}
-              />
-              {currentProvider === 'codex' && isPlanModeEnabled && (
-                <button
-                  className={`selector-button selector-plan-mode-button ${isPlanModeEnabled ? 'active' : ''}`}
-                  onClick={handlePlanModeToggle}
-                  title={t('composer.planModeToggle')}
-                  disabled={!onSelectCollaborationMode}
-                >
-                  <span className="codicon codicon-git-branch" />
-                  <span className="selector-button-text">
-                    {t('composer.planModeShort')}
-                  </span>
-                </button>
-              )}
               {toolSurface ? (
                 <div className="button-area-tool-surface">
                   {toolSurface}
@@ -526,6 +498,11 @@ export const ButtonArea = ({
                 onAddModel={onAddModel}
                 onRefreshModelConfig={onRefreshModelConfig}
                 isModelConfigRefreshing={isModelConfigRefreshing}
+                permissionMode={permissionMode}
+                onModeSelect={onModeSelect ?? NOOP_MODE}
+                selectedCollaborationModeId={selectedCollaborationModeId}
+                onSelectCollaborationMode={onSelectCollaborationMode}
+                disabled={disabled || isLoading}
               />
             </div>
           )}

@@ -179,16 +179,6 @@
   }
 }
 
-.selector-button.selector-plan-mode-button {
-  border: none;
-}
-
-.selector-button.selector-plan-mode-button.active {
-  color: var(--accent-primary, #2563eb);
-  background: color-mix(in srgb, var(--accent-primary, #2563eb) 12%, transparent);
-  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 34%, transparent);
-}
-
 .selector-button.config-button {
   width: 30px;
   padding: 0;
@@ -695,6 +685,11 @@
   background: color-mix(in srgb, white 96%, var(--accent) 4%);
   box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
   backdrop-filter: blur(10px);
+}
+
+.selector-menu-surface:focus,
+.selector-menu-surface:focus-visible {
+  outline: none;
 }
 
 .selector-menu-surface--anchored {

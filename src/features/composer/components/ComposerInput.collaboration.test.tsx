@@ -30,56 +30,53 @@ function renderComposerInput(overrides: Partial<ComponentProps<typeof ComposerIn
       collaborationModesEnabled={false}
       selectedCollaborationModeId={null}
       onSelectCollaborationMode={() => {}}
+      permissionMode="bypassPermissions"
+      onModeSelect={() => {}}
       {...overrides}
     />,
   );
 }
 
 describe("ComposerInput collaboration mode", () => {
-  it("shows plan mode switch for codex engine", () => {
+  it("shows the mode menu badge for codex engine", () => {
     const view = renderComposerInput({ collaborationModesEnabled: false });
 
-    const modeSwitch = within(view.container).getByRole("switch", {
-      name: "composer.planModeToggle",
-    });
-    expect(modeSwitch).toBeTruthy();
-    expect(modeSwitch.getAttribute("aria-checked")).toBe("false");
+    expect(view.container.querySelector(".composer-mode-badge")).toBeTruthy();
   });
 
-  it("hides plan mode switch for non-codex engines", () => {
+  it("shows the mode menu badge for Claude engine", () => {
     const view = renderComposerInput({ selectedEngine: "claude", collaborationModesEnabled: true });
 
-    expect(within(view.container).queryByRole("switch", { name: "composer.planModeToggle" })).toBeNull();
+    expect(view.container.querySelector(".composer-mode-badge")).toBeTruthy();
   });
 
-  it("switches from default(code) to plan", () => {
+  it("switches from codex code to plan through the mode menu", () => {
     const onSelectCollaborationMode = vi.fn();
     const view = renderComposerInput({
       selectedCollaborationModeId: "code",
       onSelectCollaborationMode,
     });
 
-    const modeSwitch = within(view.container).getByRole("switch", {
-      name: "composer.planModeToggle",
-    });
-    fireEvent.click(modeSwitch);
+    fireEvent.click(view.container.querySelector(".composer-mode-badge") as HTMLElement);
+    fireEvent.click(view.container.querySelector('.selector-option[data-mode-id="plan"]') as HTMLElement);
 
     expect(onSelectCollaborationMode).toHaveBeenCalledWith("plan");
   });
 
-  it("switches from plan to default(code)", () => {
+  it("switches from codex plan to code through the mode menu", () => {
     const onSelectCollaborationMode = vi.fn();
+    const onModeSelect = vi.fn();
     const view = renderComposerInput({
       selectedCollaborationModeId: "plan",
       onSelectCollaborationMode,
+      onModeSelect,
     });
 
-    const modeSwitch = within(view.container).getByRole("switch", {
-      name: "composer.planModeToggle",
-    });
-    fireEvent.click(modeSwitch);
+    fireEvent.click(view.container.querySelector(".composer-mode-badge") as HTMLElement);
+    fireEvent.click(view.container.querySelector('.selector-option[data-mode-id="bypassPermissions"]') as HTMLElement);
 
     expect(onSelectCollaborationMode).toHaveBeenCalledWith("code");
+    expect(onModeSelect).toHaveBeenCalledWith("bypassPermissions");
   });
 
   it("shows Claude default copy for an empty Claude reasoning effort", () => {

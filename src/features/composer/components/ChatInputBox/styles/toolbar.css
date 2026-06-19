@@ -116,6 +116,7 @@
   align-items: center;
   gap: 3px;
   margin-left: auto;
+  min-width: 0;
   flex-shrink: 0;
 }
 
@@ -142,7 +143,7 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  max-width: 280px;
+  max-width: min(46vw, 430px);
 }
 
 .button-area-readiness .selector-dropdown--readiness-inline {
@@ -169,6 +170,8 @@
   flex-direction: row;
   align-items: center;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
   min-height: auto;
   padding: 0;
   border: none;
@@ -178,8 +181,26 @@
 }
 
 .button-area-readiness .composer-readiness-target-group {
+  flex: 1 1 auto;
   flex-wrap: nowrap;
   gap: 5px;
+  min-width: 0;
+}
+
+.button-area-readiness .composer-readiness-model-select {
+  flex: 1 1 172px;
+  min-width: 120px;
+}
+
+.button-area-readiness .composer-readiness-target-button {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  width: 100%;
+}
+
+.button-area-readiness .composer-readiness-model {
+  min-width: 0;
 }
 
 .button-area-readiness .composer-readiness-activity {
@@ -198,8 +219,19 @@
   border-radius: 4px;
 }
 
+.button-area-readiness .composer-mode-badge {
+  height: 22px;
+  min-width: max-content;
+  padding: 0 7px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  font-size: 10.5px;
+  gap: 4px;
+  white-space: nowrap;
+}
+
 .button-area-readiness .composer-readiness-mode-impact {
-  font-size: 10px;
+  display: none;
 }
 
 @keyframes button-area-inline-tools-enter {

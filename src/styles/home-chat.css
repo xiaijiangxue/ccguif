@@ -728,7 +728,6 @@
 .home-chat-composer-host .button-area-inline-tools .selector-button.config-button,
 .home-chat-composer-host .button-area-inline-tools .selector-button.selector-provider-button,
 .home-chat-composer-host .button-area-inline-tools .selector-button.selector-shortcut-button,
-.home-chat-composer-host .button-area-inline-tools .selector-button.selector-plan-mode-button,
 .home-chat-composer-host .button-area-inline-tools .selector-reasoning-button.is-icon-only {
   width: 28px;
   min-width: 28px;
@@ -746,17 +745,11 @@
 .home-chat-composer-host .button-area-inline-tools .selector-button.config-button:hover,
 .home-chat-composer-host .button-area-inline-tools .selector-button.selector-provider-button:hover,
 .home-chat-composer-host .button-area-inline-tools .selector-button.selector-shortcut-button:hover,
-.home-chat-composer-host .button-area-inline-tools .selector-button.selector-plan-mode-button:hover,
 .home-chat-composer-host .button-area-inline-tools .selector-reasoning-button.is-icon-only:hover {
   background: transparent;
   border-color: transparent;
   box-shadow: none;
   color: var(--text-primary);
-}
-
-.home-chat-composer-host .button-area-inline-tools .selector-button.selector-plan-mode-button.active {
-  background: transparent;
-  border-color: transparent;
 }
 
 .home-chat-composer-host .button-area-inline-tools .selector-button svg,
