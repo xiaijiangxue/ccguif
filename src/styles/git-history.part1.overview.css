@@ -585,9 +585,9 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 .git-history-worktree-commit-box.commit-message-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   margin-bottom: 0;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   border-bottom: none;
 }
 
@@ -603,15 +603,15 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 
 .git-history-worktree-commit-input {
   width: 100%;
-  min-height: 48px;
-  max-height: 120px;
+  min-height: 72px;
+  max-height: 160px;
   resize: vertical;
   border-radius: 8px;
   border: 1px solid var(--border-strong);
   background: transparent;
   color: var(--text-muted);
-  font-family: var(--code-font-family);
-  font-size: var(--code-font-size, 11px);
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
+  font-size: 13px;
   line-height: 1.5;
   padding: 8px 36px 8px 10px;
   box-sizing: border-box;
@@ -623,6 +623,14 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
   border-color: var(--border-accent-soft);
   color: var(--text-emphasis);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--border-accent-soft) 20%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button-container {
+  margin-top: 1px;
+}
+
+.git-history-worktree-commit-box .commit-button {
+  padding: 6px 12px;
 }
 
 .git-history-worktree-generate {
