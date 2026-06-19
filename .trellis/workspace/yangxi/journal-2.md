@@ -1028,3 +1028,36 @@ Removed +/- prefixes from historyChangedFilesSummary (en/zh), added font-weight 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 84: style(git-history): refine graph lines, add commit list vertical line
+
+**Date**: 2026-06-20
+**Task**: style(git-history): refine graph lines, add commit list vertical line
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Refined graph line visibility (hidden by default, shown for active row), added subtle vertical line to commit list, reduced dot size to 8px, normalized header heights.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7b4fbfff` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
