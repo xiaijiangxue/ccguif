@@ -797,3 +797,36 @@ Removed root folder row wrapper in worktree tree, showing children directly. Sim
 ### Next Steps
 
 - None - task complete
+
+
+## Session 77: style: reduce file tree row vertical padding to 0.5px
+
+**Date**: 2026-06-20
+**Task**: style: reduce file tree row vertical padding to 0.5px
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Reduced file tree row vertical padding from 1px/3px to 0.5px for tighter layout.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `b40d7f23` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
