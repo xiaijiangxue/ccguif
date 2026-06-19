@@ -665,3 +665,36 @@ Moved commit count to column header, reordered section actions, refined worktree
 ### Next Steps
 
 - None - task complete
+
+
+## Session 73: refactor(git-diff): remove commit section collapse toggle, always expand
+
+**Date**: 2026-06-19
+**Task**: refactor(git-diff): remove commit section collapse toggle, always expand
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed commit section collapse toggle buttons from both diff panel and git history, always expanded. Removed change-root button. Tightened commit message gap and fixed padding.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0a6a6fa4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
