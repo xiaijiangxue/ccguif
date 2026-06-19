@@ -18,7 +18,7 @@
   --git-filetree-section-bg: color-mix(in srgb, var(--surface-card) 46%, transparent);
   --git-filetree-row-min-height: 22px;
   --git-filetree-row-gap: 5px;
-  --git-filetree-row-pad-y: 1px;
+  --git-filetree-row-pad-y: 0.5px;
   --git-filetree-row-pad-x: 6px;
   --git-filetree-row-radius: 5px;
   --git-filetree-indent-step: 8px;

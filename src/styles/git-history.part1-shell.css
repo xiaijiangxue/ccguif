@@ -65,7 +65,7 @@ body[data-git-history-resizing="true"] .git-history-dock-resizer::after {
   --git-filetree-section-bg: color-mix(in srgb, var(--surface-control, #1a2230) 40%, transparent);
   --git-filetree-row-min-height: 28px;
   --git-filetree-row-gap: 8px;
-  --git-filetree-row-pad-y: 3px;
+  --git-filetree-row-pad-y: 0.5px;
   --git-filetree-row-pad-x: 8px;
   --git-filetree-row-radius: 7px;
   --git-filetree-indent-step: 16px;
