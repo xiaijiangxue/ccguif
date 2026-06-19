@@ -731,3 +731,36 @@ Removed commit scope hint from diff panel, bumped tab font sizes to 13px, remove
 ### Next Steps
 
 - None - task complete
+
+
+## Session 75: refactor(git-history): move section actions to root folder row
+
+**Date**: 2026-06-19
+**Task**: refactor(git-history): move section actions to root folder row
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Moved GitDiffPanelSectionActions from summary bar to root folder header row, added section indicator inline, removed standalone summary bar.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d8a9db62` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
