@@ -764,3 +764,36 @@ Moved GitDiffPanelSectionActions from summary bar to root folder header row, add
 ### Next Steps
 
 - None - task complete
+
+
+## Session 76: refactor(git-history): simplify worktree tree by removing root folder wrapper
+
+**Date**: 2026-06-19
+**Task**: refactor(git-history): simplify worktree tree by removing root folder wrapper
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed root folder row wrapper in worktree tree, showing children directly. Simplified single-section CSS by removing border, gap, padding.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `0ab5faea` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
