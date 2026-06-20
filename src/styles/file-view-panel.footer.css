@@ -208,6 +208,7 @@
   transform: translateY(2px);
   transition: opacity 120ms ease, transform 120ms ease;
   pointer-events: none;
+  font-family: var(--ui-font-family);
 }
 
 .fvp-file-reference-bar.is-visible {
@@ -226,6 +227,7 @@
   min-width: 0;
   flex: 1;
   font-size: 10px;
+  font-family: var(--ui-font-family);
   color: var(--text-strong);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -235,6 +237,8 @@
 
 .fvp-file-reference-lines {
   font-size: 9px;
+  font-family: var(--ui-font-family);
+  font-variant-numeric: tabular-nums;
   color: var(--text-strong);
   border: 0;
   border-radius: 999px;

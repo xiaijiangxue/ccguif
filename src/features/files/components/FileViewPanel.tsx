@@ -65,7 +65,6 @@ import {
   parseShortcut,
 } from "../../../utils/shortcuts";
 import { highlightLine } from "../../../utils/syntax";
-import { OpenAppMenu } from "../../app/components/OpenAppMenu";
 import FileIcon from "../../../components/FileIcon";
 import type { GitFileStatus, OpenAppTarget } from "../../../types";
 import type {
@@ -646,10 +645,6 @@ export function FileViewPanel({
   activeFileLineRange = null,
   onActiveFileLineRangeChange,
   initialMode = "edit",
-  openTargets,
-  openAppIconById,
-  selectedOpenAppId,
-  onSelectOpenAppId,
   editorSplitLayout = "vertical",
   onToggleEditorSplitLayout,
   isEditorFileMaximized = false,
@@ -2443,13 +2438,6 @@ export function FileViewPanel({
             )}
           </button>
         ) : null}
-        <OpenAppMenu
-          path={absolutePath}
-          openTargets={openTargets}
-          selectedOpenAppId={selectedOpenAppId}
-          onSelectOpenAppId={onSelectOpenAppId}
-          iconById={openAppIconById}
-        />
       </div>
     </div>
   );
