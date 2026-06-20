@@ -1457,3 +1457,36 @@ Replaced sidebar-tree-label-font-weight with explicit 400 weight, added ui-font-
 ### Next Steps
 
 - None - task complete
+
+
+## Session 97: style(git): restyle commit buttons, remove inline SVG icons
+
+**Date**: 2026-06-20
+**Task**: style(git): restyle commit buttons, remove inline SVG icons
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed inline SVG icons from commit buttons, added gradient backgrounds, hover transitions, and accent variants to worktree commit buttons.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `80c24fa4` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
