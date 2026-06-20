@@ -1292,3 +1292,36 @@ Added ResizeObserver to DropdownContent for stable repositioning, compacted mode
 ### Next Steps
 
 - None - task complete
+
+
+## Session 92: feat(dropdown): add alignOffset prop for horizontal fine-tuning
+
+**Date**: 2026-06-20
+**Task**: feat(dropdown): add alignOffset prop for horizontal fine-tuning
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added alignOffset prop to DropdownContent for post-alignment horizontal adjustment, applied to ModelSelect readiness dropdown, added font styles to tool-change-inline-diff.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `7ed1f8c6` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
