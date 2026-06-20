@@ -328,10 +328,10 @@ export const ModelSelect = ({
             open={isOpen}
             onClose={() => setIsOpen(false)}
             side="top"
-            sideOffset={-10}
-            align="end"
-            minWidth={252}
-            maxHeight="280px"
+            sideOffset={8}
+            align="start"
+            minWidth={218}
+            maxHeight="240px"
             surfaceId={hoverSurfaceId}
             onPointerEnter={isReadiness ? () => hoverCloseControllerRef.current.cancel() : undefined}
             onPointerLeave={isReadiness ? handleDropdownPointerLeave : undefined}

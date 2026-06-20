@@ -291,7 +291,6 @@ export const ModeSelect = ({
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <span>{getModeText(mode.id, 'label')}</span>
-                  <span className="mode-description">{getModeText(mode.id, 'description')}</span>
                 </div>
                 {mode.id === selectedModeId && (
                   <Check size={20} className="check-mark" aria-hidden />

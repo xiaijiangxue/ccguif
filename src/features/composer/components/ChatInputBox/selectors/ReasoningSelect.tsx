@@ -93,7 +93,7 @@ export const ReasoningSelect = ({
   }, []);
 
   const menuContentClassName = cn(
-    "selector-menu-surface selector-menu-surface--anchored z-[10001] min-w-[200px] overflow-visible rounded-[14px] p-1.5 text-popover-foreground",
+    "selector-menu-surface selector-menu-surface--anchored selector-dropdown--reasoning z-[10001] overflow-visible rounded-[14px] text-popover-foreground",
     "data-[state=open]:animate-in data-[state=closed]:animate-out",
     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",

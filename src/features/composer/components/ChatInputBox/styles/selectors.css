@@ -600,8 +600,50 @@
 }
 
 .selector-dropdown--model-readiness-compact {
-  max-height: 280px;
-  margin-left: 94px;
+  width: 218px;
+  min-width: 218px;
+  max-height: 240px;
+  padding: 4px;
+}
+
+.selector-dropdown--model-readiness-compact .selector-model-group-title {
+  gap: 5px;
+  padding: 5px 8px 3px;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.selector-dropdown--model-readiness-compact .selector-option.selector-option--model-compact,
+.selector-dropdown--model-readiness-compact .selector-option {
+  min-height: 30px;
+  gap: 7px;
+  padding: 5px 7px;
+  border-radius: 8px;
+}
+
+.selector-dropdown--model-readiness-compact .selector-model-label {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.selector-dropdown--model-readiness-compact .selector-model-icon,
+.selector-dropdown--model-readiness-compact .selector-model-icon img,
+.selector-dropdown--model-readiness-compact .selector-model-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.selector-dropdown--model-readiness-compact .selector-model-check-slot {
+  width: 16px;
+  height: 16px;
+  flex-basis: 16px;
+}
+
+.selector-dropdown--model-readiness-compact .selector-model-check-slot img,
+.selector-dropdown--model-readiness-compact .selector-model-check-slot svg,
+.selector-dropdown--model-readiness-compact .check-mark {
+  width: 14px;
+  height: 14px;
 }
 
 .selector-dropdown--model-single-group {
@@ -666,8 +708,166 @@
 }
 
 .selector-dropdown--mode {
-  padding: 10px 0;
-  width: max-content;
+  min-width: 176px;
+  width: 176px;
+  padding: 4px;
+}
+
+.selector-dropdown--mode .selector-option {
+  min-height: 34px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.selector-dropdown--mode .selector-option > div {
+  min-width: 0;
+}
+
+.selector-dropdown--mode .selector-option .mode-icon {
+  flex-basis: 15px;
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
+  line-height: 15px;
+}
+
+.selector-dropdown--mode .selector-option .mode-description {
+  display: none;
+}
+
+.selector-dropdown--mode .selector-option .check-mark {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.selector-dropdown--reasoning {
+  min-width: 178px;
+  width: 178px;
+  padding: 4px;
+}
+
+.selector-dropdown--reasoning .selector-option {
+  min-height: 36px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.selector-dropdown--reasoning .selector-option > div {
+  min-width: 0;
+}
+
+.selector-dropdown--reasoning .selector-option--reasoning > .codicon,
+.selector-dropdown--reasoning .selector-option > .codicon {
+  flex-basis: 15px;
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
+  line-height: 15px;
+}
+
+.selector-dropdown--reasoning .selector-option .mode-description {
+  font-size: 10.5px;
+  line-height: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selector-dropdown--reasoning .selector-option .check-mark {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
+}
+
+.selector-dropdown--config {
+  min-width: 178px;
+  width: 178px;
+  padding: 4px;
+}
+
+.selector-dropdown--config > .selector-option,
+.selector-dropdown--config > [data-scope="menu"][data-part="trigger-item"] {
+  min-height: 34px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.selector-dropdown--config > .selector-option .codicon,
+.selector-dropdown--config > [data-scope="menu"][data-part="trigger-item"] .codicon {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
+  line-height: 15px;
+}
+
+.selector-dropdown--config .selector-option-agent-icon {
+  width: 15px;
+  height: 15px;
+  flex-basis: 15px;
+}
+
+.selector-dropdown--config .model-description {
+  display: none;
+}
+
+.selector-dropdown--config .ant-switch {
+  transform: scale(0.86);
+  transform-origin: right center;
+}
+
+.selector-dropdown--agent {
+  min-width: 230px;
+  width: 230px;
+  max-width: 250px;
+  padding: 4px;
+}
+
+.selector-dropdown--agent .selector-option {
+  min-height: 38px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.selector-dropdown--agent .selector-option.items-start {
+  align-items: center;
+}
+
+.selector-dropdown--agent .selector-option > .codicon,
+.selector-dropdown--agent .selector-option-agent-icon {
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  font-size: 15px;
+  line-height: 15px;
+}
+
+.selector-dropdown--agent .model-description {
+  max-width: 178px;
+  font-size: 10.5px;
+  line-height: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selector-dropdown--agent .check-mark {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 14px;
 }
 
 .selector-dropdown-title {

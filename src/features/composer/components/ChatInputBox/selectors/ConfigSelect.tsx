@@ -311,7 +311,7 @@ export const ConfigSelect = ({
       <Portal>
         <Menu.Positioner className="z-[10001] outline-none">
           <Menu.Content
-            className={cn(baseMenuContentClassName, "selector-menu-surface--anchored overflow-visible min-w-[220px]")}
+            className={cn(baseMenuContentClassName, "selector-menu-surface--anchored selector-dropdown--config overflow-visible")}
             aria-label={t('settings.configure', 'Configure')}
             onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
             onPointerLeave={handleMenuPointerLeave}
@@ -360,7 +360,7 @@ export const ConfigSelect = ({
               <Portal>
                 <Menu.Positioner className="z-[10002] outline-none">
                   <Menu.Content
-                    className={cn(baseMenuContentClassName, "min-w-[320px] max-w-[360px] max-h-[360px] overflow-y-auto overscroll-contain")}
+                    className={cn(baseMenuContentClassName, "selector-dropdown--agent max-h-[300px] overflow-y-auto overscroll-contain")}
                     onPointerEnter={() => hoverCloseControllerRef.current.cancel()}
                     onPointerLeave={handleMenuPointerLeave}
                   >

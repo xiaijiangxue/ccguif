@@ -60,6 +60,17 @@ function clampToViewport(value: number, size: number, viewportSize: number) {
   return Math.min(Math.max(VIEWPORT_MARGIN, value), max);
 }
 
+function getMeasuredSize(element: HTMLElement | null) {
+  if (!element) {
+    return null;
+  }
+
+  return {
+    width: element.offsetWidth || element.getBoundingClientRect().width,
+    height: element.offsetHeight || element.getBoundingClientRect().height,
+  };
+}
+
 export function DropdownContent({
   anchorEl,
   position,
@@ -91,11 +102,11 @@ export function DropdownContent({
   const updatePosition = useCallback(() => {
     if (!open) return;
 
-    const containerRect = containerRef.current?.getBoundingClientRect() ?? null;
+    const containerSize = getMeasuredSize(containerRef.current);
 
     if (position) {
-      const measuredWidth = containerRect?.width ?? minWidth ?? Math.max(200, position.width);
-      const measuredHeight = containerRect?.height ?? DEFAULT_DROPDOWN_HEIGHT;
+      const measuredWidth = containerSize?.width ?? minWidth ?? Math.max(200, position.width);
+      const measuredHeight = containerSize?.height ?? DEFAULT_DROPDOWN_HEIGHT;
       const clampedLeft = clampToViewport(position.left, measuredWidth, window.innerWidth);
       const preferredTop =
         side === "top"
@@ -135,8 +146,8 @@ export function DropdownContent({
     const anchorRect = anchorEl.getBoundingClientRect();
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const measuredWidth = containerRect?.width ?? minWidth ?? Math.max(DEFAULT_DROPDOWN_WIDTH, anchorRect.width);
-    const measuredHeight = containerRect?.height ?? DEFAULT_DROPDOWN_HEIGHT;
+    const measuredWidth = containerSize?.width ?? minWidth ?? Math.max(DEFAULT_DROPDOWN_WIDTH, anchorRect.width);
+    const measuredHeight = containerSize?.height ?? DEFAULT_DROPDOWN_HEIGHT;
 
     const preferredTop =
       side === "top"
@@ -181,7 +192,18 @@ export function DropdownContent({
   // 位置更新
   useLayoutEffect(() => {
     updatePosition();
-  }, [updatePosition]);
+  }, [mounted, updatePosition]);
+
+  // 内容高度可能在 portal 挂载后才稳定，尺寸变化时需要重新贴回锚点。
+  useEffect(() => {
+    if (!open || !mounted || !containerRef.current || typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    const observer = new ResizeObserver(() => updatePosition());
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [mounted, open, updatePosition]);
 
   // 窗口变化时重算位置
   useEffect(() => {
