@@ -1424,3 +1424,36 @@ Refined annotation draft/marker UI with left-border accent, subtler backgrounds,
 ### Next Steps
 
 - None - task complete
+
+
+## Session 96: style(diff): use explicit font properties, remove tree line decorations
+
+**Date**: 2026-06-20
+**Task**: style(diff): use explicit font properties, remove tree line decorations
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Replaced sidebar-tree-label-font-weight with explicit 400 weight, added ui-font-family to diff tabs, removed tree line ::before pseudo-elements.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `fc404d21` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
