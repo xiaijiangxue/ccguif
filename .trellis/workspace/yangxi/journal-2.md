@@ -1358,3 +1358,36 @@ Reduced file tree row estimate to 24px, tightened row padding, normalized diff s
 ### Next Steps
 
 - None - task complete
+
+
+## Session 94: refactor(file-view): remove OpenAppMenu from FileViewPanel
+
+**Date**: 2026-06-20
+**Task**: refactor(file-view): remove OpenAppMenu from FileViewPanel
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Removed OpenAppMenu and related props from FileViewPanel, added UI font to file reference bar elements.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `9a38a023` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
