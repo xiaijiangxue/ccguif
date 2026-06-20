@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 92
+- **Total Sessions**: 93
 - **Last Active**: 2026-06-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1327 | Active |
+| `journal-2.md` | ~1360 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 93 | 2026-06-20 | style: compact file tree rows to 24px, normalize diff stat fonts | `d3c48e1a` | `refactor/liquid-precision-ui` |
 | 92 | 2026-06-20 | feat(dropdown): add alignOffset prop for horizontal fine-tuning | `7ed1f8c6` | `refactor/liquid-precision-ui` |
 | 91 | 2026-06-20 | style(composer): compact selector dropdowns, improve dropdown positioning | `519999bc` | `refactor/liquid-precision-ui` |
 | 90 | 2026-06-20 | refactor(composer): move ModeSelect from ButtonArea to ComposerInput | `984c15ec` | `refactor/liquid-precision-ui` |

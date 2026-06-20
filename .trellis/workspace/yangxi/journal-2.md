@@ -1325,3 +1325,36 @@ Added alignOffset prop to DropdownContent for post-alignment horizontal adjustme
 ### Next Steps
 
 - None - task complete
+
+
+## Session 93: style: compact file tree rows to 24px, normalize diff stat fonts
+
+**Date**: 2026-06-20
+**Task**: style: compact file tree rows to 24px, normalize diff stat fonts
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Reduced file tree row estimate to 24px, tightened row padding, normalized diff stat fonts across tool-blocks to 13px ui-font.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `d3c48e1a` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
