@@ -1259,3 +1259,36 @@ Moved ModeSelect from ButtonArea to ComposerInput as badge variant, added trigge
 ### Next Steps
 
 - None - task complete
+
+
+## Session 91: style(composer): compact selector dropdowns, improve dropdown positioning
+
+**Date**: 2026-06-20
+**Task**: style(composer): compact selector dropdowns, improve dropdown positioning
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Added ResizeObserver to DropdownContent for stable repositioning, compacted model/mode selector dropdown styles with fixed widths and tighter spacing.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `519999bc` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
