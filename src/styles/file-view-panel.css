@@ -681,11 +681,12 @@
 
 .fvp-annotation-draft {
   margin: 8px 12px 0;
-  padding: 10px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, #2563eb 34%, var(--border-subtle));
-  background: color-mix(in srgb, #2563eb 7%, var(--surface-elevated));
-  box-shadow: 0 10px 24px color-mix(in srgb, #000 12%, transparent);
+  padding: 9px 10px 10px;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 82%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--border-accent, #2563eb) 70%, var(--border-subtle));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-card-muted, var(--surface-card)) 82%, var(--surface-command) 18%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, white 5%, transparent);
 }
 
 .fvp-annotation-draft-inline,
@@ -699,9 +700,10 @@
 
 .fvp-annotation-marker {
   padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, #2563eb 24%, var(--border-subtle));
-  background: color-mix(in srgb, #2563eb 5%, var(--surface-elevated));
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 78%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--border-accent, #2563eb) 58%, var(--border-subtle));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface-card-muted, var(--surface-card)) 78%, transparent);
   color: var(--text-muted);
 }
 
@@ -725,7 +727,7 @@
 }
 
 .fvp-annotation-title .codicon {
-  color: #2563eb;
+  color: color-mix(in srgb, var(--border-accent, #2563eb) 74%, var(--text-muted));
   font-size: 13px;
 }
 
@@ -769,9 +771,21 @@
 
 .fvp-annotation-draft-head {
   margin-bottom: 8px;
-  font-size: 11px;
   font-weight: 700;
   color: var(--text-strong);
+}
+
+.fvp-annotation-draft-head code,
+.fvp-annotation-marker-tools code {
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 72%, transparent);
+  border-radius: 5px;
+  padding: 1px 5px;
+  background: color-mix(in srgb, var(--surface-control) 42%, transparent);
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.35;
 }
 
 .fvp-annotation-draft-input {
@@ -779,27 +793,43 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  min-height: 58px;
+  min-height: 54px;
   resize: vertical;
-  border: 1px solid var(--border-subtle);
-  border-radius: 8px;
-  padding: 8px;
-  background: var(--surface-panel);
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 78%, transparent);
+  border-radius: 6px;
+  padding: 8px 9px;
+  background: color-mix(in srgb, var(--surface-command) 78%, var(--surface-card) 22%);
   color: var(--text-strong);
   font: inherit;
+  line-height: 1.45;
+  outline: none;
+}
+
+.fvp-annotation-draft-input::placeholder {
+  color: var(--text-faint);
+}
+
+.fvp-annotation-draft-input:focus {
+  border-color: color-mix(in srgb, var(--border-accent, #2563eb) 58%, var(--border-subtle));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--border-accent, #2563eb) 14%, transparent);
 }
 
 .fvp-annotation-draft-actions {
-  justify-content: flex-start;
+  justify-content: flex-end;
   margin-top: 8px;
 }
 
+.fvp-annotation-draft-actions .ghost,
 .fvp-annotation-submit {
-  border: none;
-  border-radius: 999px;
-  padding: 5px 12px;
-  background: #2563eb;
+  min-height: 24px;
+  border: 1px solid color-mix(in srgb, var(--border-accent, #2563eb) 58%, transparent);
+  border-radius: 6px;
+  padding: 3px 11px;
+  background: color-mix(in srgb, var(--border-accent, #2563eb) 86%, var(--surface-card) 14%);
   color: white;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.35;
   cursor: pointer;
 }
 
