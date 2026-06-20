@@ -40,7 +40,7 @@ export function FileTreeContainer({
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => listRef.current,
-    estimateSize: () => 28,
+    estimateSize: () => 24,
     overscan: 16,
     getItemKey: (index) => {
       const row = rows[index];

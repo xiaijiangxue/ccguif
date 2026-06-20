@@ -140,6 +140,20 @@
   font-size: 10px;
 }
 
+.tool-change-summary .diff-stat-add,
+.tool-change-summary .diff-stat-del,
+.tool-change-file-diff-stats .diff-stat-add,
+.tool-change-file-diff-stats .diff-stat-del {
+  min-width: auto;
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  font-weight: 400;
+  font-variant-numeric: normal;
+  font-feature-settings: normal;
+  letter-spacing: 0;
+  line-height: normal;
+}
+
 .tool-change-collapsed-card .tool-change-collapsed-preview,
 .tool-change-stack .tool-change-collapsed-preview {
   margin-left: 2px;
