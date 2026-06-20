@@ -788,6 +788,10 @@
 
 .git-history-commit-meta code {
   justify-self: start;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .git-history-commit-meta em {
@@ -1087,7 +1091,6 @@
   background: var(--git-filetree-row-active-bg);
 }
 
-.git-history-file-list .git-history-tree-item::before,
 .git-history-push-preview-file-tree .git-history-tree-item::before {
   content: "";
   position: absolute;
@@ -1220,8 +1223,10 @@
 }
 
 .git-history-message-meta-item code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, "Cascadia Mono", "Cascadia Code", Consolas, monospace;
   font-size: 13px;
-  font-weight: 350;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .git-history-empty {

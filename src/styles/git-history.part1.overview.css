@@ -627,10 +627,113 @@ body[data-git-history-column-resizing="true"] .git-history-vertical-resizer::aft
 
 .git-history-worktree-commit-box .commit-button-container {
   margin-top: 1px;
+  align-items: center;
+  gap: 5px;
 }
 
 .git-history-worktree-commit-box .commit-button {
-  padding: 6px 12px;
+  min-width: 64px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 6px;
+  border-color: color-mix(in srgb, var(--border-default) 56%, transparent);
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--surface-panel, var(--surface-card)) 38%, transparent),
+      color-mix(in srgb, var(--surface-control, #f8fafc) 42%, transparent)
+    );
+  color: color-mix(in srgb, var(--text-secondary) 78%, transparent);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0;
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 34%, transparent),
+    0 1px 1px color-mix(in srgb, #000000 4%, transparent);
+  transition:
+    transform 140ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.git-history-worktree-commit-box .commit-button svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2.25;
+  color: color-mix(in srgb, currentColor 82%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button-primary {
+  min-width: 96px;
+  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 26%, var(--border-default));
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent-primary, #2563eb) 5%, var(--surface-panel, var(--surface-card))),
+      color-mix(in srgb, var(--accent-primary, #2563eb) 4%, var(--surface-control, #f8fafc))
+    );
+  color: color-mix(in srgb, var(--accent-primary, #2563eb) 56%, var(--text-secondary));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 38%, transparent),
+    0 1px 1px color-mix(in srgb, var(--accent-primary, #2563eb) 7%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--border-accent-soft) 50%, var(--border-default));
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--surface-control-hover) 38%, var(--surface-panel, var(--surface-card))),
+      color-mix(in srgb, var(--surface-control-hover) 48%, transparent)
+    );
+  color: color-mix(in srgb, var(--text-secondary) 88%, var(--text-stronger));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 42%, transparent),
+    0 3px 8px color-mix(in srgb, #000000 5%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button-primary:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 38%, var(--border-default));
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent-primary, #2563eb) 8%, var(--surface-panel, var(--surface-card))),
+      color-mix(in srgb, var(--accent-primary, #2563eb) 7%, var(--surface-control-hover))
+    );
+  color: color-mix(in srgb, var(--accent-primary, #2563eb) 66%, var(--text-secondary));
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #ffffff 46%, transparent),
+    0 4px 10px color-mix(in srgb, var(--accent-primary, #2563eb) 9%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, #000000 11%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button:focus-visible {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 58%, var(--border-default));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-primary, #2563eb) 18%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #ffffff 52%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button:disabled {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--border-default) 58%, transparent);
+  background: color-mix(in srgb, var(--surface-control-disabled, var(--surface-control)) 78%, transparent);
+  color: color-mix(in srgb, var(--text-muted) 52%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 28%, transparent);
+}
+
+.git-history-worktree-commit-box .commit-button-primary:disabled {
+  border-color: color-mix(in srgb, var(--accent-primary, #2563eb) 28%, var(--border-default));
+  background: color-mix(in srgb, var(--accent-primary, #2563eb) 5%, var(--surface-control-disabled, var(--surface-control)));
+  color: color-mix(in srgb, var(--accent-primary, #2563eb) 38%, var(--text-muted));
 }
 
 .git-history-worktree-generate {
