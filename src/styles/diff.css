@@ -639,8 +639,10 @@
   border-radius: 0;
   min-height: 20px;
   padding: 2px 2px 3px;
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
   font-size: 13px;
-  font-weight: var(--sidebar-tree-label-font-weight);
+  font-weight: 400;
+  line-height: 1.45;
   letter-spacing: 0;
   color: var(--text-secondary);
   background: transparent;
@@ -698,8 +700,10 @@
   border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
+  font-family: var(--ui-font-family, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif);
   font-size: 13px;
-  font-weight: var(--sidebar-tree-label-font-weight);
+  font-weight: 400;
+  line-height: 1.45;
   letter-spacing: 0;
   min-height: 20px;
   padding: 2px 2px 3px;
@@ -793,15 +797,7 @@
 }
 
 .diff-section-tree-list.is-compact-root::before {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: -6px;
-  bottom: 0;
-  width: 1.25px;
-  background: var(--git-filetree-tree-line-color);
-  opacity: 1;
-  pointer-events: none;
+  content: none;
 }
 
 .diff-tree-folder-group {
@@ -818,15 +814,7 @@
 }
 
 .diff-tree-folder-children::before {
-  content: "";
-  position: absolute;
-  left: var(--git-tree-branch-x, calc(var(--git-filetree-row-pad-x) - 3px));
-  top: 0;
-  bottom: 0;
-  width: 1.25px;
-  background: var(--git-filetree-tree-line-color);
-  opacity: var(--git-tree-branch-opacity, 0.62);
-  pointer-events: none;
+  content: none;
 }
 
 .diff-tree-folder-row {
