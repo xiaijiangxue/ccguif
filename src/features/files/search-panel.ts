@@ -8,7 +8,6 @@ import {
 } from "@codemirror/view";
 import { EditorSelection } from "@codemirror/state";
 import {
-  closeSearchPanel,
   findNext,
   findPrevious,
   getSearchQuery,

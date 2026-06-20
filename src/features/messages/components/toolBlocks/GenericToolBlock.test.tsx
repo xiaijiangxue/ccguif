@@ -2,7 +2,6 @@
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationItem } from "../../../../types";
-import * as diffParser from "../../../../utils/diff";
 import { prewarmMarkdownRuntime } from "../Markdown";
 import { GenericToolBlock } from "./GenericToolBlock";
 

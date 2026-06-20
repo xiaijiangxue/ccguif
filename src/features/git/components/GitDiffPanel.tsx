@@ -11,8 +11,6 @@ import ArrowLeftRight from "lucide-react/dist/esm/icons/arrow-left-right";
 import Check from "lucide-react/dist/esm/icons/check";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
-import ChevronsDownUp from "lucide-react/dist/esm/icons/chevrons-down-up";
-import ChevronsUpDown from "lucide-react/dist/esm/icons/chevrons-up-down";
 import FolderTree from "lucide-react/dist/esm/icons/folder-tree";
 import GitPullRequest from "lucide-react/dist/esm/icons/git-pull-request";
 import HardDrive from "lucide-react/dist/esm/icons/hard-drive";
@@ -864,7 +862,6 @@ export function GitDiffPanel({
   const [gitContextMenu, setGitContextMenu] =
     useState<RendererContextMenuState | null>(null);
   const deferredCommitLanguageMenuTimerRef = useRef<number | null>(null);
-  const [isCommitSectionCollapsed, setIsCommitSectionCollapsed] = useState(false);
   const [previewFile, setPreviewFile] = useState<(DiffFile & { section: "staged" | "unstaged" }) | null>(
     null,
   );

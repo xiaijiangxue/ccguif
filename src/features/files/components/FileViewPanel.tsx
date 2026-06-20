@@ -45,7 +45,6 @@ import {
 } from "../search-panel";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import {
-  EditorSelection,
   RangeSetBuilder,
   StateEffect,
   StateField,

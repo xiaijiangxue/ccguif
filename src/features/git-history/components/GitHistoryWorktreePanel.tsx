@@ -661,13 +661,6 @@ export function GitHistoryWorktreePanel({
         ? "staged"
         : "unstaged"
       : null;
-  const compactSummaryLabel =
-    compactSection === "staged"
-      ? renderSectionIndicator("staged", stagedFiles.length, t)
-      : compactSection === "unstaged"
-        ? renderSectionIndicator("unstaged", unstagedFiles.length, t)
-        : null;
-  const compactSummaryBranch = status.branchName || resolvedRootFolderName;
   const commitStatusHint = selectedCommitCount > 0
     ? t("git.selectedFilesForCommit", { count: selectedCommitCount })
     : hasWorktreeChanges

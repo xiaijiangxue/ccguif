@@ -1151,7 +1151,7 @@ export function ComposerInput({
             {showFooterModeSelect && (
               <ModeSelect
                 value={permissionMode}
-                onChange={onModeSelect}
+                onChange={onModeSelect!}
                 provider={modeSelectProvider}
                 selectedCollaborationModeId={selectedCollaborationModeId}
                 onSelectCollaborationMode={onSelectCollaborationMode}

@@ -143,8 +143,8 @@ export function ComposerReadinessBar({
         )}
         {showModeSelect ? (
           <ModeSelect
-            value={permissionMode}
-            onChange={onModeSelect}
+            value={permissionMode!}
+            onChange={onModeSelect!}
             provider={modeSelectProvider}
             selectedCollaborationModeId={selectedCollaborationModeId}
             onSelectCollaborationMode={onSelectCollaborationMode}
