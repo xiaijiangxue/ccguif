@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 94
+- **Total Sessions**: 95
 - **Last Active**: 2026-06-20
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1393 | Active |
+| `journal-2.md` | ~1426 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 95 | 2026-06-20 | style: refine annotation UI with left-border accent and subtle backgrounds | `5c6c4440` | `refactor/liquid-precision-ui` |
 | 94 | 2026-06-20 | refactor(file-view): remove OpenAppMenu from FileViewPanel | `9a38a023` | `refactor/liquid-precision-ui` |
 | 93 | 2026-06-20 | style: compact file tree rows to 24px, normalize diff stat fonts | `d3c48e1a` | `refactor/liquid-precision-ui` |
 | 92 | 2026-06-20 | feat(dropdown): add alignOffset prop for horizontal fine-tuning | `7ed1f8c6` | `refactor/liquid-precision-ui` |

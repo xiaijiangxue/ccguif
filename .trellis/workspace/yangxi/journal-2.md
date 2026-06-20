@@ -1391,3 +1391,36 @@ Removed OpenAppMenu and related props from FileViewPanel, added UI font to file 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 95: style: refine annotation UI with left-border accent and subtle backgrounds
+
+**Date**: 2026-06-20
+**Task**: style: refine annotation UI with left-border accent and subtle backgrounds
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+Refined annotation draft/marker UI with left-border accent, subtler backgrounds, textarea focus states, code badge styling, and refined submit button.
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5c6c4440` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
