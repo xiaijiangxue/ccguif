@@ -470,6 +470,9 @@
 }
 
 .tool-change-inline-diff.edit-diff-viewer {
+  font-family: var(--ui-font-family);
+  font-size: 13px;
+  line-height: 1.5;
   margin: 0 0 8px 0;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;

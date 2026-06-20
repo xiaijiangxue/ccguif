@@ -32,6 +32,8 @@ type DropdownContentProps = {
   onClose: () => void;
   /** 对齐方式 */
   align?: "start" | "center" | "end";
+  /** 对齐后的水平微调，用于把菜单内容列而不是外框贴齐 anchor */
+  alignOffset?: number;
   /** 弹出方向 */
   side?: "top" | "bottom";
   /** 间距 */
@@ -77,6 +79,7 @@ export function DropdownContent({
   open,
   onClose,
   align = "start",
+  alignOffset = 0,
   side = "top",
   sideOffset = 4,
   minWidth,
@@ -107,7 +110,7 @@ export function DropdownContent({
     if (position) {
       const measuredWidth = containerSize?.width ?? minWidth ?? Math.max(200, position.width);
       const measuredHeight = containerSize?.height ?? DEFAULT_DROPDOWN_HEIGHT;
-      const clampedLeft = clampToViewport(position.left, measuredWidth, window.innerWidth);
+      const clampedLeft = clampToViewport(position.left + alignOffset, measuredWidth, window.innerWidth);
       const preferredTop =
         side === "top"
           ? position.top - measuredHeight - sideOffset
@@ -174,7 +177,7 @@ export function DropdownContent({
       left = anchorRect.left;
     }
 
-    left = clampToViewport(left, measuredWidth, vw);
+    left = clampToViewport(left + alignOffset, measuredWidth, vw);
 
     setEffectiveSide(resolvedSide);
     setStyle({
@@ -187,7 +190,7 @@ export function DropdownContent({
       maxHeight: maxHeight ?? "min(50vh, 400px)",
       visibility: "visible",
     });
-  }, [anchorEl, position, open, align, side, sideOffset, minWidth, maxWidth, maxHeight]);
+  }, [alignOffset, anchorEl, position, open, align, side, sideOffset, minWidth, maxWidth, maxHeight]);
 
   // 位置更新
   useLayoutEffect(() => {

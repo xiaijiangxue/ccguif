@@ -39,6 +39,8 @@ const MODEL_DESCRIPTION_KEYS: Record<string, string> = {
   'gpt-5.2': 'models.codex.gpt52.description',
 };
 
+const READINESS_DROPDOWN_ICON_INSET = 11;
+
 /**
  * Model icon component - displays different icons based on provider type
  */
@@ -330,6 +332,7 @@ export const ModelSelect = ({
             side="top"
             sideOffset={8}
             align="start"
+            alignOffset={-READINESS_DROPDOWN_ICON_INSET}
             minWidth={218}
             maxHeight="240px"
             surfaceId={hoverSurfaceId}
