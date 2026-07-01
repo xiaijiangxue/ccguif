@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-2.md`
-- **Total Sessions**: 97
-- **Last Active**: 2026-06-20
+- **Total Sessions**: 98
+- **Last Active**: 2026-07-01
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-2.md` | ~1492 | Active |
+| `journal-2.md` | ~1525 | Active |
 | `journal-1.md` | ~1977 | Archived |
 <!-- @@@/auto:active-documents -->
 
@@ -30,6 +30,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 98 | 2026-07-01 | 收敛浮窗拖拽和文件树反馈 | `4ae72646` | `refactor/liquid-precision-ui` |
 | 97 | 2026-06-20 | style(git): restyle commit buttons, remove inline SVG icons | `80c24fa4` | `refactor/liquid-precision-ui` |
 | 96 | 2026-06-20 | style(diff): use explicit font properties, remove tree line decorations | `fc404d21` | `refactor/liquid-precision-ui` |
 | 95 | 2026-06-20 | style: refine annotation UI with left-border accent and subtle backgrounds | `5c6c4440` | `refactor/liquid-precision-ui` |

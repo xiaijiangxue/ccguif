@@ -1490,3 +1490,36 @@ Removed inline SVG icons from commit buttons, added gradient backgrounds, hover 
 ### Next Steps
 
 - None - task complete
+
+
+## Session 98: 收敛浮窗拖拽和文件树反馈
+
+**Date**: 2026-07-01
+**Task**: 收敛浮窗拖拽和文件树反馈
+**Branch**: `refactor/liquid-precision-ui`
+
+### Summary
+
+移除文件树操作内联 toast 状态，改为错误日志；待办浮窗改用容器 bounds 约束拖拽位置，并补充对应 hook 测试。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `4ae72646` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete
