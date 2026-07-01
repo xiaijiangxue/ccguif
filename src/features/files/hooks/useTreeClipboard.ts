@@ -20,12 +20,6 @@ type FileTreeClipboardItem = {
   name: string;
 };
 
-export type FileTreeOperationNotice = {
-  id: string;
-  tone: "success" | "error" | "info";
-  message: string;
-};
-
 export function useTreeClipboard({
   workspaceId,
   getFileTreeItemName,
@@ -58,19 +52,17 @@ export function useTreeClipboard({
 }) {
   const [contextMenu, setContextMenu] = useState<RendererContextMenuState | null>(null);
   const [clipboardItem, setClipboardItem] = useState<FileTreeClipboardItem | null>(null);
-  const [operationNotice, setOperationNotice] = useState<FileTreeOperationNotice | null>(null);
 
   const normalizeOperationError = useCallback((error: unknown) => {
     return error instanceof Error ? error.message : String(error);
   }, []);
 
-  const showOperationNotice = useCallback((tone: FileTreeOperationNotice["tone"], message: string) => {
-    setOperationNotice({
-      id: `${Date.now()}-${tone}`,
-      tone,
-      message,
-    });
-  }, []);
+  const reportOperationError = useCallback(
+    (operation: string, error: unknown) => {
+      console.warn(`[file-tree] ${operation} failed`, normalizeOperationError(error));
+    },
+    [normalizeOperationError],
+  );
 
   const clearClipboardForDeletedPath = useCallback((deletedPath: string) => {
     setClipboardItem((prev) =>
@@ -111,18 +103,16 @@ export function useTreeClipboard({
         await trashWorkspaceItem(workspaceId, relativePath);
         clearClipboardForDeletedPath(relativePath);
         purgeDeletedFileTreePath(relativePath);
-        showOperationNotice("success", t("files.trashComplete"));
         onRefreshFiles?.();
       } catch (error) {
-        showOperationNotice("error", t("files.trashFailed", { message: normalizeOperationError(error) }));
+        reportOperationError("trash item", error);
       }
     },
     [
       clearClipboardForDeletedPath,
-      normalizeOperationError,
       onRefreshFiles,
       purgeDeletedFileTreePath,
-      showOperationNotice,
+      reportOperationError,
       t,
       workspaceId,
     ],
@@ -136,19 +126,16 @@ export function useTreeClipboard({
         kind,
         name: getFileTreeItemName(relativePath),
       });
-      showOperationNotice("info", t("files.copyReady"));
     },
-    [getFileTreeItemName, showOperationNotice, t, workspaceId],
+    [getFileTreeItemName, workspaceId],
   );
 
   const pasteFileTreeItem = useCallback(
     async (targetDirectory: string) => {
       if (!clipboardItem) {
-        showOperationNotice("error", t("files.pasteUnavailable"));
         return;
       }
       if (clipboardItem.workspaceId !== workspaceId) {
-        showOperationNotice("error", t("files.pasteWorkspaceMismatch"));
         return;
       }
       try {
@@ -158,19 +145,16 @@ export function useTreeClipboard({
           targetDirectory,
         );
         selectSingle(result.path, result.kind === "folder" ? "folder" : "file");
-        showOperationNotice("success", t("files.pasteComplete"));
         onRefreshFiles?.();
       } catch (error) {
-        showOperationNotice("error", t("files.pasteFailed", { message: normalizeOperationError(error) }));
+        reportOperationError("paste item", error);
       }
     },
     [
       clipboardItem,
-      normalizeOperationError,
       onRefreshFiles,
+      reportOperationError,
       selectSingle,
-      showOperationNotice,
-      t,
       workspaceId,
     ],
   );
@@ -180,13 +164,12 @@ export function useTreeClipboard({
       try {
         const result = await duplicateWorkspaceItem(workspaceId, relativePath);
         selectSingle(result.path, result.kind === "folder" ? "folder" : "file");
-        showOperationNotice("success", t("files.duplicateComplete"));
         onRefreshFiles?.();
       } catch (error) {
-        showOperationNotice("error", t("files.duplicateFailed", { message: normalizeOperationError(error) }));
+        reportOperationError("duplicate item", error);
       }
     },
-    [normalizeOperationError, onRefreshFiles, selectSingle, showOperationNotice, t, workspaceId],
+    [onRefreshFiles, reportOperationError, selectSingle, workspaceId],
   );
 
   const showContextMenu = useCallback(
@@ -338,10 +321,8 @@ export function useTreeClipboard({
   return {
     contextMenu,
     setContextMenu,
-    operationNotice,
-    showOperationNotice,
-    normalizeOperationError,
-      clearClipboardForDeletedPath,
+    reportOperationError,
+    clearClipboardForDeletedPath,
     copyPath,
     trashItem,
     showContextMenu,

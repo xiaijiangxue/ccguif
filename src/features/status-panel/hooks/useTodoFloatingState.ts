@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { TodoItem } from "../types";
 import {
   clampTodoFloatingPosition,
@@ -22,6 +22,11 @@ type TodoFloatingState = {
   setPosition: (position: { x: number; y: number }) => void;
 };
 
+type TodoFloatingBounds = {
+  width: number;
+  height: number;
+};
+
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
@@ -29,17 +34,20 @@ function isFiniteNumber(value: unknown): value is number {
 export function useTodoFloatingState(
   todos: TodoItem[],
   sessionId: string,
+  bounds?: TodoFloatingBounds,
 ): TodoFloatingState {
   const summary = useMemo(() => resolveTodoSummary(todos), [todos]);
   const initialExpanded = readTodoFloatingExpandState(sessionId);
+  const boundsWidth = bounds?.width ?? (typeof window === "undefined" ? 0 : window.innerWidth);
+  const boundsHeight = bounds?.height ?? (typeof window === "undefined" ? 0 : window.innerHeight);
   const [isExpanded, setIsExpanded] = useState(() => initialExpanded ?? false);
   const [position, setPositionState] = useState(() => {
     if (typeof window === "undefined") {
       return { x: 0, y: 0 };
     }
     const defaultPosition = resolveDefaultTodoFloatingPosition(
-      window.innerWidth,
-      window.innerHeight,
+      boundsWidth,
+      boundsHeight,
     );
     const stored = readTodoFloatingPosition();
     if (!stored) {
@@ -48,13 +56,13 @@ export function useTodoFloatingState(
     if (
       isLegacyDefaultTodoFloatingPosition(
         stored,
-        window.innerWidth,
-        window.innerHeight,
+        boundsWidth,
+        boundsHeight,
       )
     ) {
       return defaultPosition;
     }
-    return stored;
+    return clampTodoFloatingPosition(stored, boundsWidth, boundsHeight);
   });
   const positionRef = useRef(position);
 
@@ -73,20 +81,11 @@ export function useTodoFloatingState(
     writeTodoFloatingPosition(position);
   }, [position]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-    const handleResize = () => {
-      setPositionState((current) =>
-        clampTodoFloatingPosition(current, window.innerWidth, window.innerHeight),
-      );
-    };
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
+  useLayoutEffect(() => {
+    setPositionState((current) =>
+      clampTodoFloatingPosition(current, boundsWidth, boundsHeight),
+    );
+  }, [boundsHeight, boundsWidth]);
 
   const toggleExpand = useCallback(() => {
     setIsExpanded((current) => !current);
@@ -96,12 +95,10 @@ export function useTodoFloatingState(
     if (!isFiniteNumber(nextPosition.x) || !isFiniteNumber(nextPosition.y)) {
       return;
     }
-    const viewportWidth = typeof window === "undefined" ? 0 : window.innerWidth;
-    const viewportHeight = typeof window === "undefined" ? 0 : window.innerHeight;
     setPositionState(
-      clampTodoFloatingPosition(nextPosition, viewportWidth, viewportHeight),
+      clampTodoFloatingPosition(nextPosition, boundsWidth, boundsHeight),
     );
-  }, []);
+  }, [boundsHeight, boundsWidth]);
 
   return {
     visibility: shouldShowTodoFloatingWindow(todos)

@@ -62,7 +62,7 @@ describe("useTreeClipboard", () => {
     expect(writeText).toHaveBeenCalledWith("/workspace/src/index.ts");
   });
 
-  it("trashes a confirmed item and reports success", async () => {
+  it("trashes a confirmed item", async () => {
     vi.mocked(confirm).mockResolvedValueOnce(true);
     vi.mocked(trashWorkspaceItem).mockResolvedValueOnce(undefined);
     const { result } = renderHook(() => useHarness());
@@ -72,6 +72,5 @@ describe("useTreeClipboard", () => {
     });
 
     expect(trashWorkspaceItem).toHaveBeenCalledWith("workspace-1", "src/index.ts");
-    expect(result.current.operationNotice?.tone).toBe("success");
   });
 });

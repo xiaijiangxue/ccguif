@@ -981,8 +981,7 @@ export function FileTreePanel({
     t,
   });
   const {
-    normalizeOperationError,
-    showOperationNotice,
+    reportOperationError,
     copyPath,
     trashItem,
     showContextMenu,
@@ -992,7 +991,6 @@ export function FileTreePanel({
     const prompt = renamePrompt;
     const name = renameDraftName.trim();
     if (!prompt || !name) {
-      showOperationNotice("error", t("files.renameInvalidName"));
       return;
     }
     try {
@@ -1002,18 +1000,15 @@ export function FileTreePanel({
       setSelectedNodePaths(new Set([result.path]));
       setRenamePrompt(null);
       setRenameDraftName("");
-      showOperationNotice("success", t("files.renameComplete"));
       onRefreshFiles?.();
     } catch (error) {
-      showOperationNotice("error", t("files.renameFailed", { message: normalizeOperationError(error) }));
+      reportOperationError("rename item", error);
     }
   }, [
-    normalizeOperationError,
     onRefreshFiles,
     renameDraftName,
     renamePrompt,
-    showOperationNotice,
-    t,
+    reportOperationError,
     workspaceId,
   ]);
 
@@ -1026,10 +1021,9 @@ export function FileTreePanel({
     const relativePath = newFileParent ? `${newFileParent}/${name}` : name;
     try {
       await writeWorkspaceFile(workspaceId, relativePath, "");
-      showOperationNotice("success", t("files.createFileComplete"));
       onRefreshFiles?.();
     } catch (error) {
-      showOperationNotice("error", t("files.createFileFailed", { message: normalizeOperationError(error) }));
+      reportOperationError("create file", error);
     }
     cancelNewFile();
   }, [
@@ -1038,9 +1032,7 @@ export function FileTreePanel({
     newFileParent,
     workspaceId,
     onRefreshFiles,
-    showOperationNotice,
-    t,
-    normalizeOperationError,
+    reportOperationError,
   ]);
 
   const confirmNewFolder = useCallback(async () => {
@@ -1052,10 +1044,9 @@ export function FileTreePanel({
     const relativePath = newFolderParent ? `${newFolderParent}/${name}` : name;
     try {
       await createWorkspaceDirectory(workspaceId, relativePath);
-      showOperationNotice("success", t("files.createFolderComplete"));
       onRefreshFiles?.();
     } catch (error) {
-      showOperationNotice("error", t("files.createFolderFailed", { message: normalizeOperationError(error) }));
+      reportOperationError("create folder", error);
     }
     cancelNewFolder();
   }, [
@@ -1064,9 +1055,7 @@ export function FileTreePanel({
     newFolderParent,
     workspaceId,
     onRefreshFiles,
-    showOperationNotice,
-    t,
-    normalizeOperationError,
+    reportOperationError,
   ]);
 
   const detachedInitialFilePath = selectedNodeType === "file" ? selectedNodePath : null;
@@ -1419,14 +1408,6 @@ export function FileTreePanel({
           onClose={() => treeClipboard.setContextMenu(null)}
           className="renderer-context-menu file-tree-context-menu"
         />
-      ) : null}
-      {treeClipboard.operationNotice ? (
-        <div
-          className={`file-tree-operation-notice is-${treeClipboard.operationNotice.tone}`}
-          role={treeClipboard.operationNotice.tone === "error" ? "alert" : "status"}
-        >
-          {treeClipboard.operationNotice.message}
-        </div>
       ) : null}
       {renamePrompt !== null && (
         <div className="new-file-prompt" role="dialog" aria-modal="true">

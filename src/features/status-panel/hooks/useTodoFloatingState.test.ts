@@ -132,4 +132,20 @@ describe("useTodoFloatingState", () => {
     );
     expect(next.result.current.position).toEqual({ x: 744, y: 608 });
   });
+
+  it("clamps dragged position to the provided center content bounds", () => {
+    const { result } = renderHook(() =>
+      useTodoFloatingState(
+        todos([{ content: "working", status: "in_progress" }]),
+        "session-center-bounds",
+        { width: 640, height: 520 },
+      ),
+    );
+
+    act(() => {
+      result.current.setPosition({ x: 900, y: 700 });
+    });
+
+    expect(result.current.position).toEqual({ x: 360, y: 360 });
+  });
 });

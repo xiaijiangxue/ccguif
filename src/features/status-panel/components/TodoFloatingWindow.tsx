@@ -1,4 +1,12 @@
-import { memo, useEffect, useMemo, useRef, type RefObject } from "react";
+import {
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { motion, useDragControls, useMotionValue } from "framer-motion";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
@@ -27,11 +35,40 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const suppressNextClickRef = useRef(false);
-  const state = useTodoFloatingState(todos, sessionId);
+  const [bounds, setBounds] = useState<{ width: number; height: number } | undefined>();
+  const state = useTodoFloatingState(todos, sessionId, bounds);
   const prevTodoCountRef = useRef(state.todos.length);
   const dragControls = useDragControls();
   const x = useMotionValue(state.position.x);
   const y = useMotionValue(state.position.y);
+
+  useLayoutEffect(() => {
+    const element = constraintRef.current;
+    if (!element) {
+      return;
+    }
+    const syncBounds = () => {
+      if (element.clientWidth <= 0 || element.clientHeight <= 0) {
+        return;
+      }
+      setBounds({
+        width: element.clientWidth,
+        height: element.clientHeight,
+      });
+    };
+    syncBounds();
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", syncBounds);
+      return () => {
+        window.removeEventListener("resize", syncBounds);
+      };
+    }
+    const observer = new ResizeObserver(syncBounds);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+    };
+  }, [constraintRef]);
 
   useEffect(() => {
     x.set(state.position.x);
@@ -80,10 +117,10 @@ export const TodoFloatingWindow = memo(function TodoFloatingWindow({
       onDragStart={() => {
         suppressNextClickRef.current = true;
       }}
-      onDragEnd={(_, info) => {
+      onDragEnd={() => {
         state.setPosition({
-          x: state.position.x + info.offset.x,
-          y: state.position.y + info.offset.y,
+          x: x.get(),
+          y: y.get(),
         });
         window.setTimeout(() => {
           suppressNextClickRef.current = false;
